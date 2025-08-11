@@ -2,7 +2,7 @@ import React from 'react';
 
 const InputFormRow = () => {
   return (
-   <div className="w-full bg-[#B5EFE1] p-4 mb-4">
+   <div className="w-full bg-[#B5EFE1] p-4 mb-4 mt-6">
   <div className="bg-gray-50 border-l-4 border-gray-200 p-3">
     <div className="flex items-center gap-6 w-full">
 
@@ -13,12 +13,13 @@ const InputFormRow = () => {
         </label>
         <div className="relative flex-grow min-w-0">
           <select
-            defaultValue="Nasabah"
+            defaultValue=""   // kosong
             className="text-xs px-2 py-1.5 pr-6 border border-gray-300 rounded bg-white text-gray-700 w-full focus:outline-none focus:border-blue-400"
           >
-            <option value="Nasabah">Nasabah</option>
-            <option value="Corporate">Corporate</option>
-            <option value="Agent">Agent</option>
+            <option value="" disabled>
+              -- Select Input Type --
+            </option>
+           
           </select>
           <svg
             className="absolute right-1 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none"
@@ -38,13 +39,13 @@ const InputFormRow = () => {
         </label>
         <div className="relative flex-grow min-w-0">
           <select
-            defaultValue="Account"
+            defaultValue=""  // kosong
             className="text-xs px-2 py-1.5 pr-6 border border-gray-300 rounded bg-white text-gray-700 w-full focus:outline-none focus:border-blue-400"
           >
-            <option value="Account">Account</option>
-            <option value="Phone">Phone</option>
-            <option value="Email">Email</option>
-            <option value="ID Number">ID Number</option>
+            <option value="" disabled>
+              -- Select Source Type --
+            </option>
+            
           </select>
           <svg
             className="absolute right-1 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none"
@@ -64,7 +65,7 @@ const InputFormRow = () => {
         </label>
         <input
           type="text"
-          defaultValue="987654321"
+          defaultValue=""  // kosong
           className="text-xs px-2 py-1.5 border border-gray-300 rounded text-gray-700 flex-grow min-w-0 focus:outline-none focus:border-blue-400"
           placeholder="Enter number"
         />
@@ -72,25 +73,25 @@ const InputFormRow = () => {
 
       {/* Exp Date */}
       <div className="flex items-center gap-2 min-w-0 flex-grow">
-  <label className="text-xs font-medium text-gray-800 whitespace-nowrap w-24">
-    Exp Date
-  </label>
-  <div className="relative flex-grow min-w-0">
-    <input
-      type="number"
-      defaultValue={18}
-      min={0}
-      max={24}
-      step={1}
-      className="text-xs px-2 py-1.5 pr-6 border border-gray-300 rounded bg-white text-gray-700 w-full focus:outline-none focus:border-blue-400"
-    />
-  </div>
-</div>
+        <label className="text-xs font-medium text-gray-800 whitespace-nowrap w-24">
+          Exp Date
+        </label>
+        <div className="relative flex-grow min-w-0">
+          <input
+            type="number"
+            defaultValue=""  // kosong
+            min={0}
+            max={24}
+            step={1}
+            className="text-xs px-2 py-1.5 pr-6 border border-gray-300 rounded bg-white text-gray-700 w-full focus:outline-none focus:border-blue-400"
+            placeholder="Enter Exp Date"
+          />
+        </div>
+      </div>
 
     </div>
   </div>
 </div>
-
   );
 };
 
