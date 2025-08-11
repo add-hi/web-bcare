@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+// import FloatingCustomerContact from "../../../components/FloatingCustomerContact";
 
 export default function HomePage() {
   // Dynamic user data - these would typically come from props, context, or API
@@ -136,6 +137,9 @@ export default function HomePage() {
           <p className="text-sm">No featured news available</p>
         </div>
       </div>
+
+      {/* Floating Customer Contact Widget */}
+      {/* <FloatingCustomerContact /> */}
     </div>
   );
 }

@@ -12,9 +12,9 @@ export default function LoginPage() {
   });
 
   const [credentials, setCredentials] = useState({
-    username: '',
-    password: ''
-  })
+    username: "",
+    password: "",
+  });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -24,24 +24,26 @@ export default function LoginPage() {
     }));
   };
 
-
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
     // Simulasi login - ganti dengan API call sebenarnya
-    if (formData.username === 'admin' && formData.password === 'password') {
+    if (formData.username === "admin" && formData.password === "password") {
       // Set session/token di sini
-      localStorage.setItem('isLoggedIn', 'true')
-      localStorage.setItem('user', JSON.stringify({
-        name: 'CxC Agent',
-        id: '123456',
-        role: 'Asisten BCC Divisi CXC'
-      }))
-      router.push('/dashboard')
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          name: "CxC Agent",
+          id: "123456",
+          role: "Asisten BCC Divisi CXC",
+        })
+      );
+      router.push("/dashboard/home");
     } else {
-      alert('Username atau password salah!')
+      alert("Username atau password salah!");
     }
-  }
+  };
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
