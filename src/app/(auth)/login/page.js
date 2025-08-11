@@ -11,6 +11,11 @@ export default function LoginPage() {
     password: "",
   });
 
+  const [credentials, setCredentials] = useState({
+    username: '',
+    password: ''
+  })
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -19,18 +24,24 @@ export default function LoginPage() {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault(); // Prevent default form submission
-    console.log("Login attempt:", formData);
 
-    // Basic validation (you can add more sophisticated validation)
-    if (formData.username && formData.password) {
-      // Navigate to home screen
-      router.push("/dashboard/home");
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+    // Simulasi login - ganti dengan API call sebenarnya
+    if (formData.username === 'admin' && formData.password === 'password') {
+      // Set session/token di sini
+      localStorage.setItem('isLoggedIn', 'true')
+      localStorage.setItem('user', JSON.stringify({
+        name: 'CxC Agent',
+        id: '123456',
+        role: 'Asisten BCC Divisi CXC'
+      }))
+      router.push('/dashboard')
     } else {
-      alert("Please enter both username and password");
+      alert('Username atau password salah!')
     }
-  };
+  }
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {

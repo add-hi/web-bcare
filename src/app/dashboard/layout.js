@@ -5,9 +5,9 @@ export default function DashboardLayout({ children }) {
     return (
         <div className="min-h-screen bg-gray-100">
             <Topbar />
-            <div className="flex">
+            <div className="pt-20"> {/* Added pt-20 to account for fixed topbar */}
                 <Sidebar />
-                <main className="flex-1 p-6">
+                <main className="ml-64 p-6"> {/* Added ml-64 to account for fixed sidebar width */}
                     {children}
                 </main>
             </div>
