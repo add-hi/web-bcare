@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState } from "react";
 import {
   MessageCircle,
@@ -173,21 +175,19 @@ export default function FloatingCustomerContact() {
           <div className="flex">
             <button
               onClick={() => setActiveTab("chat")}
-              className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "chat"
+              className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "chat"
                   ? "text-orange-600 border-orange-600 bg-orange-50"
                   : "text-gray-600 border-transparent bg-white hover:text-gray-800"
-              }`}
+                }`}
             >
               Chat
             </button>
             <button
               onClick={() => setActiveTab("call")}
-              className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "call"
+              className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "call"
                   ? "text-orange-600 border-orange-600 bg-orange-50"
                   : "text-gray-600 border-transparent bg-white hover:text-gray-800"
-              }`}
+                }`}
             >
               Call
             </button>
@@ -208,26 +208,23 @@ export default function FloatingCustomerContact() {
                       {messages.map((message) => (
                         <div
                           key={message.id}
-                          className={`flex ${
-                            message.sender === "agent"
+                          className={`flex ${message.sender === "agent"
                               ? "justify-end"
                               : "justify-start"
-                          }`}
+                            }`}
                         >
                           <div
-                            className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
-                              message.sender === "agent"
+                            className={`max-w-xs px-3 py-2 rounded-lg text-sm ${message.sender === "agent"
                                 ? "bg-orange-500 text-white"
                                 : "bg-gray-200 text-gray-800"
-                            }`}
+                              }`}
                           >
                             <p>{message.text}</p>
                             <p
-                              className={`text-xs mt-1 ${
-                                message.sender === "agent"
+                              className={`text-xs mt-1 ${message.sender === "agent"
                                   ? "text-orange-100"
                                   : "text-gray-500"
-                              }`}
+                                }`}
                             >
                               {message.time}
                             </p>
@@ -296,11 +293,10 @@ export default function FloatingCustomerContact() {
                     <div className="flex items-center justify-center space-x-6">
                       <button
                         onClick={toggleMute}
-                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg ${
-                          isMuted
+                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg ${isMuted
                             ? "bg-gray-400 text-white"
                             : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                        }`}
+                          }`}
                       >
                         {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
                       </button>

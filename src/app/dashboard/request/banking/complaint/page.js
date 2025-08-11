@@ -1,4 +1,5 @@
 import ComplaintTable from "@/components/ComplaintTable";
+import FloatingCustomerContact from "@/components/FloatingCustomerContact";
 import InputFormRow from "@/components/form/InputFormRow";
 import Tab from "@/components/Tab";
 function ViewData() {
@@ -13,6 +14,7 @@ function ViewData() {
       <Tab items={tabs} />
       <InputFormRow />
       <ComplaintTable />
+      <FloatingCustomerContact />
     </div>
 
 
