@@ -634,24 +634,7 @@ const ComplaintTable = () => {
                     </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="mt-8 flex justify-center space-x-4">
-                    <button
-                        onClick={handleBackToTable}
-                        className="px-8 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-semibold"
-                    >
-                        Back to List
-                    </button>
-                    <button className="px-8 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold">
-                        Update Status
-                    </button>
-                    <button className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
-                        Send Notification
-                    </button>
-                    <button className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
-                        Add Note
-                    </button>
-                </div>
+              
             </div>
         );
     }
