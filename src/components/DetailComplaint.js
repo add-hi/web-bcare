@@ -5,18 +5,17 @@ import NotesForm from "@/components/form/NotesForm";
 import ComplaintTable from "@/components/ComplaintTable";
 import FloatingCustomerContact from "@/components/FloatingCustomerContact";
 import InputFormRow from "@/components/form/InputFormRow";
-import ComplaintList from "@/components/form/ComplaintList";
-
 
 function ViewData() {
-  
-
   return (
     <div>
-      
       {/* Konten halaman View Data */}
-      <ComplaintTable />
-      
+      <InputFormRow />
+      <CustomerForm />
+      <DataForm />
+      <NotesForm />
+      <ActionForm />
+      <FloatingCustomerContact />
     </div>
   );
 }
