@@ -20,6 +20,10 @@ export default function Topbar() {
         router.push('/login')
     }
 
+    const goToProfile = () => {
+        router.push('/profile')
+    }
+
     return (
         <header className="fixed top-0 left-0 right-0 z-50">
             {/* Bagian Kiri - Dark/Teal (sesuai sidebar) */}
@@ -41,7 +45,7 @@ export default function Topbar() {
 
                         <div className="flex items-center space-x-4">
                             {user && (
-                                <div className="flex items-center space-x-3">
+                                <div className="flex items-center space-x-3 cursor-pointer" onClick={goToProfile}>
                                     <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
                                         <span className="text-white text-sm font-medium">
                                             {user.name.charAt(0)}
