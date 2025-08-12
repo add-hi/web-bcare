@@ -6,17 +6,17 @@ import ComplaintTable from "@/components/ComplaintTable";
 import FloatingCustomerContact from "@/components/FloatingCustomerContact";
 import InputFormRow from "@/components/form/InputFormRow";
 import ComplaintList from "@/components/form/ComplaintList";
+import { BrowserRouter as Router } from 'react-router';
 
 
 function ViewData() {
   
-
   return (
     <div>
-      
+      <Router>
       {/* Konten halaman View Data */}
-      <ComplaintTable />
-      
+      <ComplaintList/>
+      </Router>
     </div>
   );
 }
