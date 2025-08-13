@@ -36,14 +36,14 @@ const DataPage = () => {
     const fileInputRef = useRef(null);
 
     // API Base URL
-    const API_BASE_URL = 'http://localhost:3001/api';
+    const API_BASE_URL = 'http://34.121.13.94:3001/api';
 
     // Load documents dari server
     const loadDocuments = async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/files`);
             const result = await response.json();
-
+            
             if (result.success) {
                 const formattedDocs = result.data.map(file => ({
                     id: Date.now() + Math.random(),
@@ -131,11 +131,11 @@ const DataPage = () => {
 
     const handleFileUpload = async (event) => {
         const files = Array.from(event.target.files);
-
+        
         if (files.length === 0) return;
 
         setUploading(true);
-
+        
         for (const file of files) {
             try {
                 const formData = new FormData();
@@ -158,7 +158,7 @@ const DataPage = () => {
                 if (result.success) {
                     // Update progress
                     setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
-
+                    
                     // Tambahkan file ke state documents
                     const newDoc = {
                         id: result.data.id,
@@ -168,8 +168,8 @@ const DataPage = () => {
                         uploadDate: new Date(result.data.uploadDate).toISOString().split('T')[0],
                         uploadedBy: result.data.uploadedBy,
                         category: result.data.category,
-                        url: result.data.mimetype.startsWith('image/') ?
-                            `${API_BASE_URL}/files/${result.data.category}/${result.data.filename}` :
+                        url: result.data.mimetype.startsWith('image/') ? 
+                            `${API_BASE_URL}/files/${result.data.category}/${result.data.filename}` : 
                             null,
                         description: result.data.description
                     };
@@ -188,7 +188,7 @@ const DataPage = () => {
 
         setUploading(false);
         setUploadProgress({});
-
+        
         // Reset file input
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -261,7 +261,7 @@ const DataPage = () => {
                     <p className="text-lg font-medium mb-2">Preview tidak tersedia</p>
                     <p className="text-sm mb-1">{doc.name}</p>
                     <p className="text-sm mb-4">{doc.size}</p>
-                    <button
+                    <button 
                         onClick={() => handleDownload(doc)}
                         className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                     >
@@ -277,16 +277,17 @@ const DataPage = () => {
             <div className="max-w-6xl mx-auto">
                 {/* Notification */}
                 {notification && (
-                    <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg ${notification.type === 'error'
-                            ? 'bg-red-500 text-white'
+                    <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg ${
+                        notification.type === 'error' 
+                            ? 'bg-red-500 text-white' 
                             : 'bg-green-500 text-white'
-                        }`}>
-                        {notification.type === 'error' ?
-                            <AlertCircle size={20} /> :
+                    }`}>
+                        {notification.type === 'error' ? 
+                            <AlertCircle size={20} /> : 
                             <CheckCircle size={20} />
                         }
                         <span>{notification.message}</span>
-                        <button
+                        <button 
                             onClick={() => setNotification(null)}
                             className="ml-2 text-white hover:text-gray-200"
                         >
@@ -312,10 +313,11 @@ const DataPage = () => {
                                     <span>{progress === -1 ? 'Error' : `${progress}%`}</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div
-                                        className={`h-2 rounded-full transition-all ${progress === -1 ? 'bg-red-500' : 'bg-blue-500'
-                                            }`}
-                                        style={{ width: progress === -1 ? '100%' : `${progress}%` }}
+                                    <div 
+                                        className={`h-2 rounded-full transition-all ${
+                                            progress === -1 ? 'bg-red-500' : 'bg-blue-500'
+                                        }`}
+                                        style={{width: progress === -1 ? '100%' : `${progress}%`}}
                                     ></div>
                                 </div>
                             </div>
@@ -515,7 +517,7 @@ const DataPage = () => {
                                         <strong>Description:</strong> {selectedDocument.description}
                                     </p>
                                     <div className="flex space-x-2">
-                                        <button
+                                        <button 
                                             onClick={() => handleDownload(selectedDocument)}
                                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                                         >
@@ -534,8 +536,8 @@ const DataPage = () => {
                         <File className="mx-auto text-gray-300 mb-4" size={48} />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No documents found</h3>
                         <p className="text-gray-500 mb-4">
-                            {searchTerm || filterType !== 'all'
-                                ? 'Try adjusting your search criteria'
+                            {searchTerm || filterType !== 'all' 
+                                ? 'Try adjusting your search criteria' 
                                 : 'Upload your first document to get started'
                             }
                         </p>
