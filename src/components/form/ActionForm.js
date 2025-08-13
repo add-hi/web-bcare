@@ -27,7 +27,7 @@ const InputForm = () => {
     <div className="w-full bg-green-100 rounded-lg shadow-lg p-6 mb-6 border border-gray-200">
       {/* Header */}
       
- <div className="bg-green-500 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
+ <div className="bg-green-600 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
         <h2 className="text-lg font-semibold">Action</h2>
       </div>
        <div className="w-full bg-white rounded-lg shadow-lg p-6 mb-6 border border-gray-200">

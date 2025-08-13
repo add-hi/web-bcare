@@ -30,12 +30,12 @@ const InputFormRow = () => {
 
   return (
     <div className="w-full bg-[#B5EFE1] p-4 mb-4 mt-1 rounded-lg">
-      <div className="bg-white border border-gray-200 p-4 rounded-lg">
-        <div className="flex gap-6 items-center flex-wrap">
+      <div className="bg-white border border-gray-200 p-6 rounded-lg">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-end">
 
           {/* Input Type */}
-          <div className="flex items-center min-w-[220px]">
-            <label className="text-xs font-medium text-gray-800 w-28 whitespace-nowrap">
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-800 mb-2">
               Input Type <span className="text-red-500">*</span>
             </label>
             <select
@@ -55,15 +55,15 @@ const InputFormRow = () => {
           </div>
 
           {/* Source Type */}
-          <div className="flex items-center min-w-[220px]">
-            <label className="text-xs font-medium text-gray-800 w-28 whitespace-nowrap">
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-800 mb-2">
               Source Type <span className="text-red-500">*</span>
             </label>
             <select
               value={sourceType}
               onChange={(e) => setSourceType(e.target.value)}
               disabled={!inputType}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none disabled:bg-gray-50 disabled:text-gray-400"
             >
               <option value="" disabled>
                 -- Select Source Type --
@@ -77,8 +77,8 @@ const InputFormRow = () => {
           </div>
 
           {/* Number */}
-          <div className="flex items-center flex-grow min-w-[240px]">
-            <label className="text-xs font-medium text-gray-800 w-36 whitespace-nowrap">
+          <div className="flex flex-col lg:col-span-1">
+            <label className="text-sm font-medium text-gray-800 mb-2">
               {getNumberLabel()} <span className="text-red-500">*</span>
             </label>
             <input
@@ -89,8 +89,8 @@ const InputFormRow = () => {
           </div>
 
           {/* Exp Date */}
-          <div className="flex items-center min-w-[140px]">
-            <label className="text-xs font-medium text-gray-800 w-28 whitespace-nowrap">
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-800 mb-2">
               Exp Date
             </label>
             <input
