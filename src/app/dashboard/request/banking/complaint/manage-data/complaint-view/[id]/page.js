@@ -12,7 +12,7 @@ function ViewData() {
   return (
     <div>
       {/* Konten halaman View Data */}
-      <div className="flex items-center gap-4 mb-6">
+      {/* <div className="flex items-center gap-4 mb-6">
         <button
           onClick={handleBackToTable}
           className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
@@ -23,7 +23,7 @@ function ViewData() {
         <h2 className="text-2xl font-bold text-gray-900">
           Complaint Detail
         </h2>
-      </div>
+      </div> */}
       <DetailComplaint />
     </div>
   );

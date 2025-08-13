@@ -1,5 +1,4 @@
 import React from "react";
-import { ChevronUp, ChevronDown } from "lucide-react"; // ikon panah atas-bawah
 
 const InputForm = () => {
   const formData = [
@@ -10,7 +9,7 @@ const InputForm = () => {
     { label: "Place Of Birth" },
     { label: "Billing Address", type: "textarea", required: false },
     { label: "Card Number" },
-    { label: "Home Phone", required: true  },
+    { label: "Home Phone", required: true },
     { label: "Postal Code" },
     { label: "Customer Name", required: true },
     { label: "Handphone", required: true },
@@ -18,50 +17,41 @@ const InputForm = () => {
     { label: "Person ID" },
     { label: "Email" },
     { label: "Fax Phone" },
-    { label: "List Debit Card Number" }
+    { label: "List Debit Card Number" },
   ];
 
+  const inputClassName =
+    "w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm";
+
   return (
-    <div className="w-full bg-[#CBE3BA] p-4 mb-4 relative rounded-md border border-gray-300">
-      {/* Header */}
+    <div className="w-full bg-[#CBE3BA] p-4 mb-4 relative rounded-lg border border-gray-300">
+      <div className="bg-white border-gray-200 p-4 rounded-lg">
 
-      {/* <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-[#c55a11] text-white font-semibold px-6 py-1 rounded shadow">
-        No. Tiket:
-      </div> */}
-
-      {/* Form grid */}
-      <div className="grid grid-cols-3 mt-6">
+      <div className="grid grid-cols-3 gap-4 mt-6">
         {formData.map((field, index) => (
-          <div key={index} className="flex w-full h-12">
-            {/* Label */}
-            <div className="bg-[#D9D9D9] px-2 w-1/3 text-sm flex items-center border border-gray-300 text-black">
+          <div key={index} className="flex items-center w-full min-h-[48px]">
+            {/* Label tanpa kotak abu */}
+            <label className="w-1/3 text-sm text-black font-medium whitespace-nowrap pr-3">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
-            </div>
+            </label>
 
-            {/* Input wrapper */}
-            <div className="bg-gray-100 w-2/3 flex items-center px-2">
-              {field.type === "select" ? (
-                <select className="w-full text-sm border border-gray-300 focus:ring-0 bg-gray-100 text-black" />
-              ) : field.type === "textarea" ? (
-                <div className="relative w-full flex items-center">
-                  <textarea
-                    className="w-full text-sm border border-gray-300 focus:ring-0 bg-gray-100 text-black resize-none overflow-y-auto pr-6"
-                    rows={2}
-                  />
-                  
-                </div>
-              ) : (
-                <input
-                  className="w-full text-sm border border-gray-300 focus:ring-0 bg-gray-100 text-black"
-                  readOnly={false}
-                />
-              )}
-            </div>
+            {/* Input langsung, tanpa wrapper kotak putih */}
+            {field.type === "select" ? (
+              <select className={inputClassName} />
+            ) : field.type === "textarea" ? (
+              <textarea
+                className={inputClassName + " resize-none overflow-y-auto"}
+                rows={2}
+              />
+            ) : (
+              <input className={inputClassName} readOnly={false} />
+            )}
           </div>
         ))}
-        
       </div>
+      </div>
+      {/* Form grid */}
     </div>
   );
 };

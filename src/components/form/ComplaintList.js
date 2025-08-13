@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from 'next/link';
 import {
   Grid3X3,
   Edit,
   ChevronDown,
   ChevronUp,
-  ArrowLeft,
+
   Clock,
-  CheckCircle,
-  AlertTriangle,
+
   Filter,
   X,
   Search,
@@ -143,8 +143,7 @@ const ComplaintList = () => {
     setSortConfig({ key: null, direction: "asc" });
   };
 
-  const handleRowClick = (complaint) => {
-    setSelectedComplaint(complaint);
+ const handleRowClick = (complaint) => {
     router.push(
       `/dashboard/request/banking/complaint/manage-data/complaint-view/${complaint.noTiket}`
     );
@@ -531,9 +530,9 @@ const ComplaintList = () => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-gray-700">
             <Plus size={20} />
-            <a href="/dashboard/request/banking/complaint/manage-data/add">
-              <span className="font-medium">Add</span>
-            </a>
+            <Link href="/dashboard/request/banking/complaint/manage-data/add">
+  <span className="font-medium cursor-pointer">Add</span>
+</Link>
           </div>
           <div className="flex items-center gap-2 text-gray-700">
             <Grid3X3 size={20} />

@@ -14,62 +14,64 @@ const InputForm = () => {
     { label: "Created Time", type: "date" },
     { label: "ID Terminal ATM" },
     { label: "SLA", required: true },
-    { label: "Description", required: true }
+    { label: "Description", required: true },
   ];
 
   return (
-    <div className="w-full bg-[#FECBA3] p-4 mb-4 relative rounded-md border border-gray-300">
+    <div className="w-full bg-orange-100 rounded-lg shadow-lg p-6 mb-6 border border-gray-200">
       {/* Header */}
-      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 
-        bg-[#c55a11] text-white font-semibold px-6 py-1 rounded shadow 
-        w-[200px] text-center">
-        Data
+      <div className="bg-orange-500 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
+        <h2 className="text-lg font-semibold">Data</h2>
       </div>
 
       {/* Form grid */}
-      <div className="grid grid-cols-3 mt-6">
-        {formData.map((field, index) => (
-          <div key={index} className="flex w-full h-12">
-            {/* Label */}
-            <div className="bg-[#D9D9D9] px-2 w-1/3 text-sm flex items-center border border-gray-300 text-black">
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </div>
+      <div className="w-full bg-white rounded-lg shadow-lg p-6 mb-6 border border-gray-200">
+        <div className="grid grid-cols-3 gap-6">
+          {formData.map((field, index) => (
+            <div key={index} className="flex items-center gap-4">
+              {/* Label */}
+              <label
+                className="w-1/3 text-sm font-medium text-black select-none"
+                htmlFor={`field-${index}`}
+              >
+                {field.label}
+                {field.required && <span className="text-red-500 ml-1">*</span>}
+              </label>
 
-            {/* Input wrapper */}
-            <div className="bg-gray-100 w-2/3 flex items-center px-2">
-              {field.type === "select" ? (
-                <select className="w-full text-sm border border-gray-300 focus:ring-0 bg-gray-100 text-black" />
-              ) : field.type === "textarea" ? (
-                <textarea
-                  className="w-full text-sm border border-gray-300 focus:ring-0 bg-gray-100 text-black resize-none overflow-y-auto pr-6"
-                  rows={2}
-                />
-              ) : field.type === "date" ? (
-                <input
-                  type="date"
-                  className="w-full text-sm border border-gray-300 focus:ring-0 bg-gray-100 text-black"
-                />
-              ) : (
-                <input
-                  type="text"
-                  className="w-full text-sm border border-gray-300 focus:ring-0 bg-gray-100 text-black"
-                  readOnly={false}
-                />
-              )}
+              {/* Input wrapper */}
+              <div className="w-2/3">
+                {field.type === "select" ? (
+                  <select
+                    id={`field-${index}`}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
+                  >
+                    <option value="">-- Select --</option>
+                    {/* Kamu bisa tambah opsi sesuai kebutuhan */}
+                  </select>
+                ) : field.type === "textarea" ? (
+                  <textarea
+                    id={`field-${index}`}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none resize-none overflow-y-auto text-black"
+                  />
+                ) : field.type === "date" ? (
+                  <input
+                    id={`field-${index}`}
+                    type="date"
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black"
+                  />
+                ) : (
+                  <input
+                    id={`field-${index}`}
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black"
+                    readOnly={false}
+                  />
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-
-        {/* Keterangan Data */}
-    <div className="w-full bg-white p-4 mb-4 relative rounded-md border border-gray-300 min-h-[100px] mt-6">
-      
-      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 
-        bg-[#c55a11] text-white font-semibold px-6 py-1 rounded shadow 
-        w-[200px] text-center">
-        Keterangan Data
-      </div>
+          ))}
+        </div>
       </div>
     </div>
   );
