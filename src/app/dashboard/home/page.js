@@ -7,7 +7,7 @@ export default function HomePage() {
   // Dynamic user data - these would typically come from props, context, or API
   const [userInfo, setUserInfo] = useState({
     userId: "123456",
-    userName: "CxC Agent",
+    userName: "Esteler Berutu",
     currentRole: "Asisten BCC Unit Divisi CXC",
     totalInbox: 0,
     totalJatuhTempo: 0,

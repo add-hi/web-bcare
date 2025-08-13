@@ -60,7 +60,7 @@ export default function LoginPage() {
       localStorage.setItem(
         "user",
         JSON.stringify({
-          name: "CxC Agent",
+          name: "Esteler Berutu",
           id: "123456",
           role: "Asisten BCC Divisi CXC",
         })
