@@ -2,8 +2,8 @@ import ViewProfile from "@/components/ViewProfile";
 
 function Profile() {
   return (
-    <div className="flex items-center justify-center w-full h-[calc(100vh-4rem)]">
-      {/* 100vh - tinggi topbar (4rem = 64px) */}
+    <div className="w-full min-h-screen flex flex-col items-center pt-10">
+
       <ViewProfile />
     </div>
   );
