@@ -53,16 +53,12 @@ const InputForm = () => {
   // }, []);
 
   return (
-    <div className="w-full bg-[#97B0E0] p-4 mb-4 relative rounded-md border border-gray-300 mt-6">
+    <div className="w-full bg-blue-100 rounded-lg shadow-lg p-6 mb-6 border border-gray-200">
       {/* Header */}
-      <div
-        className="absolute -top-4 left-1/2 transform -translate-x-1/2 
-        bg-[#c55a11] text-white font-semibold px-6 py-1 rounded shadow 
-        w-[200px] text-center"
-      >
-        Notes
-      </div>
 
+ <div className="bg-blue-500 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
+        <h2 className="text-lg font-semibold">Notes</h2>
+      </div>
       <div className="p-4 bg-white border border-blue-200 rounded-md shadow-sm mt-6">
         {/* Add Note Button */}
         <button className="flex items-center gap-2 bg-[#c55a11] text-white px-4 py-2 rounded-sm mb-2">
@@ -76,6 +72,7 @@ const InputForm = () => {
               <tr>
                 <th className="border border-gray-300 px-2 py-1 text-left">No</th>
                 <th className="border border-gray-300 px-2 py-1 text-left">Note</th>
+                <th className="border border-gray-300 px-2 py-1 text-left">Timestamp</th>
                 <th className="border border-gray-300 px-2 py-1 text-left">Created By</th>
                 <th className="border border-gray-300 px-2 py-1 text-left">Role Name</th>
                 <th className="border border-gray-300 px-2 py-1 text-left">Unit</th>
@@ -95,6 +92,7 @@ const InputForm = () => {
                       {startIndex + index + 1}
                     </td>
                     <td className="border border-gray-300 px-2 py-1">{item.note}</td>
+                    <td className="border border-gray-300 px-2 py-1">{item.timestamp}</td>
                     <td className="border border-gray-300 px-2 py-1">{item.createdBy}</td>
                     <td className="border border-gray-300 px-2 py-1">{item.roleName}</td>
                     <td className="border border-gray-300 px-2 py-1">{item.unit}</td>

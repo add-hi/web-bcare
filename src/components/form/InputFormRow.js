@@ -29,9 +29,9 @@ const InputFormRow = () => {
   };
 
   return (
-    <div className="w-full bg-[#B5EFE1] p-4 mb-4 mt-1 rounded-md">
-      <div className="bg-gray-50 border-l-4 border-gray-200 p-4">
-        <div className="flex gap-6 items-center">
+    <div className="w-full bg-[#B5EFE1] p-4 mb-4 mt-1 rounded-lg">
+      <div className="bg-white border border-gray-200 p-4 rounded-lg">
+        <div className="flex gap-6 items-center flex-wrap">
 
           {/* Input Type */}
           <div className="flex items-center min-w-[220px]">
@@ -44,7 +44,7 @@ const InputFormRow = () => {
                 setInputType(e.target.value);
                 setSourceType("");
               }}
-              className="text-xs px-3 py-2 border border-gray-300 rounded bg-white text-gray-700 focus:outline-none focus:border-blue-400 flex-grow"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
             >
               <option value="" disabled>
                 -- Select Input Type --
@@ -63,7 +63,7 @@ const InputFormRow = () => {
               value={sourceType}
               onChange={(e) => setSourceType(e.target.value)}
               disabled={!inputType}
-              className="text-xs px-3 py-2 border border-gray-300 rounded bg-white text-gray-700 focus:outline-none focus:border-blue-400 flex-grow"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
             >
               <option value="" disabled>
                 -- Select Source Type --
@@ -84,7 +84,7 @@ const InputFormRow = () => {
             <input
               type="text"
               placeholder={`Enter ${getNumberLabel()}`}
-              className="text-xs px-3 py-2 border border-gray-300 rounded text-gray-700 focus:outline-none focus:border-blue-400 flex-grow"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
             />
           </div>
 
@@ -98,7 +98,7 @@ const InputFormRow = () => {
               min={0}
               max={24}
               step={1}
-              className="text-xs px-3 py-2 border border-gray-300 rounded text-gray-700 focus:outline-none focus:border-blue-400 flex-grow"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
             />
           </div>
 
