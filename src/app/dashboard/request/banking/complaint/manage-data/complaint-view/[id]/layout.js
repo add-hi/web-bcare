@@ -15,7 +15,7 @@ export default function DashboardLayout({ children }) {
       </div>
             <div> {/* Added pt-20 to account for fixed topbar */}
                 <Sidebar />
-                <main className="p-6"> {/* Added ml-64 to account for fixed sidebar width */}
+                <main> {/* Added ml-64 to account for fixed sidebar width */}
                     {children}
                 </main>
             </div>

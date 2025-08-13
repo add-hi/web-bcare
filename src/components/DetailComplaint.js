@@ -16,12 +16,14 @@ function ViewData() {
   return (
     <div>
       <button
-        onClick={handleBack}
-        className="flex items-center gap-2 px-4 py-2 mb-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-      >
-        <ArrowLeft size={16} />
-        Back
-      </button>
+  onClick={handleBack}
+  className="flex items-center gap-2 px-4 py-2 mb-4 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors -ml-2"
+  style={{ marginLeft: '0' }} // atau kalau mau lebih presisi bisa pakai style
+>
+  <ArrowLeft size={16} />
+  Back
+</button>
+
 
       <InputFormRow />
       <CustomerForm />
