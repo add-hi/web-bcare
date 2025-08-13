@@ -23,6 +23,8 @@ import {
     Banknote,
     MessageSquare,
     Monitor,
+    File,
+    FileArchive,
 } from "lucide-react";
 
 const menuItems = [
@@ -75,6 +77,15 @@ const menuItems = [
             { name: "Main Dashboard", href: "/dashboard", icon: BarChart3 },
             { name: "User Management", href: "/dashboard/users", icon: Users },
             { name: "Settings", href: "/dashboard/settings", icon: Settings },
+        ],
+    },
+    {
+        name: "File Upload",
+        href: "/dashboard",
+        icon: BarChart3,
+        hasSubmenu: true,
+        submenu: [
+            { name: "Test Upload", href: "/dashboard/data", icon: FileArchive },
         ],
     },
 ];
@@ -197,8 +208,8 @@ export default function Sidebar() {
                                     {/* Main Menu Item */}
                                     <div
                                         className={`flex items-center justify-between px-4 py-2 rounded-lg transition-colors cursor-pointer ${isActiveParent(item)
-                                                ? "bg-slate-800 text-white"
-                                                : "text-gray-300 hover:bg-slate-600 hover:text-white"
+                                            ? "bg-slate-800 text-white"
+                                            : "text-gray-300 hover:bg-slate-600 hover:text-white"
                                             }`}
                                         onClick={() =>
                                             item.hasSubmenu ? toggleMenu(item.name) : null
@@ -230,8 +241,8 @@ export default function Sidebar() {
                                                             {subItem.hasSubSubmenu ? (
                                                                 <div
                                                                     className={`flex items-center justify-between px-4 py-2 rounded-md text-sm transition-colors cursor-pointer ${isActiveSubParent(subItem)
-                                                                            ? "bg-slate-800 text-white"
-                                                                            : "text-gray-400 hover:bg-slate-600 hover:text-white"
+                                                                        ? "bg-slate-800 text-white"
+                                                                        : "text-gray-400 hover:bg-slate-600 hover:text-white"
                                                                         }`}
                                                                     onClick={() => toggleSubMenu(subItem.name)}
                                                                 >
@@ -249,8 +260,8 @@ export default function Sidebar() {
                                                                 <Link
                                                                     href={subItem.href}
                                                                     className={`flex items-center space-x-3 px-4 py-2 rounded-md text-sm transition-colors ${pathname === subItem.href
-                                                                            ? "bg-slate-800 text-white"
-                                                                            : "text-gray-400 hover:bg-slate-600 hover:text-white"
+                                                                        ? "bg-slate-800 text-white"
+                                                                        : "text-gray-400 hover:bg-slate-600 hover:text-white"
                                                                         }`}
                                                                 >
                                                                     <SubIconComponent size={16} />
@@ -268,8 +279,8 @@ export default function Sidebar() {
                                                                                 <Link
                                                                                     href={subSubItem.href}
                                                                                     className={`flex items-center space-x-3 px-4 py-2 rounded-md text-xs transition-colors ${pathname === subSubItem.href
-                                                                                            ? "bg-slate-800 text-white border-l-2 border-blue-400"
-                                                                                            : "text-gray-500 hover:bg-slate-600 hover:text-white"
+                                                                                        ? "bg-slate-800 text-white border-l-2 border-blue-400"
+                                                                                        : "text-gray-500 hover:bg-slate-600 hover:text-white"
                                                                                         }`}
                                                                                 >
                                                                                     <SubSubIconComponent size={14} />
