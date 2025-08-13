@@ -684,14 +684,6 @@ const DivisionComplaintHandler = () => {
                         {selectedComplaint?.customerName}
                       </p>
                     </div>
-                    {/* <div className="flex gap-2">
-                      <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                        <Phone size={16} />
-                      </button>
-                      <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                        <Mail size={16} />
-                      </button>
-                    </div> */}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
