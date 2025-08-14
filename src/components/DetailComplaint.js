@@ -20,7 +20,7 @@ function DetailComplaint() {
       <DataForm />
       <NotesForm />
       <ActionForm />
-      <FloatingCustomerContact />
+     
     </div>
   );
 }
