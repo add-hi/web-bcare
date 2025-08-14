@@ -7,20 +7,19 @@ import {
   Edit,
   ChevronDown,
   ChevronUp,
-
   Clock,
-
   Filter,
   X,
   Search,
   Plus,
+  ArrowLeft,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import DetailComplaint from "@/components/DetailComplaint";
 
 const ComplaintList = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
-  const [viewMode, setViewMode] = useState("table"); // 'table' or 'detail'
+  const [viewMode, setViewMode] = useState("table"); // 'table', 'detail', or 'add'
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [filters, setFilters] = useState({});
   const [showFilterDropdown, setShowFilterDropdown] = useState(null);
@@ -143,16 +142,46 @@ const ComplaintList = () => {
     setSortConfig({ key: null, direction: "asc" });
   };
 
- const handleRowClick = (complaint) => {
-    router.push(
-      `/dashboard/request/banking/complaint/manage-data/complaint-view/${complaint.noTiket}`
-    );
+  // Updated handlers
+  const handleAddClick = () => {
+    setViewMode("add");
+    setSelectedComplaint(null);
+  };
+
+  const handleRowClick = (complaint) => {
+    setSelectedComplaint(complaint);
+    setViewMode("detail");
   };
 
   const handleBackToTable = () => {
     setViewMode("table");
     setSelectedComplaint(null);
   };
+
+  // If we're in detail or add mode, show DetailComplaint component
+  if (viewMode === "detail" || viewMode === "add") {
+    return (
+      <div className="max-w-full mx-auto p-6 bg-white">
+        {/* Back Button */}
+        <div className="mb-4">
+          <button
+            onClick={handleBackToTable}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ArrowLeft size={20} />
+            <span>Back to List</span>
+          </button>
+        </div>
+
+        {/* DetailComplaint Component */}
+        <DetailComplaint
+          selectedComplaint={selectedComplaint}
+          mode={viewMode}
+          onBack={handleBackToTable}
+        />
+      </div>
+    );
+  }
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -473,27 +502,6 @@ const ComplaintList = () => {
     );
   };
 
-  // if (viewMode === 'detail') {
-  // return (
-  //         <>
-  //         <div className="flex items-center gap-4 mb-6">
-  //                             <button
-  //                                 onClick={handleBackToTable}
-  //                                 className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-  //                             >
-  //                                 <ArrowLeft size={16} />
-  //                                 Back to Table
-  //                             </button>
-  //                             <h2 className="text-2xl font-bold text-gray-900">
-  //                                 Complaint Detail - {selectedComplaint?.noTiket}
-  //                             </h2>
-  //                         </div>
-  //             <DetailComplaint />
-
-  //         </>
-  //     )
-  // }
-
   const columns = [
     { key: "tglInput", label: "Tgl Input", sortable: true, filterable: true },
     { key: "noTiket", label: "No. Tiket", sortable: true, filterable: true },
@@ -530,17 +538,12 @@ const ComplaintList = () => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-gray-700">
             <Plus size={20} />
-            <Link href="/dashboard/request/banking/complaint/manage-data/add">
-  <span className="font-medium cursor-pointer">Add</span>
-</Link>
-          </div>
-          <div className="flex items-center gap-2 text-gray-700">
-            <Grid3X3 size={20} />
-            <span className="font-medium">View</span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-700">
-            <Edit size={20} />
-            <span className="font-medium">Edit</span>
+            <button
+              onClick={handleAddClick}
+              className="font-medium cursor-pointer hover:text-blue-600"
+            >
+              Add
+            </button>
           </div>
         </div>
 
@@ -656,11 +659,10 @@ const ComplaintList = () => {
                                 : column.key
                             )
                           }
-                          className={`hover:text-blue-600 ${
-                            filters[column.key]
-                              ? "text-blue-600"
-                              : "text-gray-400"
-                          }`}
+                          className={`hover:text-blue-600 ${filters[column.key]
+                            ? "text-blue-600"
+                            : "text-gray-400"
+                            }`}
                         >
                           <Filter size={14} />
                         </button>

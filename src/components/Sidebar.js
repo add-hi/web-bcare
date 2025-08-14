@@ -9,16 +9,8 @@ import {
   ChevronDown,
   ChevronRight,
   PieChart,
-  TrendingUp,
-  FileBarChart,
-  Plus,
-  Settings,
-  Search,
-  CreditCard,
   Banknote,
   MessageSquare,
-  Monitor,
-  FileArchive,
 } from "lucide-react";
 
 const menuItems = [
@@ -29,12 +21,6 @@ const menuItems = [
     hasSubmenu: true,
     submenu: [
       { name: "Overview", href: "/dashboard/home", icon: PieChart },
-      //   {
-      //     name: "Tracking",
-      //     href: "/dashboard/home/tracking",
-      //     icon: TrendingUp,
-      //   },
-      //   { name: "Reports", href: "/dashboard/home/reports", icon: FileBarChart },
     ],
   },
   {
@@ -49,45 +35,13 @@ const menuItems = [
         icon: Banknote,
         hasSubSubmenu: true,
         subSubmenu: [
-          //   {
-          //     name: "Inquiry",
-          //     href: "/dashboard/request/banking/inquiry",
-          //     icon: Search,
-          //   },
-          //   {
-          //     name: "Maintain",
-          //     href: "/dashboard/request/banking/maintain",
-          //     icon: Settings,
-          //   },
-          //   {
-          //     name: "Transaction",
-          //     href: "/dashboard/request/banking/transaction",
-          //     icon: TrendingUp,
-          //   },
           {
             name: "Complaint",
             href: "/dashboard/request/banking/complaint",
             icon: MessageSquare,
           },
-          //   {
-          //     name: "Monitoring",
-          //     href: "/dashboard/request/banking/monitoring",
-          //     icon: Monitor,
-          //   },
         ],
       },
-      //   { name: "Kartu Kredit", href: "/dashboard/request/cc", icon: CreditCard },
-      //   {
-      //     name: "Trade & Remittance",
-      //     href: "/dashboard/request/tnc",
-      //     icon: Plus,
-      //   },
-      //   {
-      //     name: "Service Action Team",
-      //     href: "/dashboard/request/sat",
-      //     icon: Plus,
-      //   },
-      //   { name: "Search", href: "/dashboard/request/search", icon: Search },
     ],
   },
   {
@@ -98,16 +52,7 @@ const menuItems = [
     submenu: [
       { name: "Mock DGO", href: "/dashboard/mockdgo", icon: BarChart3 },
     ],
-  },
-  {
-    name: "File Upload",
-    href: "/dashboard",
-    icon: BarChart3,
-    hasSubmenu: true,
-    submenu: [
-      { name: "Test Upload", href: "/dashboard/data", icon: FileArchive },
-    ],
-  },
+  }
 ];
 
 export default function Sidebar() {
@@ -227,11 +172,10 @@ export default function Sidebar() {
                 <div>
                   {/* Main Menu Item */}
                   <div
-                    className={`flex items-center justify-between px-4 py-2 rounded-lg transition-colors cursor-pointer ${
-                      isActiveParent(item)
-                        ? "bg-slate-800 text-white"
-                        : "text-gray-300 hover:bg-slate-600 hover:text-white"
-                    }`}
+                    className={`flex items-center justify-between px-4 py-2 rounded-lg transition-colors cursor-pointer ${isActiveParent(item)
+                      ? "bg-slate-800 text-white"
+                      : "text-gray-300 hover:bg-slate-600 hover:text-white"
+                      }`}
                     onClick={() =>
                       item.hasSubmenu ? toggleMenu(item.name) : null
                     }
@@ -244,9 +188,8 @@ export default function Sidebar() {
                     {item.hasSubmenu && (
                       <ChevronDown
                         size={16}
-                        className={`transition-transform duration-200 ${
-                          expandedMenus[item.name] ? "rotate-180" : ""
-                        }`}
+                        className={`transition-transform duration-200 ${expandedMenus[item.name] ? "rotate-180" : ""
+                          }`}
                       />
                     )}
                   </div>
@@ -262,11 +205,10 @@ export default function Sidebar() {
                               {/* Submenu Item */}
                               {subItem.hasSubSubmenu ? (
                                 <div
-                                  className={`flex items-center justify-between px-4 py-2 rounded-md text-sm transition-colors cursor-pointer ${
-                                    isActiveSubParent(subItem)
-                                      ? "bg-slate-800 text-white"
-                                      : "text-gray-400 hover:bg-slate-600 hover:text-white"
-                                  }`}
+                                  className={`flex items-center justify-between px-4 py-2 rounded-md text-sm transition-colors cursor-pointer ${isActiveSubParent(subItem)
+                                    ? "bg-slate-800 text-white"
+                                    : "text-gray-400 hover:bg-slate-600 hover:text-white"
+                                    }`}
                                   onClick={() => toggleSubMenu(subItem.name)}
                                 >
                                   <div className="flex items-center space-x-3">
@@ -275,21 +217,19 @@ export default function Sidebar() {
                                   </div>
                                   <ChevronRight
                                     size={14}
-                                    className={`transition-transform duration-200 ${
-                                      expandedSubMenus[subItem.name]
-                                        ? "rotate-90"
-                                        : ""
-                                    }`}
+                                    className={`transition-transform duration-200 ${expandedSubMenus[subItem.name]
+                                      ? "rotate-90"
+                                      : ""
+                                      }`}
                                   />
                                 </div>
                               ) : (
                                 <Link
                                   href={subItem.href}
-                                  className={`flex items-center space-x-3 px-4 py-2 rounded-md text-sm transition-colors ${
-                                    pathname === subItem.href
-                                      ? "bg-slate-800 text-white"
-                                      : "text-gray-400 hover:bg-slate-600 hover:text-white"
-                                  }`}
+                                  className={`flex items-center space-x-3 px-4 py-2 rounded-md text-sm transition-colors ${pathname === subItem.href
+                                    ? "bg-slate-800 text-white"
+                                    : "text-gray-400 hover:bg-slate-600 hover:text-white"
+                                    }`}
                                 >
                                   <SubIconComponent size={16} />
                                   <span>{subItem.name}</span>
@@ -307,11 +247,10 @@ export default function Sidebar() {
                                         <li key={subSubItem.name}>
                                           <Link
                                             href={subSubItem.href}
-                                            className={`flex items-center space-x-3 px-4 py-2 rounded-md text-xs transition-colors ${
-                                              pathname === subSubItem.href
-                                                ? "bg-slate-800 text-white border-l-2 border-blue-400"
-                                                : "text-gray-500 hover:bg-slate-600 hover:text-white"
-                                            }`}
+                                            className={`flex items-center space-x-3 px-4 py-2 rounded-md text-xs transition-colors ${pathname === subSubItem.href
+                                              ? "bg-slate-800 text-white border-l-2 border-blue-400"
+                                              : "text-gray-500 hover:bg-slate-600 hover:text-white"
+                                              }`}
                                           >
                                             <SubSubIconComponent size={14} />
                                             <span>{subSubItem.name}</span>

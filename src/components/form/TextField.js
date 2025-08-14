@@ -8,7 +8,7 @@ const InputFormRow = () => {
         {/* Input Type */}
         <div className="flex flex-col min-w-[130px] border border-gray-300 rounded p-2">
           <label className="text-xs font-medium text-gray-800 whitespace-nowrap mb-1">
-            Input Type <span className="text-red-500">*</span>
+            Input Type 345<span className="text-red-500">*</span>
           </label>
           <select
             defaultValue="Nasabah"

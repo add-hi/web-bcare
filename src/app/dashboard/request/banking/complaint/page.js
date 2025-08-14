@@ -1,24 +1,7 @@
-import CustomerForm from "@/components/form/CustomerForm";
-import DataForm from "@/components/form/DataForm";
-import ActionForm from "@/components/form/ActionForm";
-import NotesForm from "@/components/form/NotesForm";
-import ComplaintTable from "@/components/ComplaintTable";
-import FloatingCustomerContact from "@/components/FloatingCustomerContact";
-import InputFormRow from "@/components/form/InputFormRow";
-import ComplaintList from "@/components/form/ComplaintList";
+import React from 'react'
 
-
-function ViewData() {
-  
-
-  return (
-    <div>
-      
-      {/* Konten halaman View Data */}
-      <ComplaintTable />
-      
-    </div>
-  );
+export default function page() {
+    return (
+        <></>
+    )
 }
-
-export default ViewData;
