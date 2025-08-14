@@ -43,7 +43,7 @@ const InputFormRow = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-end">
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-800 mb-2">
-              Input Type 123<span className="text-red-500">*</span>
+              Input Type<span className="text-red-500">*</span>
             </label>
             <select
               value={inputType}

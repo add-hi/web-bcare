@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import DetailComplaint from "@/components/DetailComplaint";
+import AddComplaint from "@/components/AddComplaint";
 
 const ComplaintList = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -158,11 +159,9 @@ const ComplaintList = () => {
     setSelectedComplaint(null);
   };
 
-  // If we're in detail or add mode, show DetailComplaint component
-  if (viewMode === "detail" || viewMode === "add") {
+  if (viewMode === "detail") {
     return (
       <div className="max-w-full mx-auto p-6 bg-white">
-        {/* Back Button */}
         <div className="mb-4">
           <button
             onClick={handleBackToTable}
@@ -173,12 +172,28 @@ const ComplaintList = () => {
           </button>
         </div>
 
-        {/* DetailComplaint Component */}
         <DetailComplaint
           selectedComplaint={selectedComplaint}
-          mode={viewMode}
           onBack={handleBackToTable}
         />
+      </div>
+    );
+  }
+
+  if (viewMode === "add") {
+    return (
+      <div className="max-w-full mx-auto p-6 bg-white">
+        <div className="mb-4">
+          <button
+            onClick={handleBackToTable}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ArrowLeft size={20} />
+            <span>Back to List</span>
+          </button>
+        </div>
+
+        <AddComplaint />
       </div>
     );
   }
