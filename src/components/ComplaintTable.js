@@ -1000,11 +1000,10 @@ const ComplaintTable = () => {
                       Time Remaining
                     </span>
                     <p
-                      className={`text-base font-medium ${
-                        selectedComplaint?.timeRemaining.includes("Overdue")
+                      className={`text-base font-medium ${selectedComplaint?.timeRemaining.includes("Overdue")
                           ? "text-red-600"
                           : "text-gray-900"
-                      }`}
+                        }`}
                     >
                       {selectedComplaint?.timeRemaining}
                     </p>
@@ -1122,17 +1121,6 @@ const ComplaintTable = () => {
     <div className="max-w-full mx-auto p-6 bg-white">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-gray-700">
-            <Grid3X3 size={20} />
-            <span className="font-medium">View</span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-700">
-            <Edit size={20} />
-            <span className="font-medium">Edit</span>
-          </div>
-        </div>
-
         {/* Filter Controls */}
         <div className="flex items-center gap-2">
           {Object.keys(filters).length > 0 && (
@@ -1215,9 +1203,8 @@ const ComplaintTable = () => {
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900 ${
-                    column.width || ""
-                  }`}
+                  className={`border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900 ${column.width || ""
+                    }`}
                 >
                   <div className="flex items-center justify-between gap-2 relative">
                     <span className="truncate">{column.label}</span>
@@ -1247,11 +1234,10 @@ const ComplaintTable = () => {
                                 : column.key
                             )
                           }
-                          className={`hover:text-blue-600 ${
-                            filters[column.key]
+                          className={`hover:text-blue-600 ${filters[column.key]
                               ? "text-blue-600"
                               : "text-gray-400"
-                          }`}
+                            }`}
                         >
                           <Filter size={14} />
                         </button>

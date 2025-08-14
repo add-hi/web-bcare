@@ -32,11 +32,9 @@ const InputFormRow = () => {
     <div className="w-full bg-[#B5EFE1] p-4 mb-4 mt-1 rounded-lg">
       <div className="bg-white border border-gray-200 p-6 rounded-lg">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-end">
-
-          {/* Input Type */}
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-800 mb-2">
-              Input Type <span className="text-red-500">*</span>
+              Input Type 123<span className="text-red-500">*</span>
             </label>
             <select
               value={inputType}
