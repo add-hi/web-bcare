@@ -65,6 +65,16 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {/* Email */}
+              <div className="flex items-center space-x-4">
+                <Briefcase className="w-6 h-6 text-orange-500 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-gray-500">Email</p>
+                  <p className="text-lg font-semibold text-orange-600">{employee.email || 'No email set'}</p>
+                </div>
+              </div>
+
+              
               {/* Role */}
               <div className="flex items-center space-x-4">
                 <Briefcase className="w-6 h-6 text-orange-500 flex-shrink-0" />
