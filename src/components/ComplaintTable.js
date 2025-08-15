@@ -23,7 +23,10 @@ import {
   CheckSquare,
   RefreshCw,
   Building2,
+  Paperclip
 } from "lucide-react";
+
+import Attachment from "@/components/Attachment";
 
 const ComplaintTable = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -332,6 +335,10 @@ const ComplaintTable = () => {
       return newFilters;
     });
   };
+
+  const openAttachments = () => setViewMode("attachments");
+  const backFromAttachments = () => setViewMode(selectedComplaint ? "detail" : "table");
+
 
   const clearAllFilters = () => {
     setFilters({});
@@ -699,6 +706,25 @@ const ComplaintTable = () => {
     );
   };
 
+    if (viewMode === "attachments") {
+    return (
+      <div className="max-w-full mx-auto p-6 bg-white">
+        <div className="mb-4">
+          <button
+            onClick={backFromAttachments}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ArrowLeft size={20} />
+            <span>Back to {selectedComplaint ? "Detail" : "List"}</span>
+          </button>
+        </div>
+
+        {/* Pass id/objek ticket kalau diperlukan oleh Attachment */}
+        <Attachment ticketId={selectedComplaint?.noTiket} ticket={selectedComplaint} />
+      </div>
+    );
+  }
+
   if (viewMode === "detail") {
     // Timeline steps for tracking
     const timelineSteps = [
@@ -747,9 +773,17 @@ const ComplaintTable = () => {
             <ArrowLeft size={16} />
             Back to Table
           </button>
+
           <h2 className="text-2xl font-bold text-gray-900">
             Complaint Detail - {selectedComplaint?.noTiket}
           </h2>
+                    <button
+                      onClick={openAttachments}
+                      className="ml-auto flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      <Paperclip size={18} />
+                      Attachments
+                    </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

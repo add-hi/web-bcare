@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Home,
   FileText,
@@ -16,19 +16,22 @@ const menuItems = [
     href: "/dashboard/home",
     icon: Home,
     hasSubmenu: false,
+    division_codes: ["cxc"], // tampil untuk UIC & CXC
   },
   {
     name: "Complaint",
     href: "/dashboard/complaint",
     icon: FileText,
     hasSubmenu: false,
+    division_codes: ["cxc"], // tampil untuk UIC & CXC
   },
   {
     name: "Dashboard",
     href: "/dashboard/mockdgo",
     icon: BarChart3,
     hasSubmenu: false,
-  }
+    division_codes: ["uic"], // hanya UIC
+  },
 ];
 
 export default function Sidebar() {
@@ -39,9 +42,7 @@ export default function Sidebar() {
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
+    if (userData) setUser(JSON.parse(userData));
 
     // Auto expand menu and submenu if current path matches
     const newExpandedMenus = {};
@@ -50,7 +51,6 @@ export default function Sidebar() {
     menuItems.forEach((item) => {
       if (item.submenu) {
         const hasActiveSubmenu = item.submenu.some((sub) => {
-
           if (pathname === sub.href) return true;
 
           // Check sub-submenu match
@@ -66,9 +66,7 @@ export default function Sidebar() {
           return false;
         });
 
-        if (hasActiveSubmenu) {
-          newExpandedMenus[item.name] = true;
-        }
+        if (hasActiveSubmenu) newExpandedMenus[item.name] = true;
       }
     });
 
@@ -112,6 +110,12 @@ export default function Sidebar() {
     return false;
   };
 
+  // ⬇️ Hanya tampilkan item yang diizinkan untuk division saat ini
+  const visibleItems = useMemo(() => {
+    const division_code = user?.division_code?.toLowerCase();
+    return menuItems.filter((i) => (i.division_codes ? division_code && i.division_codes.includes(division_code) : true));
+  }, [user]);
+
   return (
     <aside className="w-64 bg-slate-700 text-white min-h-screen fixed left-0 top-18 bottom-0 overflow-y-auto">
       {/* User Info */}
@@ -141,7 +145,7 @@ export default function Sidebar() {
         </div>
 
         <ul className="space-y-1 px-2">
-          {menuItems.map((item) => {
+          {visibleItems.map((item) => {
             const IconComponent = item.icon;
             return (
               <li key={item.name}>
@@ -150,10 +154,11 @@ export default function Sidebar() {
                   {item.hasSubmenu ? (
                     // Menu dengan submenu - hanya toggle
                     <div
-                      className={`flex items-center justify-between px-4 py-2 rounded-lg transition-colors cursor-pointer ${isActiveParent(item)
-                        ? "bg-slate-800 text-white"
-                        : "text-gray-300 hover:bg-slate-600 hover:text-white"
-                        }`}
+                      className={`flex items-center justify-between px-4 py-2 rounded-lg transition-colors cursor-pointer ${
+                        isActiveParent(item)
+                          ? "bg-slate-800 text-white"
+                          : "text-gray-300 hover:bg-slate-600 hover:text-white"
+                      }`}
                       onClick={() => toggleMenu(item.name)}
                     >
                       <div className="flex items-center space-x-3">
@@ -163,18 +168,20 @@ export default function Sidebar() {
 
                       <ChevronDown
                         size={16}
-                        className={`transition-transform duration-200 ${expandedMenus[item.name] ? "rotate-180" : ""
-                          }`}
+                        className={`transition-transform duration-200 ${
+                          expandedMenus[item.name] ? "rotate-180" : ""
+                        }`}
                       />
                     </div>
                   ) : (
                     // Menu tanpa submenu - langsung link
                     <Link
                       href={item.href}
-                      className={`flex items-center px-4 py-2 rounded-lg transition-colors ${pathname === item.href
-                        ? "bg-slate-800 text-white"
-                        : "text-gray-300 hover:bg-slate-600 hover:text-white"
-                        }`}
+                      className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
+                        pathname === item.href
+                          ? "bg-slate-800 text-white"
+                          : "text-gray-300 hover:bg-slate-600 hover:text-white"
+                      }`}
                     >
                       <div className="flex items-center space-x-3">
                         <IconComponent size={18} />
@@ -186,7 +193,7 @@ export default function Sidebar() {
                   {/* Submenu */}
                   {item.hasSubmenu && expandedMenus[item.name] && (
                     <ul className="mt-2 ml-6 space-y-1">
-                      {item.submenu.map((subItem) => {
+                      {item.submenu?.map((subItem) => {
                         const SubIconComponent = subItem.icon;
                         return (
                           <li key={subItem.name}>
@@ -194,10 +201,11 @@ export default function Sidebar() {
                               {/* Submenu Item */}
                               {subItem.hasSubSubmenu ? (
                                 <div
-                                  className={`flex items-center justify-between px-4 py-2 rounded-md text-sm transition-colors cursor-pointer ${isActiveSubParent(subItem)
-                                    ? "bg-slate-800 text-white"
-                                    : "text-gray-400 hover:bg-slate-600 hover:text-white"
-                                    }`}
+                                  className={`flex items-center justify-between px-4 py-2 rounded-md text-sm transition-colors cursor-pointer ${
+                                    isActiveSubParent(subItem)
+                                      ? "bg-slate-800 text-white"
+                                      : "text-gray-400 hover:bg-slate-600 hover:text-white"
+                                  }`}
                                   onClick={() => toggleSubMenu(subItem.name)}
                                 >
                                   <div className="flex items-center space-x-3">
@@ -206,19 +214,19 @@ export default function Sidebar() {
                                   </div>
                                   <ChevronRight
                                     size={14}
-                                    className={`transition-transform duration-200 ${expandedSubMenus[subItem.name]
-                                      ? "rotate-90"
-                                      : ""
-                                      }`}
+                                    className={`transition-transform duration-200 ${
+                                      expandedSubMenus[subItem.name] ? "rotate-90" : ""
+                                    }`}
                                   />
                                 </div>
                               ) : (
                                 <Link
                                   href={subItem.href}
-                                  className={`flex items-center space-x-3 px-4 py-2 rounded-md text-sm transition-colors ${pathname === subItem.href
-                                    ? "bg-slate-800 text-white"
-                                    : "text-gray-400 hover:bg-slate-600 hover:text-white"
-                                    }`}
+                                  className={`flex items-center space-x-3 px-4 py-2 rounded-md text-sm transition-colors ${
+                                    pathname === subItem.href
+                                      ? "bg-slate-800 text-white"
+                                      : "text-gray-400 hover:bg-slate-600 hover:text-white"
+                                  }`}
                                 >
                                   <SubIconComponent size={16} />
                                   <span>{subItem.name}</span>
@@ -236,10 +244,11 @@ export default function Sidebar() {
                                         <li key={subSubItem.name}>
                                           <Link
                                             href={subSubItem.href}
-                                            className={`flex items-center space-x-3 px-4 py-2 rounded-md text-xs transition-colors ${pathname === subSubItem.href
-                                              ? "bg-slate-800 text-white border-l-2 border-blue-400"
-                                              : "text-gray-500 hover:bg-slate-600 hover:text-white"
-                                              }`}
+                                            className={`flex items-center space-x-3 px-4 py-2 rounded-md text-xs transition-colors ${
+                                              pathname === subSubItem.href
+                                                ? "bg-slate-800 text-white border-l-2 border-blue-400"
+                                                : "text-gray-500 hover:bg-slate-600 hover:text-white"
+                                            }`}
                                           >
                                             <SubSubIconComponent size={14} />
                                             <span>{subSubItem.name}</span>
