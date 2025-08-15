@@ -16,15 +16,26 @@ import {
   Shield,
   Copy,
 } from "lucide-react";
+import useAuth from "@/hooks/useAuth";
 
 export default function LoginPage() {
   const router = useRouter();
+
+  const { isAuthenticated } = useAuth(); // <-- add
+
+  React.useEffect(() => {
+    // <-- add
+    if (isAuthenticated) router.replace("/dashboard/home");
+  }, [isAuthenticated, router]);
+
+  const { login, status } = useAuth(); // <-- added
+  const isLoading = status === "loading"; // <-- derive loading from store
+
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordData, setForgotPasswordData] = useState({
     npp: "",
@@ -33,10 +44,7 @@ export default function LoginPage() {
   const [forgotPasswordStep, setForgotPasswordStep] = useState(1);
   const [isSubmittingReset, setIsSubmittingReset] = useState(false);
 
-  const [credentials, setCredentials] = useState({
-    username: "",
-    password: "",
-  });
+  // removed unused local "credentials" + demo cookie helpers + demo auth
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -46,49 +54,25 @@ export default function LoginPage() {
     }));
   };
 
-// Tambahkan helper di atas komponen:
-const setDivisionCookie = (division_code) => {
-  // Cookie 8 jam (28800 detik). Non-HttpOnly (TESTING SAJA).
-  document.cookie = `division_code=${division_code}; Path=/; Max-Age=28800`;
-};
-const deleteDivisionCookie = () => {
-  document.cookie = "division_code=; Path=/; Max-Age=0";
-};
+  // NEW: real submit using the auth hook
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const result = await login({
+        npp: formData.username, // backend expects "npp"
+        password: formData.password,
+      });
 
-// GANTI handleSubmit lama dengan ini:
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsLoading(true);
-
-  // Simulasi delay
-  await new Promise((r) => setTimeout(r, 600));
-
-  // ====== DEMO LOGIN TANPA API/DB ======
-  // uic/password   -> division_code "uic"
-  // admin/password -> division_code "cxc"
-  let division_code = null;
-  if (formData.username === "uic" && formData.password === "password") division_code = "uic";
-  if (formData.username === "cxc" && formData.password === "password") division_code = "cxc";
-
-  if (!division_code) {
-    setIsLoading(false);
-    alert("NPP atau password salah!");
-    return;
-  }
-
-  // Simpan utk UI (Sidebar, header, dsb)
-  // const user = { name: formData.username, id: "123456", division };
-  const user = { name: "Esteler Berutu", id: "123456", role: "Asisten BCC", division_code };
-  localStorage.setItem("isLoggedIn", "true");
-  localStorage.setItem("user", JSON.stringify(user));
-
-  // ⬅️ penting: set cookie supaya dibaca middleware
-  setDivisionCookie(division_code);
-
-  // Arahkan sesuai division_code
-  if (division_code === "uic") router.push("/dashboard/mockdgo");
-  else router.push("/dashboard/home");
-};
+      // Optional: route by division code if you want (kept close to your old logic)
+      const div =
+        result?.user?.division_details?.division_code?.toLowerCase?.() || "";
+      if (div === "CXC") router.push("/dashboard/home");
+      else router.push("/dashboard/mockdgo");
+    } catch (err) {
+      // Keep your UX simple; you can swap alert for a toast if you have one
+      alert(err?.message || "Login failed");
+    }
+  };
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
@@ -107,11 +91,7 @@ const handleSubmit = async (e) => {
   const handleForgotPasswordSubmit = async (e) => {
     e.preventDefault();
     setIsSubmittingReset(true);
-
-    // Simulate checking NPP in system
     await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // Move to contact admin step
     setForgotPasswordStep(2);
     setIsSubmittingReset(false);
   };
@@ -125,10 +105,7 @@ const handleSubmit = async (e) => {
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    // You could add a toast notification here
   };
-
-  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4 relative overflow-hidden">
@@ -154,9 +131,6 @@ const handleSubmit = async (e) => {
                 priority
               />
             </div>
-            {/* <h1 className="text-2xl font-bold text-gray-800 mb-1">
-              Welcome Back
-            </h1> */}
             <p className="text-blue-600 text-m font-semibold tracking-wide uppercase opacity-80">
               CX Communication Portal
             </p>

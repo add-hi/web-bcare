@@ -1,28 +1,25 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import useAuth from "@/hooks/useAuth";
 
 export default function Topbar() {
-  const [user, setUser] = useState(null);
   const router = useRouter();
-
-  useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("user");
+    logout();
     router.push("/login");
   };
 
   const goToProfile = () => {
     router.push("/dashboard/profile");
   };
+
+  // Normalize fields from API/store to match your current JSX usage
+  const displayName = user?.full_name || user?.name || user?.email || "User";
+  const displayId = user?.npp || user?.id || user?.employee_id || "";
+  const initial = displayName?.charAt(0) || "?";
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
@@ -52,12 +49,14 @@ export default function Topbar() {
                 >
                   <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
                     <span className="text-white text-sm font-medium">
-                      {user.name.charAt(0)}
+                      {initial}
                     </span>
                   </div>
                   <div className="text-sm">
-                    <div className="font-medium text-gray-900">{user.name}</div>
-                    <div className="text-gray-500">{user.id}</div>
+                    <div className="font-medium text-gray-900">
+                      {displayName}
+                    </div>
+                    <div className="text-gray-500">{displayId}</div>
                   </div>
                 </div>
               )}
