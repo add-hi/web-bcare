@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
+import useAuth from "@/hooks/useAuth"; // <-- added
 
 const menuItems = [
   {
@@ -30,20 +31,17 @@ const menuItems = [
     href: "/dashboard/mockdgo",
     icon: BarChart3,
     hasSubmenu: false,
-    division_codes: ["uic"], // hanya UIC
+    division_codes: ["uic1", "tbs"], // hanya UIC
   },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [user, setUser] = useState(null);
+  const { user } = useAuth(); // <-- added
   const [expandedMenus, setExpandedMenus] = useState({});
   const [expandedSubMenus, setExpandedSubMenus] = useState({});
 
   useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (userData) setUser(JSON.parse(userData));
-
     // Auto expand menu and submenu if current path matches
     const newExpandedMenus = {};
     const newExpandedSubMenus = {};
@@ -112,9 +110,21 @@ export default function Sidebar() {
 
   // ⬇️ Hanya tampilkan item yang diizinkan untuk division saat ini
   const visibleItems = useMemo(() => {
-    const division_code = user?.division_code?.toLowerCase();
-    return menuItems.filter((i) => (i.division_codes ? division_code && i.division_codes.includes(division_code) : true));
+    const division_code =
+      user?.division_details?.division_code?.toLowerCase?.() ||
+      user?.division_code?.toLowerCase?.();
+    return menuItems.filter((i) =>
+      i.division_codes
+        ? division_code && i.division_codes.includes(division_code)
+        : true
+    );
   }, [user]);
+
+  // Normalize user fields from API/store (keeps your layout as-is)
+  const displayName = user?.full_name || user?.name || user?.email || "User";
+  const displayId = user?.npp || user?.id || user?.employee_id || "";
+  const displayRole = user?.role_details?.role_name || user?.role || "";
+  const initial = displayName.charAt(0);
 
   return (
     <aside className="w-64 bg-slate-700 text-white min-h-screen fixed left-0 top-18 bottom-0 overflow-y-auto">
@@ -123,14 +133,12 @@ export default function Sidebar() {
         {user && (
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-medium">
-                {user.name.charAt(0)}
-              </span>
+              <span className="text-white font-medium">{initial}</span>
             </div>
             <div>
-              <div className="font-medium">{user.name}</div>
-              <div className="text-sm text-gray-300">{user.id}</div>
-              <div className="text-xs text-gray-400">{user.role}</div>
+              <div className="font-medium">{displayName}</div>
+              <div className="text-sm text-gray-300">{displayId}</div>
+              <div className="text-xs text-gray-400">{displayRole}</div>
             </div>
           </div>
         )}
@@ -215,7 +223,9 @@ export default function Sidebar() {
                                   <ChevronRight
                                     size={14}
                                     className={`transition-transform duration-200 ${
-                                      expandedSubMenus[subItem.name] ? "rotate-90" : ""
+                                      expandedSubMenus[subItem.name]
+                                        ? "rotate-90"
+                                        : ""
                                     }`}
                                   />
                                 </div>
