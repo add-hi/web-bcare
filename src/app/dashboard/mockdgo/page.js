@@ -2,8 +2,6 @@
 
 import React, { useState, useMemo } from "react";
 import {
-  Grid3X3,
-  Edit,
   ChevronDown,
   ChevronUp,
   ArrowLeft,
