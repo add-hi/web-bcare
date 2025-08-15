@@ -46,31 +46,49 @@ export default function LoginPage() {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+// Tambahkan helper di atas komponen:
+const setDivisionCookie = (division_code) => {
+  // Cookie 8 jam (28800 detik). Non-HttpOnly (TESTING SAJA).
+  document.cookie = `division_code=${division_code}; Path=/; Max-Age=28800`;
+};
+const deleteDivisionCookie = () => {
+  document.cookie = "division_code=; Path=/; Max-Age=0";
+};
 
-    // Simulate loading delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+// GANTI handleSubmit lama dengan ini:
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-    // Simulate login - replace with actual API call
-    if (formData.username === "admin" && formData.password === "password") {
-      // Set session/token here
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          name: "Esteler Berutu",
-          id: "123456",
-          role: "Asisten BCC Divisi CXC",
-        })
-      );
-      router.push("/dashboard/home");
-    } else {
-      setIsLoading(false);
-      alert("NPP atau password salah!");
-    }
-  };
+  // Simulasi delay
+  await new Promise((r) => setTimeout(r, 600));
+
+  // ====== DEMO LOGIN TANPA API/DB ======
+  // uic/password   -> division_code "uic"
+  // admin/password -> division_code "cxc"
+  let division_code = null;
+  if (formData.username === "uic" && formData.password === "password") division_code = "uic";
+  if (formData.username === "cxc" && formData.password === "password") division_code = "cxc";
+
+  if (!division_code) {
+    setIsLoading(false);
+    alert("NPP atau password salah!");
+    return;
+  }
+
+  // Simpan utk UI (Sidebar, header, dsb)
+  // const user = { name: formData.username, id: "123456", division };
+  const user = { name: "Esteler Berutu", id: "123456", role: "Asisten BCC", division_code };
+  localStorage.setItem("isLoggedIn", "true");
+  localStorage.setItem("user", JSON.stringify(user));
+
+  // ⬅️ penting: set cookie supaya dibaca middleware
+  setDivisionCookie(division_code);
+
+  // Arahkan sesuai division_code
+  if (division_code === "uic") router.push("/dashboard/mockdgo");
+  else router.push("/dashboard/home");
+};
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
@@ -109,6 +127,8 @@ export default function LoginPage() {
     navigator.clipboard.writeText(text);
     // You could add a toast notification here
   };
+
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4 relative overflow-hidden">

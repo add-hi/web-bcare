@@ -53,7 +53,7 @@ const InputFormRow = () => {
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
             >
-              <option value="" disabled>-- Select Input Type --</option>
+              <option value="" disabled>Select Input Type</option>
               <option value="nasabah">Nasabah</option>
               <option value="non_nasabah">Non Nasabah</option>
             </select>
@@ -70,7 +70,7 @@ const InputFormRow = () => {
               disabled={!inputType}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none disabled:bg-gray-50 disabled:text-gray-400"
             >
-              <option value="" disabled>-- Select Source Type --</option>
+              <option value="" disabled>Select Source Type</option>
               {sourceOptions[inputType]?.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}

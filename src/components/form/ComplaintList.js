@@ -117,7 +117,7 @@ const ComplaintList = () => {
         <div className="mb-4">
           <button
             onClick={backFromAttachments}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <ArrowLeft size={20} />
             <span>Back to {selectedComplaint ? "Detail" : "List"}</span>
@@ -137,7 +137,7 @@ const ComplaintList = () => {
         <div className="mb-4 flex items-center justify-between">
           <button
             onClick={handleBackToTable}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <ArrowLeft size={20} />
             <span>Back to List</span>
@@ -146,7 +146,7 @@ const ComplaintList = () => {
           {/* buka komponen Attachment */}
           <button
             onClick={openAttachments}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <Paperclip size={18} />
             Attachments
@@ -165,7 +165,7 @@ const ComplaintList = () => {
         <div className="mb-4 flex items-center justify-between">
           <button
             onClick={handleBackToTable}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <ArrowLeft size={20} />
             <span>Back to List</span>
@@ -174,7 +174,7 @@ const ComplaintList = () => {
           {/* opsional: bisa juga buka attachment kosong untuk pre-upload */}
           <button
             onClick={openAttachments}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <Paperclip size={18} />
             Attachments
@@ -347,9 +347,9 @@ const ComplaintList = () => {
     <div className="max-w-full mx-auto p-6 bg-white">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-gray-700">
+          <div className="ml-auto flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
             <Plus size={20} />
-            <button onClick={handleAddClick} className="font-medium cursor-pointer hover:text-blue-600">
+            <button onClick={handleAddClick} className="font-medium cursor-pointer hover:text-orange-600">
               Add
             </button>
           </div>
