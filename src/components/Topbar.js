@@ -21,7 +21,7 @@ export default function Topbar() {
   };
 
   const goToProfile = () => {
-    router.push("/profile");
+    router.push("/dashboard/profile");
   };
 
   return (
@@ -42,7 +42,7 @@ export default function Topbar() {
         <div className="flex-1 bg-white shadow-sm border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-semibold text-cyan-700">
-              CX Communication v2
+              B-Care Dashboard
             </h1>
             <div className="flex items-center space-x-4">
               {user && (

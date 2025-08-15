@@ -8,9 +8,6 @@ import {
   BarChart3,
   ChevronDown,
   ChevronRight,
-  PieChart,
-  Banknote,
-  MessageSquare,
 } from "lucide-react";
 
 const menuItems = [
@@ -18,40 +15,19 @@ const menuItems = [
     name: "Home",
     href: "/dashboard/home",
     icon: Home,
-    hasSubmenu: true,
-    submenu: [
-      { name: "Overview", href: "/dashboard/home", icon: PieChart },
-    ],
+    hasSubmenu: false,
   },
   {
-    name: "Request",
-    href: "/dashboard/request",
+    name: "Complaint",
+    href: "/dashboard/complaint",
     icon: FileText,
-    hasSubmenu: true,
-    submenu: [
-      {
-        name: "Banking",
-        href: "/dashboard/request/banking",
-        icon: Banknote,
-        hasSubSubmenu: true,
-        subSubmenu: [
-          {
-            name: "Complaint",
-            href: "/dashboard/request/banking/complaint",
-            icon: MessageSquare,
-          },
-        ],
-      },
-    ],
+    hasSubmenu: false,
   },
   {
     name: "Dashboard",
-    href: "/dashboard",
+    href: "/dashboard/mockdgo",
     icon: BarChart3,
-    hasSubmenu: true,
-    submenu: [
-      { name: "Mock DGO", href: "/dashboard/mockdgo", icon: BarChart3 },
-    ],
+    hasSubmenu: false,
   }
 ];
 
@@ -74,7 +50,7 @@ export default function Sidebar() {
     menuItems.forEach((item) => {
       if (item.submenu) {
         const hasActiveSubmenu = item.submenu.some((sub) => {
-          // Check direct submenu match
+
           if (pathname === sub.href) return true;
 
           // Check sub-submenu match
@@ -171,28 +147,41 @@ export default function Sidebar() {
               <li key={item.name}>
                 <div>
                   {/* Main Menu Item */}
-                  <div
-                    className={`flex items-center justify-between px-4 py-2 rounded-lg transition-colors cursor-pointer ${isActiveParent(item)
-                      ? "bg-slate-800 text-white"
-                      : "text-gray-300 hover:bg-slate-600 hover:text-white"
-                      }`}
-                    onClick={() =>
-                      item.hasSubmenu ? toggleMenu(item.name) : null
-                    }
-                  >
-                    <div className="flex items-center space-x-3">
-                      <IconComponent size={18} />
-                      <span className="font-medium">{item.name}</span>
-                    </div>
+                  {item.hasSubmenu ? (
+                    // Menu dengan submenu - hanya toggle
+                    <div
+                      className={`flex items-center justify-between px-4 py-2 rounded-lg transition-colors cursor-pointer ${isActiveParent(item)
+                        ? "bg-slate-800 text-white"
+                        : "text-gray-300 hover:bg-slate-600 hover:text-white"
+                        }`}
+                      onClick={() => toggleMenu(item.name)}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <IconComponent size={18} />
+                        <span className="font-medium">{item.name}</span>
+                      </div>
 
-                    {item.hasSubmenu && (
                       <ChevronDown
                         size={16}
                         className={`transition-transform duration-200 ${expandedMenus[item.name] ? "rotate-180" : ""
                           }`}
                       />
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    // Menu tanpa submenu - langsung link
+                    <Link
+                      href={item.href}
+                      className={`flex items-center px-4 py-2 rounded-lg transition-colors ${pathname === item.href
+                        ? "bg-slate-800 text-white"
+                        : "text-gray-300 hover:bg-slate-600 hover:text-white"
+                        }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <IconComponent size={18} />
+                        <span className="font-medium">{item.name}</span>
+                      </div>
+                    </Link>
+                  )}
 
                   {/* Submenu */}
                   {item.hasSubmenu && expandedMenus[item.name] && (
@@ -272,23 +261,6 @@ export default function Sidebar() {
           })}
         </ul>
       </nav>
-
-      {/* Manage Data Section - Commented out as in original */}
-      {/* <div className="mt-8 px-4">
-                <div className="bg-green-600 text-white px-3 py-1 rounded text-sm font-medium inline-block mb-4">
-                    MANAGE DATA
-                </div>
-                <Link
-                    href="/dashboard/manage-data"
-                    className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${pathname === '/dashboard/manage-data'
-                            ? 'bg-slate-800 text-white'
-                            : 'text-gray-300 hover:bg-slate-600 hover:text-white'
-                        }`}
-                >
-                    <Database size={18} />
-                    <span className="font-medium">Data Management</span>
-                </Link>
-            </div> */}
     </aside>
   );
 }
