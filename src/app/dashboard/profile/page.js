@@ -1,6 +1,6 @@
 "use client";
 import { User, Badge, Briefcase } from "lucide-react";
-import useAuth from "@/hooks/useAuth";
+import useAuth from "@/hooks/useUser";
 
 function Profile() {
   const { user, status } = useAuth();

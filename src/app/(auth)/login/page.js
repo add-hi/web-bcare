@@ -16,7 +16,7 @@ import {
   Shield,
   Copy,
 } from "lucide-react";
-import useAuth from "@/hooks/useAuth";
+import useAuth from "@/hooks/useUser";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,7 +24,6 @@ export default function LoginPage() {
   const { isAuthenticated } = useAuth(); // <-- add
 
   React.useEffect(() => {
-    // <-- add
     if (isAuthenticated) router.replace("/dashboard/home");
   }, [isAuthenticated, router]);
 

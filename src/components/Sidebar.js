@@ -9,7 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import useAuth from "@/hooks/useAuth"; // <-- added
+import useAuth from "@/hooks/useUser"; // <-- added
 
 const menuItems = [
   {
