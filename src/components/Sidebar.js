@@ -9,7 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import useAuth from "@/hooks/useAuth"; // <-- added
+import useAuth from "@/hooks/useAuth"; // <-- uses zustand store
 
 const menuItems = [
   {
@@ -17,20 +17,21 @@ const menuItems = [
     href: "/dashboard/home",
     icon: Home,
     hasSubmenu: false,
-    division_codes: ["cxc"], // tampil untuk UIC & CXC
+    division_codes: ["cxc"], // CXC only
   },
   {
     name: "Complaint",
     href: "/dashboard/complaint",
     icon: FileText,
     hasSubmenu: false,
-    division_codes: ["cxc"], // tampil untuk UIC & CXC
+    division_codes: ["cxc"], // CXC only
   },
   {
     name: "Dashboard",
     href: "/dashboard/mockdgo",
     icon: BarChart3,
     hasSubmenu: false,
+    // Keep your existing list, but our filter below will now accept any UIC*
     division_codes: [
       "uic1",
       "uic3",
@@ -41,18 +42,17 @@ const menuItems = [
       "uic11",
       "tbs",
       "opr",
-    ], // hanya UIC
+    ],
   },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user } = useAuth(); // <-- added
+  const { user } = useAuth();
   const [expandedMenus, setExpandedMenus] = useState({});
   const [expandedSubMenus, setExpandedSubMenus] = useState({});
 
   useEffect(() => {
-    // Auto expand menu and submenu if current path matches
     const newExpandedMenus = {};
     const newExpandedSubMenus = {};
 
@@ -61,7 +61,6 @@ export default function Sidebar() {
         const hasActiveSubmenu = item.submenu.some((sub) => {
           if (pathname === sub.href) return true;
 
-          // Check sub-submenu match
           if (sub.subSubmenu) {
             const hasActiveSubSubmenu = sub.subSubmenu.some(
               (subSub) => pathname === subSub.href
@@ -83,10 +82,7 @@ export default function Sidebar() {
   }, [pathname]);
 
   const toggleMenu = (menuName) => {
-    setExpandedMenus((prev) => ({
-      ...prev,
-      [menuName]: !prev[menuName],
-    }));
+    setExpandedMenus((prev) => ({ ...prev, [menuName]: !prev[menuName] }));
   };
 
   const toggleSubMenu = (subMenuName) => {
@@ -118,23 +114,37 @@ export default function Sidebar() {
     return false;
   };
 
-  // ⬇️ Hanya tampilkan item yang diizinkan untuk division saat ini
+  // --- Only tiny change here: future-proof UIC* and keep exact match for others
   const visibleItems = useMemo(() => {
-    const division_code =
-      user?.division_details?.division_code?.toLowerCase?.() ||
-      user?.division_code?.toLowerCase?.();
-    return menuItems.filter((i) =>
-      i.division_codes
-        ? division_code && i.division_codes.includes(division_code)
-        : true
-    );
+    const raw =
+      user?.division_details?.division_code ?? user?.division_code ?? "";
+    const division_code = raw.toString().trim().toLowerCase();
+
+    const hasAccess = (item) => {
+      if (!item.division_codes) return true;
+      if (!division_code) return false;
+
+      // If user's division is any UIC*, allow items that target any UIC* entry
+      if (division_code.startsWith("uic")) {
+        return item.division_codes.some((dc) =>
+          dc.toLowerCase().startsWith("uic")
+        );
+      }
+
+      // Else require exact match (e.g., 'cxc', 'tbs', 'opr')
+      return item.division_codes
+        .map((dc) => dc.toLowerCase())
+        .includes(division_code);
+    };
+
+    return menuItems.filter(hasAccess);
   }, [user]);
 
   // Normalize user fields from API/store (keeps your layout as-is)
   const displayName = user?.full_name || user?.name || user?.email || "User";
   const displayId = user?.npp || user?.id || user?.employee_id || "";
   const displayRole = user?.role_details?.role_name || user?.role || "";
-  const initial = displayName.charAt(0);
+  const initial = (displayName && displayName[0]) || "U"; // <-- tiny guard
 
   return (
     <aside className="w-64 bg-slate-700 text-white min-h-screen fixed left-0 top-18 bottom-0 overflow-y-auto">
@@ -170,7 +180,6 @@ export default function Sidebar() {
                 <div>
                   {/* Main Menu Item */}
                   {item.hasSubmenu ? (
-                    // Menu dengan submenu - hanya toggle
                     <div
                       className={`flex items-center justify-between px-4 py-2 rounded-lg transition-colors cursor-pointer ${
                         isActiveParent(item)
@@ -192,7 +201,6 @@ export default function Sidebar() {
                       />
                     </div>
                   ) : (
-                    // Menu tanpa submenu - langsung link
                     <Link
                       href={item.href}
                       className={`flex items-center px-4 py-2 rounded-lg transition-colors ${

@@ -21,15 +21,30 @@ import useAuth from "@/hooks/useAuth";
 export default function LoginPage() {
   const router = useRouter();
 
-  const { isAuthenticated } = useAuth(); // <-- add
+  // pull everything at once
+  const { login, status, isAuthenticated, user } = useAuth();
+
+  // ✅ support both function *and* boolean; also fallback to status
+  const authed =
+    (typeof isAuthenticated === "function"
+      ? isAuthenticated()
+      : !!isAuthenticated) || status === "authenticated";
 
   React.useEffect(() => {
-    // <-- add
-    if (isAuthenticated) router.replace("/dashboard/home");
-  }, [isAuthenticated, router]);
+    if (!authed) return;
+    const division = String(
+      user?.division_code ?? user?.division_details?.division_code ?? ""
+    )
+      .trim()
+      .toLowerCase();
+    if (division.startsWith("cxc")) {
+      router.replace("/dashboard/home");
+    } else {
+      router.replace("/dashboard/mockdgo");
+    }
+  }, [authed, user, router]);
 
-  const { login, status } = useAuth(); // <-- added
-  const isLoading = status === "loading"; // <-- derive loading from store
+  const isLoading = status === "loading";
 
   const [formData, setFormData] = useState({
     username: "",
@@ -44,8 +59,6 @@ export default function LoginPage() {
   const [forgotPasswordStep, setForgotPasswordStep] = useState(1);
   const [isSubmittingReset, setIsSubmittingReset] = useState(false);
 
-  // removed unused local "credentials" + demo cookie helpers + demo auth
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -54,7 +67,7 @@ export default function LoginPage() {
     }));
   };
 
-  // NEW: real submit using the auth hook
+  // real submit using the auth hook
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -63,21 +76,26 @@ export default function LoginPage() {
         password: formData.password,
       });
 
-      // Optional: route by division code if you want (kept close to your old logic)
-      const div =
-        result?.user?.division_details?.division_code?.toLowerCase?.() || "";
-      if (div === "CXC") router.push("/dashboard/home");
-      else router.push("/dashboard/mockdgo");
+      const division = String(
+        result?.user?.division_code ??
+          result?.user?.division_details?.division_code ??
+          ""
+      )
+        .trim()
+        .toLowerCase();
+
+      if (division.startsWith("cxc")) {
+        router.push("/dashboard/home");
+      } else {
+        router.push("/dashboard/mockdgo");
+      }
     } catch (err) {
-      // Keep your UX simple; you can swap alert for a toast if you have one
       alert(err?.message || "Login failed");
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      handleSubmit(e);
-    }
+    if (e.key === "Enter") handleSubmit(e);
   };
 
   const handleForgotPasswordInputChange = (e) => {

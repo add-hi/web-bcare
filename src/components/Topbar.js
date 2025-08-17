@@ -1,29 +1,29 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useState } from "react"; // ⬅️ drop useEffect
 import useAuth from "@/hooks/useAuth";
 
 export default function Topbar() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const [busy, setBusy] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
+  const handleLogout = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await logout(); // hits /auth/logout, clears tokens/cookies in store
+      router.replace("/login"); // middleware will allow /login once cookie is gone
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const goToProfile = () => {
-    router.push("/dashboard/profile");
-  };
-
-  // Normalize fields from API/store to match your current JSX usage
-  const displayName = user?.full_name || user?.name || user?.email || "User";
-  const displayId = user?.npp || user?.id || user?.employee_id || "";
-  const initial = displayName?.charAt(0) || "?";
+  const goToProfile = () => router.push("/dashboard/profile");
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
-      {/* Bagian Kiri - Dark/Teal (sesuai sidebar) */}
       <div className="flex">
         <div className="w-64 bg-slate-700 text-white px-6 py-4 shadow-[0_2px_4px_rgba(0,0,0,0.1)]">
           <Image
@@ -35,7 +35,6 @@ export default function Topbar() {
           />
         </div>
 
-        {/* Bagian Kanan - Light */}
         <div className="flex-1 bg-white shadow-sm border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-semibold text-cyan-700">
@@ -49,23 +48,26 @@ export default function Topbar() {
                 >
                   <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
                     <span className="text-white text-sm font-medium">
-                      {initial}
+                      {user?.full_name?.charAt(0) ||
+                        user?.name?.charAt(0) ||
+                        "U"}
                     </span>
                   </div>
                   <div className="text-sm">
                     <div className="font-medium text-gray-900">
-                      {displayName}
+                      {user?.full_name || user?.name}
                     </div>
-                    <div className="text-gray-500">{displayId}</div>
+                    <div className="text-gray-500">{user?.npp || user?.id}</div>
                   </div>
                 </div>
               )}
 
               <button
                 onClick={handleLogout}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+                disabled={busy}
+                className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
               >
-                LOGOUT
+                {busy ? "LOGGING OUT..." : "LOGOUT"}
               </button>
             </div>
           </div>

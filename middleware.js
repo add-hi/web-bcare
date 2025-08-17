@@ -1,44 +1,48 @@
-// middleware.js (place this file at the project root, same level as package.json)
-import { NextResponse } from 'next/server';
+// middleware.js (project root)
+import { NextResponse } from "next/server";
 
-/**
- * Very light protection:
- * - If request is NOT for public paths and no access_token cookie -> redirect to /login
- * - If request is for /login but already has token -> redirect to /dashboard (adjust to your app)
- *
- * NOTE: Because we set the token from the client (non-HttpOnly cookie),
- *       this is dev-friendly. For production, consider setting an HttpOnly cookie
- *       via a Next.js Route Handler when you proxy the login endpoint.
- */
-const PUBLIC_PATHS = [
-  '/login',             // your /(auth)/login route is served as /login
-  '/_next', '/favicon.ico', '/robots.txt', '/sitemap.xml',
-];
-
-function isPublic(pathname) {
-  return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
-}
+const PUBLIC_PATHS = ["/", "/login"]; // public pages
 
 export function middleware(req) {
   const { nextUrl, cookies } = req;
-  const pathname = nextUrl.pathname || '/';
+  const pathname = nextUrl.pathname || "/";
 
-  const token = cookies.get('access_token')?.value;
-
-  // Already logged in but trying to access /login -> push to dashboard
-  if (pathname === '/login' && token) {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+  // --- Never intercept API or static assets (defense in depth) ---
+  if (
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml"
+  ) {
+    return NextResponse.next();
   }
 
-  // Block private routes without token
-  if (!isPublic(pathname) && !token) {
-    return NextResponse.redirect(new URL('/login', req.url));
+  const token = cookies.get("access_token")?.value;
+  const isLogin = pathname === "/login";
+  const isDashboard = pathname.startsWith("/dashboard");
+
+  // If visiting /login while authenticated -> send to dashboard/home
+  if (isLogin && token) {
+    const url = nextUrl.clone();
+    url.pathname = "/dashboard/home";
+    return NextResponse.redirect(url);
+  }
+
+  // Protect /dashboard/* when not authenticated
+  if (isDashboard && !token) {
+    const url = nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();
 }
 
-// Exclude static assets, images, and the auth route group
+// Exclude API and static assets from running middleware
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)'],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
+  ],
 };

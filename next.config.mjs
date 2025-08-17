@@ -6,7 +6,7 @@ const nextConfig = {
   async rewrites() {
     return [
       // Proxy any request under /api/* to your backend to avoid CORS
-      { source: "/api/:path*", destination: `${API_BASE}/:path*` },
+      { source: "/api/:path*", destination: `${API_BASE}/v1/:path*` },
     ];
   },
 };
