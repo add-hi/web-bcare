@@ -3,13 +3,17 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import httpClient from "@/lib/httpClient";
-import apiPaths from "@/lib/apiPaths"; // <-- use centralized paths
+import apiPaths from "@/lib/apiPaths"; // centralized paths
 
 /** Ensure "Bearer " prefix exactly once */
 export const ensureBearer = (raw) => {
   if (!raw) return "";
   return raw.startsWith("Bearer ") ? raw : `Bearer ${raw}`;
 };
+
+/** Cookie names used by middleware & interceptors */
+const ACCESS_COOKIE_NAME = "access_token";
+const REFRESH_COOKIE_NAME = "refresh_token";
 
 /** Cookie helpers; avoid Secure flag on http://localhost so middleware sees it */
 const setCookie = (name, value, maxAgeSeconds = 60 * 60 * 24 * 7) => {
@@ -22,7 +26,7 @@ const setCookie = (name, value, maxAgeSeconds = 60 * 60 * 24 * 7) => {
   }`;
 };
 
-// FIX: mirror the same Secure logic when deleting (so cookies are actually cleared on localhost)
+// mirror the same Secure logic when deleting (so cookies are actually cleared on localhost)
 const deleteCookie = (name) => {
   if (typeof document === "undefined") return;
   const isHttps =
@@ -34,7 +38,7 @@ const deleteCookie = (name) => {
 
 const initialState = {
   status: "idle", // 'idle' | 'loading' | 'authenticated' | 'unauthenticated' | 'error'
-  accessToken: null, // may be "Bearer ..." or raw; we keep as returned
+  accessToken: null, // may be "Bearer ..." or raw; keep as returned
   refreshToken: null, // raw refresh token per Swagger
   tokenType: "Bearer", // default
   expiresAt: null, // epoch ms
@@ -70,7 +74,7 @@ export const useAuthStore = create(
         const id = setTimeout(async () => {
           try {
             await get().refreshAccessToken();
-          } catch (e) {
+          } catch {
             // On failure, force logout
             get().logout();
           }
@@ -82,7 +86,6 @@ export const useAuthStore = create(
       login: async ({ npp, password }) => {
         set({ status: "loading", error: null });
         try {
-          // was: httpClient.post('/v1/auth/login/employee', ...)
           const res = await httpClient.post(apiPaths.auth.loginEmployee, {
             npp,
             password,
@@ -111,8 +114,9 @@ export const useAuthStore = create(
             error: null,
           });
 
-          // Mirror to cookie so middleware can protect routes
-          setCookie("access_token", ensureBearer(access));
+          // Mirror to cookies so middleware & interceptors can use them
+          setCookie(ACCESS_COOKIE_NAME, ensureBearer(access));
+          if (refresh) setCookie(REFRESH_COOKIE_NAME, refresh);
 
           // schedule refresh if we have refresh token + expiresIn
           if (refresh && expiresIn) get()._scheduleRefresh(expiresIn);
@@ -134,17 +138,40 @@ export const useAuthStore = create(
 
       /** Fetch current user (optional to call after app start) */
       fetchMe: async () => {
+        const token = ensureBearer(get().accessToken);
+        const res = await httpClient.get(apiPaths.auth.me, {
+          headers: token ? { Authorization: token } : {},
+        });
+        const data = res?.data?.data || null;
+        if (data) set({ user: data });
+        return data;
+      },
+
+      /** Hydrate user from /auth/me if we have a token but not user (e.g., new tab) */
+      hydrateFromMe: async () => {
+        const { accessToken } = get();
+        if (!accessToken) {
+          set({ status: "unauthenticated" });
+          return null;
+        }
+
         try {
-          const token = ensureBearer(get().accessToken);
-          // was: httpClient.get('/v1/auth/me', ...)
-          const res = await httpClient.get(apiPaths.auth.me, {
-            headers: token ? { Authorization: token } : {},
+          if (!get().user) set({ status: "loading" });
+          const me = await get().fetchMe();
+          if (me) {
+            set({ user: me, status: "authenticated" });
+          } else {
+            set({ status: "unauthenticated", user: null });
+          }
+          return me;
+        } catch {
+          set({
+            status: "unauthenticated",
+            user: null,
+            accessToken: null,
+            refreshToken: null,
           });
-          const data = res?.data?.data || null;
-          if (data) set({ user: data });
-          return data;
-        } catch (e) {
-          throw e;
+          return null;
         }
       },
 
@@ -152,45 +179,39 @@ export const useAuthStore = create(
       refreshAccessToken: async () => {
         const rt = get().refreshToken;
         if (!rt) throw new Error("No refresh token");
-        try {
-          // was: httpClient.post('/v1/auth/refresh', ...)
-          const res = await httpClient.post(apiPaths.auth.refresh, {
-            refresh_token: rt,
-          });
-          const body = res?.data || {};
-          const access = body?.access_token;
-          const tokenType = body?.token_type || "Bearer";
-          const expiresIn = Number(body?.expires_in || 0);
-          if (!access) throw new Error(body?.message || "No new access_token");
+        const res = await httpClient.post(apiPaths.auth.refresh, {
+          refresh_token: rt,
+        });
+        const body = res?.data || {};
+        const access = body?.access_token;
+        const tokenType = body?.token_type || "Bearer";
+        const expiresIn = Number(body?.expires_in || 0);
+        if (!access) throw new Error(body?.message || "No new access_token");
 
-          const now = Date.now();
-          const expiresAt = expiresIn ? now + expiresIn * 1000 : null;
+        const now = Date.now();
+        const expiresAt = expiresIn ? now + expiresIn * 1000 : null;
 
-          set({
-            accessToken: access,
-            tokenType,
-            expiresAt,
-          });
+        set({
+          accessToken: access,
+          tokenType,
+          expiresAt,
+        });
 
-          setCookie("access_token", ensureBearer(access));
-          if (expiresIn) get()._scheduleRefresh(expiresIn);
+        // keep access cookie fresh (interceptors & middleware rely on it)
+        setCookie(ACCESS_COOKIE_NAME, ensureBearer(access));
+        if (expiresIn) get()._scheduleRefresh(expiresIn);
 
-          return access;
-        } catch (e) {
-          // refresh failed; surface to caller
-          throw e;
-        }
+        return access;
       },
 
       /** Logout: call backend then clear */
       logout: async () => {
         try {
           const token = ensureBearer(get().accessToken);
-          // was: httpClient.post('/v1/auth/logout', ...)
           await httpClient.post(apiPaths.auth.logout, null, {
             headers: token ? { Authorization: token } : {},
           });
-        } catch (e) {
+        } catch {
           // ignore network/API errors on logout
         } finally {
           // clear timer
@@ -203,7 +224,9 @@ export const useAuthStore = create(
             status: "unauthenticated",
             _refreshTimeoutId: null,
           });
-          deleteCookie("access_token");
+          // clear cookies for both tokens
+          deleteCookie(ACCESS_COOKIE_NAME);
+          deleteCookie(REFRESH_COOKIE_NAME);
           if (typeof window !== "undefined") {
             try {
               localStorage.removeItem("auth");
@@ -215,17 +238,49 @@ export const useAuthStore = create(
       /** Initialize auth state post-rehydration */
       initialize: () => {
         const { accessToken, user, expiresAt, refreshToken } = get();
+
+        // If we have a token but no user (fresh tab), hydrate via /auth/me
+        if (accessToken && !user) {
+          set({ status: "loading" });
+          get()
+            .hydrateFromMe()
+            .finally(() => {
+              const { refreshToken: rt, expiresAt: exp } = get();
+              if (exp && rt) {
+                const now = Date.now();
+                const remainingMs = exp - now;
+                if (remainingMs > 70 * 1000) {
+                  const remainingSec = Math.floor(remainingMs / 1000);
+                  get()._scheduleRefresh(remainingSec);
+                } else {
+                  get()
+                    .refreshAccessToken()
+                    .catch(() => {
+                      set({
+                        status: "unauthenticated",
+                        accessToken: null,
+                        refreshToken: null,
+                        user: null,
+                      });
+                      deleteCookie(ACCESS_COOKIE_NAME);
+                      deleteCookie(REFRESH_COOKIE_NAME);
+                    });
+                }
+              }
+            });
+          return;
+        }
+
+        // Original behavior when both token & user already exist
         if (accessToken && user) {
           set({ status: "authenticated" });
           if (expiresAt && refreshToken) {
             const now = Date.now();
             const remainingMs = expiresAt - now;
-            // if > 70s remaining, schedule; else try immediate refresh
             if (remainingMs > 70 * 1000) {
               const remainingSec = Math.floor(remainingMs / 1000);
               get()._scheduleRefresh(remainingSec);
             } else {
-              // attempt an eager refresh to extend session
               get()
                 .refreshAccessToken()
                 .catch(() => {
@@ -235,7 +290,8 @@ export const useAuthStore = create(
                     refreshToken: null,
                     user: null,
                   });
-                  deleteCookie("access_token");
+                  deleteCookie(ACCESS_COOKIE_NAME);
+                  deleteCookie(REFRESH_COOKIE_NAME);
                 });
             }
           }
