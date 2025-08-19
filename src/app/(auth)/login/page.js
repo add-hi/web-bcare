@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -16,80 +16,68 @@ import {
   Shield,
   Copy,
 } from "lucide-react";
-import useAuth from "@/hooks/useUser";
+import useUser from "@/hooks/useUser";
+
+// --- helper to read division_code from user objects ---
+function normalizeDivision(u) {
+  return String(u?.division_code ?? u?.division_details?.division_code ?? "")
+    .trim()
+    .toLowerCase();
+}
 
 export default function LoginPage() {
   const router = useRouter();
+  const { isAuthenticated, login, status, user } = useUser();
+  const isLoading = status === "authenticating" || status === "loading";
 
-  const { isAuthenticated } = useAuth(); // <-- add
+  // If already logged in and you hit /login, route by division from store
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const division = normalizeDivision(user);
+    if (division === "cxc") router.replace("/dashboard/home");
+    else router.replace("/dashboard/mockdgo");
+  }, [isAuthenticated, user, router]);
 
-  React.useEffect(() => {
-    if (isAuthenticated) router.replace("/dashboard/home");
-  }, [isAuthenticated, router]);
-
-  const { login, status } = useAuth(); // <-- added
-  const isLoading = status === "loading"; // <-- derive loading from store
-
-  const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [forgotPasswordData, setForgotPasswordData] = useState({
-    npp: "",
-    email: "",
-  });
+  const [forgotPasswordData, setForgotPasswordData] = useState({ npp: "" });
   const [forgotPasswordStep, setForgotPasswordStep] = useState(1);
   const [isSubmittingReset, setIsSubmittingReset] = useState(false);
 
-  // removed unused local "credentials" + demo cookie helpers + demo auth
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // NEW: real submit using the auth hook
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const result = await login({
-        npp: formData.username, // backend expects "npp"
+        npp: formData.username,
         password: formData.password,
       });
 
-      // Response shape:
-      // { success, message, access_token, refresh_token, token_type, expires_in, data: { division_code: "CXC", ... } }
-      const div = String(
-        result?.data?.division_code ?? // new backend shape
-          result?.user?.data?.division_code ?? // fallback to old shape if any
-          result?.division_code ?? // extra safety
-          ""
-      ).toLowerCase();
+      // Prefer division from response payload; store will hydrate right after anyway
+      const division =
+        normalizeDivision(result?.data) ||
+        normalizeDivision(result?.user) ||
+        "";
 
-      if (div === "cxc") router.push("/dashboard/home");
+      if (division === "cxc") router.push("/dashboard/home");
       else router.push("/dashboard/mockdgo");
     } catch (err) {
       alert(err?.message || "Login failed");
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      handleSubmit(e);
-    }
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") handleSubmit(e);
   };
 
   const handleForgotPasswordInputChange = (e) => {
     const { name, value } = e.target;
-    setForgotPasswordData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForgotPasswordData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleForgotPasswordSubmit = async (e) => {
@@ -103,13 +91,11 @@ export default function LoginPage() {
   const resetForgotPassword = () => {
     setShowForgotPassword(false);
     setForgotPasswordStep(1);
-    setForgotPasswordData({ npp: "", email: "" });
+    setForgotPasswordData({ npp: "" });
     setIsSubmittingReset(false);
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-  };
+  const copyToClipboard = (text) => navigator.clipboard.writeText(text);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4 relative overflow-hidden">
@@ -119,7 +105,6 @@ export default function LoginPage() {
       <div className="absolute top-1/2 left-10 w-24 h-24 bg-orange-300/10 rounded-full blur-2xl animate-pulse delay-500"></div>
 
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl shadow-gray-900/10 p-8 pt-10 w-full max-w-md border border-white/20 relative z-10">
-        {/* Subtle gradient overlay */}
         <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/40 to-transparent pointer-events-none"></div>
 
         <div className="relative z-10">
@@ -158,7 +143,7 @@ export default function LoginPage() {
                     name="username"
                     value={formData.username}
                     onChange={handleInputChange}
-                    onKeyPress={handleKeyPress}
+                    onKeyDown={handleKeyDown}
                     className="w-full pl-12 pr-4 py-4 bg-gray-50/50 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none transition-all duration-200 placeholder-gray-400 hover:bg-gray-50 group"
                     placeholder="Enter your NPP"
                     required
@@ -180,7 +165,7 @@ export default function LoginPage() {
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    onKeyPress={handleKeyPress}
+                    onKeyDown={handleKeyDown}
                     className="w-full pl-12 pr-12 py-4 bg-gray-50/50 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 outline-none transition-all duration-200 placeholder-gray-400 hover:bg-gray-50"
                     placeholder="Enter your password"
                     required
@@ -412,7 +397,7 @@ export default function LoginPage() {
                     <button
                       onClick={() => {
                         setForgotPasswordStep(1);
-                        setForgotPasswordData({ npp: "", email: "" });
+                        setForgotPasswordData({ npp: "" });
                       }}
                       className="w-full py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors flex items-center justify-center space-x-2"
                     >
