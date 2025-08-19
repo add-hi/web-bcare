@@ -62,13 +62,18 @@ export default function LoginPage() {
         password: formData.password,
       });
 
-      // Optional: route by division code if you want (kept close to your old logic)
-      const div =
-        result?.user?.division_details?.division_code?.toLowerCase?.() || "";
-      if (div === "CXC") router.push("/dashboard/home");
+      // Response shape:
+      // { success, message, access_token, refresh_token, token_type, expires_in, data: { division_code: "CXC", ... } }
+      const div = String(
+        result?.data?.division_code ?? // new backend shape
+          result?.user?.data?.division_code ?? // fallback to old shape if any
+          result?.division_code ?? // extra safety
+          ""
+      ).toLowerCase();
+
+      if (div === "cxc") router.push("/dashboard/home");
       else router.push("/dashboard/mockdgo");
     } catch (err) {
-      // Keep your UX simple; you can swap alert for a toast if you have one
       alert(err?.message || "Login failed");
     }
   };
