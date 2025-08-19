@@ -20,7 +20,6 @@ function AddComplaint() {
       <DataForm />
       <NotesForm />
       <ActionForm />
-     
     </div>
   );
 }

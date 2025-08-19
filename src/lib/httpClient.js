@@ -36,5 +36,14 @@ const httpClient = axios.create({
   withCredentials: false,
 });
 
+// jaga-jaga kalau header di-override di tempat lain
+httpClient.interceptors.request.use((config) => {
+  config.headers = config.headers || {};
+  if (!("ngrok-skip-browser-warning" in config.headers)) {
+    config.headers["ngrok-skip-browser-warning"] = "true";
+  }
+  return config;
+});
+
 export default httpClient;
 export { apiBase };
