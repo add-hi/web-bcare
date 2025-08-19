@@ -9,7 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import useAuth from "@/hooks/useUser"; // <-- added
+import useUser from "@/hooks/useUser"; // ← use the correct hook
 
 const menuItems = [
   {
@@ -17,14 +17,14 @@ const menuItems = [
     href: "/dashboard/home",
     icon: Home,
     hasSubmenu: false,
-    division_codes: ["cxc"], // tampil untuk UIC & CXC
+    division_codes: ["cxc"], // CXC only
   },
   {
     name: "Complaint",
     href: "/dashboard/complaint",
     icon: FileText,
     hasSubmenu: false,
-    division_codes: ["cxc"], // tampil untuk UIC & CXC
+    division_codes: ["cxc"], // CXC only
   },
   {
     name: "Dashboard",
@@ -41,18 +41,17 @@ const menuItems = [
       "uic11",
       "tbs",
       "opr",
-    ], // hanya UIC
+    ], // UIC/TBS/OPR
   },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user } = useAuth(); // <-- added
+  const { user } = useUser(); // ← from user hook
   const [expandedMenus, setExpandedMenus] = useState({});
   const [expandedSubMenus, setExpandedSubMenus] = useState({});
 
   useEffect(() => {
-    // Auto expand menu and submenu if current path matches
     const newExpandedMenus = {};
     const newExpandedSubMenus = {};
 
@@ -61,7 +60,6 @@ export default function Sidebar() {
         const hasActiveSubmenu = item.submenu.some((sub) => {
           if (pathname === sub.href) return true;
 
-          // Check sub-submenu match
           if (sub.subSubmenu) {
             const hasActiveSubSubmenu = sub.subSubmenu.some(
               (subSub) => pathname === subSub.href
@@ -82,28 +80,22 @@ export default function Sidebar() {
     setExpandedSubMenus(newExpandedSubMenus);
   }, [pathname]);
 
-  const toggleMenu = (menuName) => {
-    setExpandedMenus((prev) => ({
-      ...prev,
-      [menuName]: !prev[menuName],
-    }));
-  };
+  const toggleMenu = (menuName) =>
+    setExpandedMenus((prev) => ({ ...prev, [menuName]: !prev[menuName] }));
 
-  const toggleSubMenu = (subMenuName) => {
+  const toggleSubMenu = (subMenuName) =>
     setExpandedSubMenus((prev) => ({
       ...prev,
       [subMenuName]: !prev[subMenuName],
     }));
-  };
 
   const isActiveParent = (item) => {
     if (pathname === item.href) return true;
     if (item.submenu) {
       return item.submenu.some((sub) => {
         if (pathname === sub.href) return true;
-        if (sub.subSubmenu) {
+        if (sub.subSubmenu)
           return sub.subSubmenu.some((subSub) => pathname === subSub.href);
-        }
         return false;
       });
     }
@@ -112,29 +104,27 @@ export default function Sidebar() {
 
   const isActiveSubParent = (subItem) => {
     if (pathname === subItem.href) return true;
-    if (subItem.subSubmenu) {
-      return subItem.subSubmenu.some((subSub) => pathname === subSub.href);
-    }
+    if (subItem.subSubmenu)
+      return subItem.subSubmenu.some((s) => pathname === s.href);
     return false;
   };
 
-  // ⬇️ Hanya tampilkan item yang diizinkan untuk division saat ini
+  // Only show items allowed for the current division
   const visibleItems = useMemo(() => {
-    const division_code =
-      user?.division_details?.division_code?.toLowerCase?.() ||
-      user?.division_code?.toLowerCase?.();
+    const division = (
+      user?.division_details?.division_code ||
+      user?.division_code ||
+      ""
+    ).toLowerCase();
     return menuItems.filter((i) =>
-      i.division_codes
-        ? division_code && i.division_codes.includes(division_code)
-        : true
+      i.division_codes ? division && i.division_codes.includes(division) : true
     );
   }, [user]);
 
-  // Normalize user fields from API/store (keeps your layout as-is)
   const displayName = user?.full_name || user?.name || user?.email || "User";
   const displayId = user?.npp || user?.id || user?.employee_id || "";
   const displayRole = user?.role_details?.role_name || user?.role || "";
-  const initial = displayName.charAt(0);
+  const initial = displayName?.charAt(0) || "U";
 
   return (
     <aside className="w-64 bg-slate-700 text-white min-h-screen fixed left-0 top-18 bottom-0 overflow-y-auto">
@@ -164,13 +154,11 @@ export default function Sidebar() {
 
         <ul className="space-y-1 px-2">
           {visibleItems.map((item) => {
-            const IconComponent = item.icon;
+            const Icon = item.icon;
             return (
               <li key={item.name}>
                 <div>
-                  {/* Main Menu Item */}
                   {item.hasSubmenu ? (
-                    // Menu dengan submenu - hanya toggle
                     <div
                       className={`flex items-center justify-between px-4 py-2 rounded-lg transition-colors cursor-pointer ${
                         isActiveParent(item)
@@ -180,10 +168,9 @@ export default function Sidebar() {
                       onClick={() => toggleMenu(item.name)}
                     >
                       <div className="flex items-center space-x-3">
-                        <IconComponent size={18} />
+                        <Icon size={18} />
                         <span className="font-medium">{item.name}</span>
                       </div>
-
                       <ChevronDown
                         size={16}
                         className={`transition-transform duration-200 ${
@@ -192,7 +179,6 @@ export default function Sidebar() {
                       />
                     </div>
                   ) : (
-                    // Menu tanpa submenu - langsung link
                     <Link
                       href={item.href}
                       className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
@@ -202,21 +188,19 @@ export default function Sidebar() {
                       }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <IconComponent size={18} />
+                        <Icon size={18} />
                         <span className="font-medium">{item.name}</span>
                       </div>
                     </Link>
                   )}
 
-                  {/* Submenu */}
                   {item.hasSubmenu && expandedMenus[item.name] && (
                     <ul className="mt-2 ml-6 space-y-1">
                       {item.submenu?.map((subItem) => {
-                        const SubIconComponent = subItem.icon;
+                        const SubIcon = subItem.icon;
                         return (
                           <li key={subItem.name}>
                             <div>
-                              {/* Submenu Item */}
                               {subItem.hasSubSubmenu ? (
                                 <div
                                   className={`flex items-center justify-between px-4 py-2 rounded-md text-sm transition-colors cursor-pointer ${
@@ -227,7 +211,7 @@ export default function Sidebar() {
                                   onClick={() => toggleSubMenu(subItem.name)}
                                 >
                                   <div className="flex items-center space-x-3">
-                                    <SubIconComponent size={16} />
+                                    <SubIcon size={16} />
                                     <span>{subItem.name}</span>
                                   </div>
                                   <ChevronRight
@@ -248,36 +232,10 @@ export default function Sidebar() {
                                       : "text-gray-400 hover:bg-slate-600 hover:text-white"
                                   }`}
                                 >
-                                  <SubIconComponent size={16} />
+                                  <SubIcon size={16} />
                                   <span>{subItem.name}</span>
                                 </Link>
                               )}
-
-                              {/* Sub-submenu */}
-                              {subItem.hasSubSubmenu &&
-                                expandedSubMenus[subItem.name] && (
-                                  <ul className="mt-2 ml-6 space-y-1">
-                                    {subItem.subSubmenu.map((subSubItem) => {
-                                      const SubSubIconComponent =
-                                        subSubItem.icon;
-                                      return (
-                                        <li key={subSubItem.name}>
-                                          <Link
-                                            href={subSubItem.href}
-                                            className={`flex items-center space-x-3 px-4 py-2 rounded-md text-xs transition-colors ${
-                                              pathname === subSubItem.href
-                                                ? "bg-slate-800 text-white border-l-2 border-blue-400"
-                                                : "text-gray-500 hover:bg-slate-600 hover:text-white"
-                                            }`}
-                                          >
-                                            <SubSubIconComponent size={14} />
-                                            <span>{subSubItem.name}</span>
-                                          </Link>
-                                        </li>
-                                      );
-                                    })}
-                                  </ul>
-                                )}
                             </div>
                           </li>
                         );
