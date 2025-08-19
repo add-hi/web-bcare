@@ -2,7 +2,7 @@
 "use client";
 import { useEffect } from "react";
 import httpClient from "@/lib/httpClient"; // shared axios instance
-import { apiPaths } from "@/lib/apiPaths";
+import apiPaths from "@/lib/apiPaths";
 import { useAuthStore } from "@/store/auth";
 
 const ACCESS_COOKIE = "access_token";
