@@ -5,7 +5,7 @@ import useAddComplaint from "@/hooks/useAddComplaint";
 
 const InputForm = () => {
   const {
-    dataFormData, currentEmployee, currentRole, policies, uics, getUicName, saveTicket, setActionFormData
+    dataFormData, currentEmployee, currentRole, policies, uics, getUicName
   } = useAddComplaint();
   
   const [formData, setFormData] = useState({
@@ -22,93 +22,30 @@ const InputForm = () => {
   // Auto-fill Form Unit with current user role
   useEffect(() => {
     if (currentRole?.role_name) {
-      setFormData(prev => {
-        const newData = { ...prev, formUnit: currentRole.role_name };
-        setTimeout(() => setActionFormData(newData), 0);
-        return newData;
-      });
+      setFormData(prev => ({ ...prev, formUnit: currentRole.role_name }));
     }
-  }, [currentRole, setActionFormData]);
+  }, [currentRole]);
 
   // Auto-fill Unit To based on channel and category selection
   useEffect(() => {
     const { channelId, categoryId } = dataFormData;
-    // console.log('ActionForm - dataFormData:', dataFormData);
-    // console.log('ActionForm - channelId:', channelId, 'categoryId:', categoryId);
-    // console.log('ActionForm - policies length:', policies.length, 'uics length:', uics.length);
-    
     if (channelId && categoryId) {
       const uicName = getUicName(channelId, categoryId);
-      // console.log('ActionForm - getUicName result:', uicName);
-      
       if (uicName) {
-        setFormData(prev => {
-          const newData = { ...prev, unitTo: uicName };
-          setTimeout(() => setActionFormData(newData), 0);
-          return newData;
-        });
+        setFormData(prev => ({ ...prev, unitTo: uicName }));
       }
     }
-  }, [dataFormData, getUicName, policies, uics, setActionFormData]);
-  
-  // Reset form when dataFormData is cleared
-  useEffect(() => {
-    if (!dataFormData.channelId && !dataFormData.categoryId) {
-      const resetData = {
-        action: "",
-        formUnit: currentRole?.role_name || "",
-        unitTo: "",
-        closedTime: "",
-        solution: "",
-        reason: "",
-      };
-      setFormData(resetData);
-      setActionFormData(resetData);
-    }
-  }, [dataFormData, currentRole, setActionFormData]);
-
-  // Listen for reset event
-  useEffect(() => {
-    const handleReset = () => {
-      const resetData = {
-        action: "",
-        formUnit: currentRole?.role_name || "",
-        unitTo: "",
-        closedTime: "",
-        solution: "",
-        reason: "",
-      };
-      setFormData(resetData);
-      setActionFormData(resetData);
-    };
-
-    window.addEventListener('resetAllForms', handleReset);
-    return () => window.removeEventListener('resetAllForms', handleReset);
-  }, [currentRole, setActionFormData]);
+  }, [dataFormData, getUicName]);
 
   const handleInputChange = (field, value) => {
-    console.log('🔄 ActionForm handleInputChange:', field, '=', value);
-    setFormData(prev => {
-      const newData = { ...prev, [field]: value };
-      // Use setTimeout to avoid setState during render
-      setTimeout(() => {
-        console.log('💾 ActionForm setActionFormData called with:', newData);
-        console.log('🎯 ActionForm - action value being set:', newData.action);
-        setActionFormData(newData);
-      }, 0);
-      return newData;
-    });
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
-  const handleSave = async () => {
-    try {
-      console.log("Saving ticket data...");
-      await saveTicket();
-      alert('Ticket saved successfully!');
-    } catch (error) {
-      console.error('Save failed:', error);
-      alert('Failed to save ticket: ' + error.message);
-    }
+  const handleSave = () => {
+    console.log("Saving data:", formData);
   };
 
   return (
@@ -135,8 +72,8 @@ const InputForm = () => {
                   <option value="" disabled>
                     -- Pilih Action --
                   </option>
-                  <option value="ESCALATED">ESCALATED</option>
-                  <option value="CLOSED">CLOSED</option>
+                  <option value="Eskalasi">Eskalasi</option>
+                  <option value="Closed">Closed</option>
                 </select>
               </div>
             </div>
@@ -171,8 +108,8 @@ const InputForm = () => {
               />
             </div>
 
-            {/* Closed Time - hanya muncul kalau action === "CLOSED" */}
-            {formData.action === "CLOSED" && (
+            {/* Closed Time - hanya muncul kalau action === "Closed" */}
+            {formData.action === "Closed" && (
               <div className="flex items-center space-x-2 min-w-[140px] flex-grow min-w-0">
                 <label className="text-sm font-medium text-black whitespace-nowrap">
                   Closed Time
@@ -189,8 +126,8 @@ const InputForm = () => {
             )}
           </div>
 
-          {/* Solution - muncul kalau action === "CLOSED" */}
-          {formData.action === "CLOSED" && (
+          {/* Solution - muncul kalau action === "Closed" */}
+          {formData.action === "Closed" && (
             <div className="flex items-center space-x-2 min-w-[140px] flex-grow min-w-0 mt-3">
               <label className="text-sm font-medium text-black whitespace-nowrap">
                 Solution

@@ -12,6 +12,29 @@ function AddComplaint() {
   const inputFormRef = useRef();
   const {
     customerData, searchContext, inputType, dataFormData,
+    setCustomerData, setDataFormData, fetchDropdownData, fetchCurrentUser, reset
+  } = useAddComplaint();
+
+  // Fetch initial data on mount
+  useEffect(() => {
+    fetchDropdownData();
+    fetchCurrentUser();
+  }, [fetchDropdownData, fetchCurrentUser]);
+
+  const handleCustomerData = (data, context, type) => {
+    setCustomerData(data, context, type);
+  };
+
+  const handleFullReset = () => {
+    reset();
+    if (inputFormRef.current) {
+      inputFormRef.current.resetForm();
+    }
+  };
+
+  const inputFormRef = useRef();
+  const {
+    customerData, searchContext, inputType, dataFormData,
     setCustomerData, setDataFormData, resetAllForms
   } = useAddComplaint();
 

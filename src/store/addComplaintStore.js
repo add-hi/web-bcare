@@ -26,8 +26,6 @@ const initial = {
   
   // Loading states
   loadingData: false,
-  isDataFetched: false,        // ← ADD THIS
-  isUserFetched: false, 
   
   // Current user
   currentEmployee: null,
@@ -65,25 +63,8 @@ const useAddComplaintStore = create((set, get) => ({
   setCurrentEmployee: (currentEmployee) => set({ currentEmployee }),
   setCurrentRole: (currentRole) => set({ currentRole }),
 
-  // Reset action - preserve dropdown data and current user
-  reset: () => set((state) => ({
-    ...initial,
-    // Preserve dropdown data
-    channels: state.channels,
-    categories: state.categories,
-    allCategories: state.allCategories,
-    policies: state.policies,
-    sources: state.sources,
-    terminals: state.terminals,
-    priorities: state.priorities,
-    uics: state.uics,
-    employees: state.employees,
-    roles: state.roles,
-    // Preserve current user
-    currentEmployee: state.currentEmployee,
-    currentRole: state.currentRole,
-    loadingData: state.loadingData
-  })),
+  // Reset action
+  reset: () => set({ ...initial }),
 }));
 
 export default useAddComplaintStore;
