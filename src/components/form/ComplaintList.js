@@ -27,7 +27,7 @@ const ComplaintList = () => {
   const originalComplaints = [
     {
       id: 1,
-      tglInput: "11/08/2025",
+      tglInput: "10/08/2025",
       noTiket: "123456778",
       channel: "ATM",
       category: "Tarik Tunai di Mesin ATM",
@@ -38,20 +38,6 @@ const ComplaintList = () => {
       unitNow: "BCC Unit Divisi CXC",
       status: "Unconfirm",
       sla: "7",
-    },
-    {
-      id: 2,
-      tglInput: "10/08/2025",
-      noTiket: "12345679",
-      channel: "Mobile Banking",
-      category: "Transfer Antar Bank",
-      customerName: "John De",
-      number: "9027484",
-      cardNumber: "123456787641",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Unconfirm",
-      sla: "5",
     },
   ];
 

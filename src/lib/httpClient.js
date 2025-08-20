@@ -36,7 +36,5 @@ const httpClient = axios.create({
   withCredentials: false,
 });
 
-
-
 export default httpClient;
 export { apiBase };
