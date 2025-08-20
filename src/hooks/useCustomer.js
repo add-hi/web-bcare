@@ -27,7 +27,7 @@ export default function useCustomer(customerId) {
     const BASE = useMemo(() => {
         const v =
             process.env.NEXT_PUBLIC_TICKET_API_BASE_URL ||
-            "https://275232686ea9.ngrok-free.app";
+            "https://bcare.my.id";
         return v.replace(/\/$/, "");
     }, []);
 
