@@ -20,7 +20,7 @@ import useUser from "@/hooks/useUser";
 
 // --- helper to read division_code from user objects ---
 function normalizeDivision(u) {
-  return String(u?.division_code ?? u?.division_details?.division_code ?? "")
+  return String(u?.division_code ?? u?.data.division_code ?? "")
     .trim()
     .toLowerCase();
 }
@@ -59,10 +59,9 @@ export default function LoginPage() {
       });
 
       // Optional: route by division code if you want (kept close to your old logic)
-      const div =
-        result?.user?.division_details?.division_code?.toLowerCase?.() || "";
-      if (div === "CXC") router.push("/dashboard/home");
-      else router.push("/dashboard/home");
+      const div = result?.data?.division_code?.toLowerCase?.() || "";
+      if (div === "cxc") router.push("/dashboard/home");
+      else router.push("/dashboard/mockdgo");
     } catch (err) {
       alert(err?.message || "Login failed");
     }
