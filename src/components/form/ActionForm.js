@@ -1,143 +1,86 @@
 "use client";
+import React, { useEffect, useState } from "react";
 
-import React, { useState } from "react";
-
-const InputForm = () => {
-  const [formData, setFormData] = useState({
-    action: "", // kosong
-    formUnit: "", // kosong
-    unitTo: "", // kosong
-    closedTime: "", // kosong
-    solution: "", // untuk Closed
-    reason: "", // untuk Decline
+const ActionForm = ({ detail, onChange }) => {
+  const toInitial = (d) => ({
+    action: "",            // Decline | Eskalasi | Closed (opsional)
+    formUnit: "",
+    unitTo: "",
+    closedTime: d?.timestamps?.closedTime || "",
+    solution: "",
+    reason: "",
+    // readonly info
+    customerStatus: d?.statuses?.customer?.name || "",
+    employeeStatus: d?.statuses?.employee?.name || "",
+    slaDays: d?.policy?.slaDays ?? "",
+    slaHours: d?.policy?.slaHours ?? "",
+    slaStatus: d?.sla?.status ?? "",
+    slaRemaining: d?.sla?.remainingHours ?? "",
   });
 
-  const handleInputChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
+  const [form, setForm] = useState(toInitial(detail));
+  useEffect(() => { const n = toInitial(detail); setForm(n); onChange?.(n); }, [detail]);
+  const update = (k, v) => setForm((p) => { const n = { ...p, [k]: v }; onChange?.(n); return n; });
 
-  const handleSave = () => {
-    console.log("Saving data:", formData);
-  };
+  const input = "w-full px-3 py-2 border border-gray-300 rounded outline-none text-black text-sm";
 
   return (
     <div className="w-full bg-green-100 rounded-lg shadow-lg p-6 mb-6 border border-gray-200">
-      {/* Header */}
-
       <div className="bg-green-600 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
         <h2 className="text-lg font-semibold">Action</h2>
       </div>
-      <div className="w-full bg-white rounded-lg shadow-lg p-4 border border-gray-200">
-        <div className="p-1  text-black mt-3">
-          <div className="flex items-center gap-4 flex-wrap">
-            {/* Action */}
-            <div className="flex gap-3 items-end min-w-[140px] flex-grow min-w-0">
-              <label className="text-sm font-medium text-black whitespace-nowrap self-center">
-                Action
-              </label>
-              <div className="flex-1">
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm"
-                  value={formData.action}
-                  onChange={(e) => handleInputChange("action", e.target.value)}
-                >
-                  <option value="" disabled>
-                    -- Pilih Action --
-                  </option>
-                  <option value="Decline">Decline</option>
-                  <option value="Eskalasi">Eskalasi</option>
-                  <option value="Closed">Closed</option>
-                </select>
-              </div>
-            </div>
 
-            {/* Form Unit */}
-            <div className="flex items-center space-x-2 min-w-[140px] flex-grow min-w-0">
-              <label className="text-sm font-medium text-black whitespace-nowrap">
-                Form Unit
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm"
-                value={formData.formUnit}
-                onChange={(e) => handleInputChange("formUnit", e.target.value)}
-                placeholder="Isi Form Unit"
-              />
-            </div>
+      <div className="w-full bg-white rounded-lg shadow-lg p-4 border border-gray-200 space-y-3">
+        {/* Info readonly */}
+        <div className="grid grid-cols-4 gap-3">
+          <div><label className="text-sm font-medium">Customer Status</label><input className={input} value={form.customerStatus} readOnly /></div>
+          <div><label className="text-sm font-medium">Employee Status</label><input className={input} value={form.employeeStatus} readOnly /></div>
+          <div><label className="text-sm font-medium">Priority</label><input className={input} value={form.priority} readOnly /></div>
+          <div><label className="text-sm font-medium">SLA</label><input className={input} value={`${form.slaDays}d / ${form.slaHours}h`} readOnly /></div>
+          <div><label className="text-sm font-medium">SLA Status</label><input className={input} value={form.slaStatus} readOnly /></div>
+          <div><label className="text-sm font-medium">Remaining (h)</label><input className={input} value={form.slaRemaining} readOnly /></div>
+        </div>
 
-            {/* Unit to */}
-            <div className="flex items-center space-x-2 min-w-[180px] flex-grow min-w-0">
-              <label className="text-sm font-medium text-black whitespace-nowrap">
-                Unit to <span className="text-red-500">*</span>
-              </label>
-              <select
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm"
-                value={formData.unitTo}
-                onChange={(e) => handleInputChange("unitTo", e.target.value)}
-              >
-                <option value="" disabled>
-                  -- Pilih Unit --
-                </option>
-                {/* nanti option bisa dari DB */}
-              </select>
-            </div>
-
-            {/* Closed Time */}
-            <div className="flex items-center space-x-2 min-w-[140px] flex-grow min-w-0">
-              <label className="text-sm font-medium text-black whitespace-nowrap">
-                Closed Time
-              </label>
-              <input
-                type="date"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm"
-                value={formData.closedTime}
-                onChange={(e) =>
-                  handleInputChange("closedTime", e.target.value)
-                }
-              />
-            </div>
-
-            {/* Save Button */}
-            <button
-              onClick={handleSave}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded text-sm font-medium transition-colors duration-200 ml-auto flex-shrink-0"
-            >
-              Save
-            </button>
+        {/* Action controls */}
+        <div className="grid grid-cols-4 gap-3">
+          <div>
+            <label className="text-sm font-medium">Action</label>
+            <select className={input} value={form.action} onChange={(e) => update("action", e.target.value)}>
+              <option value="">-- Pilih Action --</option>
+              <option value="Decline">Decline</option>
+              <option value="Eskalasi">Eskalasi</option>
+              <option value="Closed">Closed</option>
+            </select>
           </div>
 
-          {/* Solution - muncul kalau action === "Closed" */}
-          {formData.action === "Closed" && (
-            <div className="flex items-center space-x-2 min-w-[140px] flex-grow min-w-0 mt-3">
-              <label className="text-sm font-medium text-black whitespace-nowrap">
-                Solution
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black "
-                value={formData.solution}
-                onChange={(e) => handleInputChange("solution", e.target.value)}
-                placeholder="Isi Solution"
-              />
+          <div>
+            <label className="text-sm font-medium">Form Unit</label>
+            <input className={input} value={form.formUnit} onChange={(e) => update("formUnit", e.target.value)} />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Unit To</label>
+            <select className={input} value={form.unitTo} onChange={(e) => update("unitTo", e.target.value)}>
+              <option value="">-- Pilih Unit --</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Closed Time</label>
+            <input type="date" className={input} value={form.closedTime || ""} onChange={(e) => update("closedTime", e.target.value)} />
+          </div>
+
+          {form.action === "Closed" && (
+            <div className="col-span-2">
+              <label className="text-sm font-medium">Solution</label>
+              <input className={input} value={form.solution} onChange={(e) => update("solution", e.target.value)} />
             </div>
           )}
 
-          {/* Reason - muncul kalau action === "Decline" */}
-          {formData.action === "Decline" && (
-            <div className="flex items-center space-x-2 min-w-[140px] flex-grow min-w-0 mt-3">
-              <label className="text-sm font-medium text-black whitespace-nowrap">
-                Reason
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm"
-                value={formData.reason}
-                onChange={(e) => handleInputChange("reason", e.target.value)}
-                placeholder="Isi Reason"
-              />
+          {form.action === "Decline" && (
+            <div className="col-span-2">
+              <label className="text-sm font-medium">Reason</label>
+              <input className={input} value={form.reason} onChange={(e) => update("reason", e.target.value)} />
             </div>
           )}
         </div>
@@ -146,4 +89,4 @@ const InputForm = () => {
   );
 };
 
-export default InputForm;
+export default ActionForm;

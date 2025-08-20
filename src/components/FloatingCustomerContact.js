@@ -1,365 +1,463 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   MessageCircle,
   Phone,
   PhoneOff,
-  Mic,
-  MicOff,
   X,
   User,
-  Volume2,
-  Settings,
-  UserPlus,
+  Mic,
+  MicOff,
+  Users,
+  LogOut,
 } from "lucide-react";
+import io from "socket.io-client";
 
-export default function FloatingCustomerContact() {
-  // UI State
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("setup");
-  const [showCustomerSetup, setShowCustomerSetup] = useState(true);
+export default function FloatingCustomerContact({ room = "general", detail }) {
+  // ====== Socket Configuration ======
+  const SOCKET_URL = "https://bcare.my.id";
 
-  // Socket and Connection State
-  const [agentId, setAgentId] = useState('');
-  const [customerId, setCustomerId] = useState('');
-  const [inputCustomerId, setInputCustomerId] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
+  // console.log(`CUS-${detail.ids.customerId}`);
 
-  // Call State
-  const [isOnCall, setIsOnCall] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isRemoteMicOn, setIsRemoteMicOn] = useState(true);
-  const [connectionState, setConnectionState] = useState('new');
-  const [incomingCall, setIncomingCall] = useState(null);
-  const [localStream, setLocalStream] = useState(null);
-
-  // Chat State
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [remoteTyping, setRemoteTyping] = useState(false);
-
-  // Customer Data State
-  const [customerData, setCustomerData] = useState({
-    name: "No Customer Selected",
-    phone: "",
-    status: "offline",
-  });
-
-  // Refs
-  const localAudio = useRef();
-  const remoteAudio = useRef();
-  const peerConnection = useRef(null);
-  const messagesEndRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
-  const socketRef = useRef(null);
-
-  // WebRTC Configuration
-  const pcConfig = {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      {
-        urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:80?transport=tcp',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
+  // Generate consistent UID per browser
+  const uid = useMemo(() => {
+    if (typeof window === "undefined") return "guest";
+    try {
+      const raw = localStorage.getItem("auth");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const userId = parsed?.state?.user?.id;
+        if (userId != null) {
+          const gen = `EMP-${userId}`;
+          localStorage.setItem("chat:uid", gen);
+          return gen;
+        }
       }
-    ],
-    iceCandidatePoolSize: 10,
-    iceTransportPolicy: 'all'
-  };
-
-  // Simulate socket connection for demo
-  useEffect(() => {
-    // Simulate socket connection
-    const simulateConnection = () => {
-      setAgentId('agent_' + Math.random().toString(36).substr(2, 9));
-      setIsConnected(true);
-      console.log('Simulated socket connection established');
-    };
-
-    const timer = setTimeout(simulateConnection, 1000);
-    return () => clearTimeout(timer);
+      const existing = localStorage.getItem("chat:uid");
+      if (existing) return existing;
+      const gen = `guest_${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem("chat:uid", gen);
+      return gen;
+    } catch (e) {
+      return "guest";
+    }
   }, []);
 
-  // Load customer data when customerId changes
-  useEffect(() => {
-    if (customerId) {
-      // Simulate loading customer data
-      const customerInfo = {
-        name: `Customer ${customerId.slice(-4)}`,
-        phone: `+62${Math.floor(Math.random() * 1000000000)}`,
-        status: "online",
-      };
-      setCustomerData(customerInfo);
+  const fallbackCallRoom = `call:${room}`;
+  const [dmRoom, setDmRoom] = useState(null);
+  const ACTIVE_ROOM = useMemo(
+    () => dmRoom || fallbackCallRoom,
+    [dmRoom, fallbackCallRoom]
+  );
 
-      // Load chat history from localStorage
-      const savedMessages = localStorage.getItem(`chat_${customerId}`);
-      if (savedMessages) {
-        setMessages(JSON.parse(savedMessages));
-      } else {
-        setMessages([]);
+  // UI State
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("chat");
+
+  // Socket and Connection State
+  const [connected, setConnected] = useState(false);
+  const [peerCount, setPeerCount] = useState(1);
+  const [activePeers, setActivePeers] = useState([]);
+  const [isLiveChat, setIsLiveChat] = useState(false);
+
+  // Call State
+  const [callStatus, setCallStatus] = useState("idle");
+  const [showCallUI, setShowCallUI] = useState(false);
+  const [remoteFrame, setRemoteFrame] = useState(null);
+  const [isMuted, setIsMuted] = useState(false);
+
+  // Chat State
+  const MAX_MSG = 200;
+  const initialMessages = [];
+  const [messages, setMessages] = useState([]);
+  const [inputText, setInputText] = useState("");
+  const storageKey = `msgs:${ACTIVE_ROOM}`;
+
+  // Refs
+  const localVideoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const socketRef = useRef(null);
+  const streamRef = useRef(null);
+  const frameTimer = useRef(null);
+  const callStartAt = useRef(null);
+  const FPS = 1.5;
+
+  // ====== Helpers ======
+  const nowHHMM = () =>
+    new Date().toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const pushMsg = useCallback(
+    (msg) => {
+      setMessages((prev) => {
+        const prevArray = Array.isArray(prev) ? prev : [];
+        const next = [...prevArray, msg].slice(-MAX_MSG);
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    },
+    [storageKey]
+  );
+
+  // ====== Video Streaming Functions ======
+  const startLocalStream = useCallback(async () => {
+    if (streamRef.current) return streamRef.current;
+    try {
+      console.log("Requesting camera access...");
+
+      // Check if getUserMedia is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera not supported in this browser");
       }
 
-      console.log('Customer data loaded:', customerInfo);
-
-      // Hide setup and show chat tab after customer is set
-      setShowCustomerSetup(false);
-      setActiveTab('chat');
-    } else {
-      setCustomerData({
-        name: "No Customer Selected",
-        phone: "",
-        status: "offline",
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 320, height: 240 },
+        audio: false,
       });
-      setMessages([]);
+      console.log("Camera access granted");
+      streamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+        await localVideoRef.current.play();
+        console.log("Video element ready");
+      }
+      return stream;
+    } catch (error) {
+      console.error("Error accessing camera:", error);
+      alert(`Camera error: ${error.message}`);
+      throw error;
     }
-  }, [customerId]);
+  }, []);
+
+  const stopLocalStream = useCallback(() => {
+    if (frameTimer.current) {
+      clearInterval(frameTimer.current);
+      frameTimer.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
+  const startStreamingFrames = useCallback(() => {
+    if (frameTimer.current) return;
+    console.log("Starting frame streaming...");
+    const sendFrame = () => {
+      const video = localVideoRef.current;
+      const canvas = canvasRef.current;
+      const sock = socketRef.current;
+      if (!video || !canvas || !sock) {
+        console.log("Missing elements:", {
+          video: !!video,
+          canvas: !!canvas,
+          sock: !!sock,
+        });
+        return;
+      }
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.log("Video not ready yet");
+        return;
+      }
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+      const base64 = dataUrl.split(",")[1];
+      sock.emit("call:frame", { room: ACTIVE_ROOM, data: base64 });
+      console.log("Frame sent, size:", w, "x", h);
+    };
+    frameTimer.current = setInterval(sendFrame, 1000 / FPS);
+  }, [ACTIVE_ROOM]);
+
+  const stopStreamingFrames = useCallback(() => {
+    if (frameTimer.current) {
+      clearInterval(frameTimer.current);
+      frameTimer.current = null;
+    }
+  }, []);
+
+  // ====== Socket lifecycle ======
+  useEffect(() => {
+    const sock = io(SOCKET_URL, { transports: ["websocket", "polling"] });
+    socketRef.current = sock;
+
+    const onConnect = () => {
+      setConnected(true);
+      sock.emit("auth:register", { userId: uid });
+      sock.emit("join", { room: ACTIVE_ROOM, userId: uid });
+      sock.emit("presence:get", { room: ACTIVE_ROOM });
+    };
+    const onDisconnect = () => {
+      setConnected(false);
+    };
+
+    sock.on("connect", onConnect);
+    sock.on("disconnect", onDisconnect);
+
+    // DM / Presence
+    sock.on("dm:pending", ({ room }) => {
+      setDmRoom(room);
+      sock.emit("presence:get", { room });
+    });
+    sock.on("dm:request", ({ room }) => {
+      setDmRoom(room);
+      sock.emit("dm:join", { room });
+      sock.emit("presence:get", { room });
+      setIsLiveChat(true);
+      pushMsg({
+        id: `sys_${Date.now()}`,
+        text: `Live chat diminta oleh ${detail.ids.customerId}.`,
+        isBot: true,
+        timestamp: nowHHMM(),
+      });
+    });
+    sock.on("dm:ready", ({ room }) => {
+      sock.emit("presence:get", { room });
+      setIsLiveChat(true);
+    });
+    sock.on("presence:list", ({ room, peers }) => {
+      if (room !== ACTIVE_ROOM) return;
+      setActivePeers(peers || []);
+      setPeerCount((peers || []).length || 1);
+    });
+
+    // Chat
+    sock.on("chat:new", (msg) => {
+      if (msg?.room !== ACTIVE_ROOM) return;
+      if (!msg?.text) return;
+      pushMsg({
+        id: String(msg._id || msg.id || Date.now()),
+        text: msg.text,
+        isBot: msg.author?.id !== uid,
+        timestamp: nowHHMM(),
+      });
+    });
+
+    // Call
+    sock.on("call:ringing", () => {
+      setCallStatus("ringing");
+      setShowCallUI(true);
+    });
+    sock.on("call:accepted", async () => {
+      setCallStatus("in-call");
+      setShowCallUI(true);
+      callStartAt.current = Date.now();
+      setTimeout(() => {
+        startStreamingFrames();
+      }, 1000);
+    });
+    sock.on("call:declined", () => {
+      setCallStatus("idle");
+      setShowCallUI(false);
+      setRemoteFrame(null);
+      stopStreamingFrames();
+      stopLocalStream();
+    });
+    sock.on("call:ended", () => {
+      if (callStartAt.current) {
+        const dur = Math.floor((Date.now() - callStartAt.current) / 1000);
+        const mm = String(Math.floor(dur / 60)).padStart(2, "0");
+        const ss = String(dur % 60).padStart(2, "0");
+        pushMsg({
+          id: `call_${Date.now()}`,
+          text: `📞 Panggilan selesai • Durasi: ${mm}:${ss}`,
+          isBot: true,
+          timestamp: nowHHMM(),
+          isCallLog: true,
+        });
+      }
+      callStartAt.current = null;
+      setCallStatus("idle");
+      setShowCallUI(false);
+      setRemoteFrame(null);
+      stopStreamingFrames();
+      stopLocalStream();
+    });
+    sock.on("call:frame", ({ data }) => setRemoteFrame(data));
+
+    if (sock.connected) onConnect();
+
+    return () => {
+      try {
+        sock.emit("leave", { room: ACTIVE_ROOM, userId: uid });
+      } catch {}
+      sock.off();
+      sock.disconnect();
+      stopStreamingFrames();
+      stopLocalStream();
+    };
+  }, [SOCKET_URL, ACTIVE_ROOM, uid]);
+
+  // Load chat history per room
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      const uniq = Array.from(new Map(parsed.map((m) => [m.id, m])).values());
+      const merged = [
+        ...initialMessages,
+        ...uniq.filter((m) => !initialMessages.find((im) => im.id === m.id)),
+      ];
+      setMessages(merged);
+    } catch {
+      setMessages(initialMessages);
+    }
+  }, [storageKey]);
 
   // Auto-scroll chat messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // WebRTC Functions
-  const createPeerConnection = (remoteId) => {
-    const pc = new RTCPeerConnection(pcConfig);
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        console.log('🧊 Sending ICE candidate to customer');
-        // In real implementation, emit via socket
-        console.log('ice-candidate', { to: remoteId, candidate: event.candidate });
-      } else {
-        console.log('✅ ICE gathering complete');
-      }
+  // ====== Actions ======
+  const handleSend = useCallback(() => {
+    const sock = socketRef.current;
+    if (!sock || !isLiveChat) return;
+    const trimmed = (inputText || "").trim();
+    if (!trimmed) return;
+    const now = Date.now();
+    const outgoing = {
+      id: `m_${now}`,
+      text: trimmed,
+      isBot: false,
+      timestamp: nowHHMM(),
+      author: { id: String(uid), firstName: "You" },
+      createdAt: now,
+      type: "text",
+      room: ACTIVE_ROOM,
     };
+    pushMsg(outgoing);
+    sock.emit("chat:send", outgoing);
+    setInputText("");
+  }, [inputText, isLiveChat, ACTIVE_ROOM, pushMsg, uid]);
 
-    pc.ontrack = (event) => {
-      console.log('🔊 Customer audio track received');
-      const remoteStream = event.streams[0];
-      if (remoteStream && remoteAudio.current) {
-        console.log('🔊 Setting customer audio source');
-        remoteAudio.current.srcObject = remoteStream;
-        remoteAudio.current.play().then(() => {
-          console.log('✅ Customer audio playing successfully');
-        }).catch(e => {
-          console.error('❌ Auto-play failed:', e.name, e.message);
-        });
-      }
-    };
-
-    pc.onconnectionstatechange = () => {
-      console.log('Connection state:', pc.connectionState);
-      setConnectionState(pc.connectionState);
-    };
-
-    return pc;
-  };
-
-  const getLocalStream = async () => {
-    try {
-      console.log('🎤 Requesting microphone access...');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
-      console.log('🎤 Agent microphone stream obtained');
-      return stream;
-    } catch (error) {
-      console.error('❌ Error accessing microphone:', error.name, error.message);
-      alert(`Microphone error: ${error.name} - ${error.message}`);
-      throw error;
-    }
-  };
-
-  const startCall = async () => {
-    if (!customerId) {
-      alert('Please set a Customer ID first');
+  const quickDM = useCallback(() => {
+    const sock = socketRef.current;
+    if (!sock) return;
+    const target = `CUS-${detail.ids.customerId}`;
+    if (!target) {
+      alert("Peer tidak tersedia. Buka tab lain (user berbeda) untuk testing.");
       return;
     }
+    sock.emit("dm:open", { toUserId: target });
+  }, []);
 
+  const placeCall = useCallback(async () => {
+    const sock = socketRef.current;
+    if (!sock) return;
+    if (peerCount < 2) {
+      alert("Agent tidak tersedia. Pastikan ada 2 user yang online.");
+      return;
+    }
     try {
-      const stream = await getLocalStream();
-      setLocalStream(stream);
-      if (localAudio.current) {
-        localAudio.current.srcObject = stream;
-      }
-
-      peerConnection.current = createPeerConnection(customerId);
-
-      stream.getTracks().forEach(track => {
-        console.log('🎤 Adding agent audio track');
-        peerConnection.current.addTrack(track, stream);
-      });
-
-      const offer = await peerConnection.current.createOffer({
-        offerToReceiveAudio: true
-      });
-      await peerConnection.current.setLocalDescription(offer);
-
-      // In real implementation, emit via socket
-      console.log('call-user', { offer, to: customerId });
-
-      setIsOnCall(true);
-      setActiveTab('call');
-
-      // Simulate call acceptance after 2 seconds for demo
+      await startLocalStream();
+      sock.emit("call:invite", { room: ACTIVE_ROOM });
+      setCallStatus("ringing");
+      setShowCallUI(true);
+      setActiveTab("call");
       setTimeout(() => {
-        console.log('📞 Simulating call acceptance');
-        setConnectionState('connected');
-      }, 2000);
+        startStreamingFrames();
+      }, 1000);
     } catch (error) {
-      console.error('Error starting call:', error);
-      alert('Error accessing microphone: ' + error.message);
+      console.error("Failed to start camera for call:", error);
     }
-  };
+  }, [peerCount, ACTIVE_ROOM, startLocalStream, startStreamingFrames]);
 
-  const endCall = () => {
-    console.log('📴 Ending call');
-
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
+  const acceptCall = useCallback(async () => {
+    const sock = socketRef.current;
+    if (!sock) return;
+    try {
+      await startLocalStream();
+      sock.emit("call:accept", { room: ACTIVE_ROOM });
+      setCallStatus("in-call");
+      setShowCallUI(true);
+      callStartAt.current = Date.now();
+      setTimeout(() => {
+        startStreamingFrames();
+      }, 1000);
+    } catch (error) {
+      console.error("Failed to start video stream:", error);
     }
+  }, [ACTIVE_ROOM, startLocalStream, startStreamingFrames]);
 
-    if (peerConnection.current) {
-      peerConnection.current.close();
-    }
+  const declineCall = useCallback(() => {
+    const sock = socketRef.current;
+    if (!sock) return;
+    sock.emit("call:decline", { room: ACTIVE_ROOM });
+    setCallStatus("idle");
+    setShowCallUI(false);
+    stopStreamingFrames();
+    stopLocalStream();
+  }, [ACTIVE_ROOM, stopLocalStream, stopStreamingFrames]);
 
-    peerConnection.current = null;
-    setLocalStream(null);
-    setIsOnCall(false);
-    setIsMuted(false);
-    setIsRemoteMicOn(true);
-    setConnectionState('new');
+  const hangupCall = useCallback(() => {
+    const sock = socketRef.current;
+    if (!sock) return;
+    sock.emit("call:hangup", { room: ACTIVE_ROOM });
+    stopStreamingFrames();
+    stopLocalStream();
+    setCallStatus("idle");
+    setShowCallUI(false);
+    setRemoteFrame(null);
+  }, [ACTIVE_ROOM, stopLocalStream, stopStreamingFrames]);
 
-    if (localAudio.current) {
-      localAudio.current.srcObject = null;
-    }
-    if (remoteAudio.current) {
-      remoteAudio.current.srcObject = null;
-    }
-  };
-
-  const handleEndCall = () => {
-    // In real implementation, emit via socket
-    console.log('end-call', { to: customerId });
-    endCall();
-  };
-
-  const toggleMute = () => {
-    if (!localStream) return;
-
-    const audioTrack = localStream.getAudioTracks()[0];
-    if (audioTrack) {
-      audioTrack.enabled = !audioTrack.enabled;
-      setIsMuted(!audioTrack.enabled);
-
-      // In real implementation, emit via socket
-      console.log('update-mic-status', { to: customerId, isMicOn: audioTrack.enabled });
-    }
-  };
-
-  // Chat Functions
-  const sendMessage = () => {
-    if (!newMessage.trim() || !customerId) return;
-
-    const messageData = {
-      id: Date.now(),
-      text: newMessage.trim(),
-      sender: 'agent',
-      timestamp: new Date().toISOString(),
-      time: formatTime(new Date())
-    };
-
-    // In real implementation, emit via socket
-    console.log('send-message', { to: customerId, message: newMessage.trim(), timestamp: messageData.timestamp });
-
-    // Add to local state
-    const updatedMessages = [...messages, messageData];
-    setMessages(updatedMessages);
-
-    // Save to localStorage - Note: localStorage is not supported in Claude artifacts
-    // In real implementation, you would use this line:
-    // localStorage.setItem(`chat_${customerId}`, JSON.stringify(updatedMessages));
-
-    setNewMessage('');
-    setIsTyping(false);
-  };
-
-  const handleMessageChange = (e) => {
-    setNewMessage(e.target.value);
-
-    if (!isTyping && customerId) {
-      setIsTyping(true);
-      // In real implementation, emit via socket
-      console.log('typing', { to: customerId, isTyping: true });
-    }
-
-    clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
-      if (customerId) {
-        console.log('typing', { to: customerId, isTyping: false });
-      }
-    }, 1000);
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      sendMessage();
-    }
-  };
-
-  const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString('id-ID', {
-      hour: '2-digit',
-      minute: '2-digit'
+  const startLiveChat = () => {
+    setIsLiveChat(true);
+    pushMsg({
+      id: `sys_${Date.now()}`,
+      text: "Anda telah terhubung dengan live chat. Silakan mulai percakapan.",
+      isBot: true,
+      timestamp: nowHHMM(),
     });
+    quickDM();
   };
 
-  const handleSetCustomerId = () => {
-    if (!inputCustomerId.trim()) {
-      alert('Please enter a valid Customer ID');
-      return;
-    }
+  const clearAll = () => {
+    try {
+      const keys = Object.keys(localStorage).filter((k) =>
+        k.startsWith("msgs:")
+      );
+      keys.forEach((k) => localStorage.removeItem(k));
+    } catch {}
+    setMessages([...initialMessages]);
+    setIsLiveChat(false);
+    setDmRoom(null);
+    setActivePeers([]);
+    setPeerCount(1);
+    setCallStatus("idle");
+    setRemoteFrame(null);
+    setShowCallUI(false);
+    stopStreamingFrames();
+    stopLocalStream();
 
-    setCustomerId(inputCustomerId.trim());
-    setInputCustomerId('');
-  };
-
-  const handleDisconnectCustomer = () => {
-    if (isOnCall) {
-      handleEndCall();
+    const sock = socketRef.current;
+    if (sock?.connected) {
+      try {
+        sock.emit("leave", { room: ACTIVE_ROOM, userId: uid });
+      } catch {}
+      sock.disconnect();
     }
-    setCustomerId('');
-    setMessages([]);
-    setShowCustomerSetup(true);
-    setActiveTab('setup');
-  };
-
-  const getConnectionStatusColor = () => {
-    switch (connectionState) {
-      case 'connected': return 'bg-green-500';
-      case 'connecting': return 'bg-yellow-500';
-      case 'disconnected': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
+    setTimeout(() => {
+      const newSock = io(SOCKET_URL, { transports: ["websocket", "polling"] });
+      socketRef.current = newSock;
+    }, 400);
   };
 
   const toggleWidget = () => {
@@ -368,9 +466,9 @@ export default function FloatingCustomerContact() {
 
   return (
     <>
-      {/* Hidden audio elements */}
-      <audio ref={localAudio} autoPlay muted />
-      <audio ref={remoteAudio} autoPlay />
+      {/* Hidden media elements */}
+      <video ref={localVideoRef} autoPlay muted style={{ display: "none" }} />
+      <canvas ref={canvasRef} style={{ display: "none" }} />
 
       {/* Floating Button */}
       <div className="fixed bottom-6 right-6 z-50">
@@ -382,14 +480,13 @@ export default function FloatingCustomerContact() {
             >
               <MessageCircle size={24} />
             </button>
-            {/* Connection Status Indicator */}
             <div
-              className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${isConnected ? 'bg-green-500' : 'bg-red-500'
-                }`}
+              className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
+                connected ? "bg-green-500" : "bg-red-500"
+              }`}
             />
-            {/* Customer Connected Indicator */}
-            {customerId && (
-              <div className="absolute -bottom-1 -left-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white" />
+            {isLiveChat && (
+              <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-orange-400 rounded-full border-2 border-white" />
             )}
           </div>
         )}
@@ -399,356 +496,258 @@ export default function FloatingCustomerContact() {
       {isOpen && (
         <div className="fixed bottom-6 right-6 z-50 w-80 bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden">
           {/* Header */}
-          <div className="bg-blue-500 text-white p-4 flex items-center justify-between">
+          <div className="bg-orange-500 text-white p-3 flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <h3 className="font-semibold">Agent Contact</h3>
+              <h3 className="font-semibold text-sm">Chat Agent</h3>
               <div
-                className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'
-                  }`}
+                className={`w-2 h-2 rounded-full ${
+                  connected ? "bg-green-300" : "bg-red-300"
+                }`}
               />
+              {isLiveChat && (
+                <span className="text-xs opacity-90">• {peerCount} peers</span>
+              )}
             </div>
-            <button
-              onClick={toggleWidget}
-              className="text-white hover:text-gray-200 transition-colors"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          {/* Agent Info */}
-          <div className="p-4 bg-gray-50">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                <User size={16} className="text-white" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-gray-900 text-sm">
-                  Agent Portal
-                </h4>
-                {agentId && (
-                  <div className="flex items-center space-x-2">
-                    <p className="text-xs text-gray-500 font-mono">ID: {agentId}</p>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(agentId).then(() => {
-                          // Show temporary success message
-                          const button = event.target;
-                          const originalText = button.textContent;
-                          button.textContent = '✓';
-                          button.className = 'text-green-600 text-xs font-semibold';
-                          setTimeout(() => {
-                            button.textContent = originalText;
-                            button.className = 'text-blue-600 hover:text-blue-800 text-xs font-semibold cursor-pointer';
-                          }, 1000);
-                        }).catch(() => {
-                          alert('Failed to copy ID');
-                        });
-                      }}
-                      className="text-blue-600 hover:text-blue-800 text-xs font-semibold cursor-pointer"
-                      title="Copy my ID"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'
-                }`}></div>
-            </div>
-          </div>
-
-          {/* Customer Info */}
-          {customerId && (
-            <div className="p-4 bg-blue-50 border-b">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                  <User size={16} className="text-gray-600" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 text-sm">
-                    {customerData.name}
-                  </h4>
-                  <p className="text-xs text-gray-500">ID: {customerId.slice(0, 8)}...</p>
-                </div>
+            <div className="flex items-center space-x-2">
+              {!isLiveChat ? (
                 <button
-                  onClick={handleDisconnectCustomer}
-                  className="text-red-500 hover:text-red-700 p-1"
-                  title="Disconnect Customer"
+                  onClick={startLiveChat}
+                  className="text-white hover:text-green-200 text-xs px-2 py-1 rounded border border-white/30 hover:bg-white/10"
+                  title="Start chat"
                 >
-                  <X size={16} />
+                  Start
                 </button>
-              </div>
+              ) : (
+                <>
+                  <button
+                    onClick={quickDM}
+                    className="text-white hover:text-blue-200 text-xs px-1.5 py-1 rounded border border-white/30 hover:bg-white/10"
+                    title="Pair DM"
+                  >
+                    <Users size={12} />
+                  </button>
+                  <button
+                    onClick={clearAll}
+                    className="text-white hover:text-red-200 text-xs px-1.5 py-1 rounded border border-white/30 hover:bg-white/10"
+                    title="End chat"
+                  >
+                    <LogOut size={12} />
+                  </button>
+                </>
+              )}
+              <button
+                onClick={toggleWidget}
+                className="text-white hover:text-gray-200"
+              >
+                <X size={18} />
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Tabs */}
-          <div className="flex">
-            {showCustomerSetup && (
-              <button
-                onClick={() => setActiveTab("setup")}
-                className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "setup"
-                  ? "text-orange-600 border-orange-600 bg-orange-50"
-                  : "text-gray-600 border-transparent bg-white hover:text-gray-800"
-                  }`}
-              >
-                <div className="flex items-center justify-center space-x-1">
-                  <Settings size={14} />
-                  <span>Setup</span>
-                </div>
-              </button>
-            )}
+          <div className="flex border-b border-gray-200">
             <button
               onClick={() => setActiveTab("chat")}
-              disabled={!customerId}
-              className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "chat"
-                ? "text-orange-600 border-orange-600 bg-orange-50"
-                : "text-gray-600 border-transparent bg-white hover:text-gray-800"
-                } ${!customerId ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                activeTab === "chat"
+                  ? "text-orange-600 border-b-2 border-orange-600 bg-orange-50"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
             >
-              Chat
+              Chat{" "}
+              {isLiveChat && (
+                <span className="ml-1 w-1.5 h-1.5 bg-green-500 rounded-full inline-block"></span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab("call")}
-              disabled={!customerId}
-              className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "call"
-                ? "text-orange-600 border-orange-600 bg-orange-50"
-                : "text-gray-600 border-transparent bg-white hover:text-gray-800"
-                } ${!customerId ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                activeTab === "call"
+                  ? "text-orange-600 border-b-2 border-orange-600 bg-orange-50"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
             >
-              Call
-              {isOnCall && (
-                <span className="ml-1 w-2 h-2 bg-green-500 rounded-full inline-block"></span>
+              Call{" "}
+              {callStatus !== "idle" && (
+                <span className="ml-1 w-1.5 h-1.5 bg-red-500 rounded-full inline-block"></span>
               )}
             </button>
           </div>
 
           {/* Tab Content */}
           <div className="h-72 bg-white overflow-hidden">
-            {activeTab === "setup" && (
-              <div className="h-full overflow-y-auto p-4">
-                <div className="text-center mb-4">
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <UserPlus size={20} className="text-orange-600" />
-                  </div>
-                  <h3 className="font-semibold text-base mb-1">Connect to Customer</h3>
-                  <p className="text-gray-600 text-xs">
-                    Enter the customer's ID to start a conversation
-                  </p>
-                </div>
-
-                {/* My ID Display */}
-                {agentId && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                    <p className="text-xs text-blue-700 font-medium mb-2 text-center">Share this ID with customers:</p>
-                    <div className="bg-white border rounded-md p-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono text-gray-700 truncate mr-2">{agentId}</span>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(agentId).then(() => {
-                              // Show temporary success message
-                              const button = event.target;
-                              const originalText = button.textContent;
-                              button.textContent = '✓';
-                              button.className = 'text-green-600 text-xs font-semibold px-2 py-1 bg-green-50 rounded';
-                              setTimeout(() => {
-                                button.textContent = originalText;
-                                button.className = 'text-blue-600 hover:text-blue-800 text-xs font-semibold px-2 py-1 rounded hover:bg-blue-50 transition-colors flex-shrink-0';
-                              }, 1000);
-                            }).catch(() => {
-                              alert('Failed to copy ID');
-                            });
-                          }}
-                          className="text-blue-600 hover:text-blue-800 text-xs font-semibold px-2 py-1 rounded hover:bg-blue-50 transition-colors flex-shrink-0"
-                          title="Copy my ID"
-                        >
-                          Copy
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Customer ID
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter Customer ID"
-                      value={inputCustomerId}
-                      onChange={(e) => setInputCustomerId(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSetCustomerId()}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    />
-                  </div>
-                  <button
-                    onClick={handleSetCustomerId}
-                    disabled={!inputCustomerId.trim() || !isConnected}
-                    className="w-full py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  >
-                    {!isConnected ? 'Connecting...' : 'Connect to Customer'}
-                  </button>
-                </div>
-              </div>
-            )}
-
             {activeTab === "chat" && (
               <div className="h-full flex flex-col">
                 {/* Chat Messages Area */}
-                <div className="flex-1 p-4 overflow-y-auto">
-                  {messages.length === 0 ? (
-                    <div className="text-center text-gray-500 text-sm flex items-center justify-center h-full">
-                      Start a conversation with {customerData.name}
+                <div className="flex-1 p-3 overflow-y-auto">
+                  {!isLiveChat ? (
+                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                      Click "Start" to begin live chat
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {messages.map((message) => (
                         <div
                           key={message.id}
-                          className={`flex ${message.sender === "agent"
-                            ? "justify-end"
-                            : "justify-start"
-                            }`}
+                          className={`flex ${
+                            !message.isBot ? "justify-end" : "justify-start"
+                          }`}
                         >
                           <div
-                            className={`max-w-xs px-3 py-2 rounded-lg text-sm ${message.sender === "agent"
-                              ? "bg-orange-500 text-white"
-                              : "bg-gray-200 text-gray-800"
-                              }`}
+                            className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
+                              !message.isBot
+                                ? "bg-orange-500 text-white rounded-br-sm"
+                                : "bg-gray-100 text-gray-800 rounded-bl-sm"
+                            } ${
+                              message.isCallLog
+                                ? "bg-blue-100 text-blue-800"
+                                : ""
+                            }`}
                           >
-                            <p>{message.text}</p>
-                            <p
-                              className={`text-xs mt-1 ${message.sender === "agent"
-                                ? "text-orange-100"
-                                : "text-gray-500"
-                                }`}
-                            >
-                              {message.time}
+                            <p className="leading-relaxed">{message.text}</p>
+                            <p className={`text-xs mt-1 opacity-70`}>
+                              {message.timestamp}
                             </p>
                           </div>
                         </div>
                       ))}
-                      {remoteTyping && (
-                        <div className="flex justify-start">
-                          <div className="bg-gray-200 rounded-lg px-3 py-2 text-sm">
-                            <div className="flex space-x-1">
-                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                       <div ref={messagesEndRef} />
                     </div>
                   )}
                 </div>
 
                 {/* Chat Input */}
-                <div className="p-4 flex space-x-2 border-t border-gray-100">
-                  <input
-                    type="text"
-                    placeholder={isConnected ? "Type a message..." : "Connecting..."}
-                    value={newMessage}
-                    onChange={handleMessageChange}
-                    onKeyPress={handleKeyPress}
-                    disabled={!isConnected || !customerId}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-100"
-                  />
-                  <button
-                    onClick={sendMessage}
-                    disabled={!newMessage.trim() || !isConnected || !customerId}
-                    className="px-4 py-2 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors text-sm font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  >
-                    Send
-                  </button>
+                <div className="p-3 border-t border-gray-100">
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      placeholder={
+                        isLiveChat ? "Type message..." : "Chat not active"
+                      }
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && handleSend()}
+                      disabled={!isLiveChat}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:bg-gray-50"
+                    />
+                    <button
+                      onClick={handleSend}
+                      disabled={!inputText.trim() || !isLiveChat}
+                      className="px-4 py-2 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors text-sm disabled:bg-gray-300"
+                    >
+                      Send
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeTab === "call" && (
-              <div className="h-full flex items-center justify-center p-6">
-                {!isOnCall ? (
-                  // Ready to call state
-                  <div className="text-center w-full">
-                    <div className="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center mb-4 mx-auto">
-                      <User size={32} className="text-gray-600" />
+              <div className="h-full flex flex-col">
+                {/* Video Area */}
+                <div className="flex-1 p-3 overflow-hidden">
+                  {remoteFrame ? (
+                    <div className="w-full h-full">
+                      <img
+                        src={`data:image/jpeg;base64,${remoteFrame}`}
+                        alt="Remote video"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
                     </div>
-                    <h4 className="font-semibold text-gray-900 text-lg mb-2">
-                      {customerData.name}
-                    </h4>
-                    <p className="text-gray-600 mb-2 text-sm">
-                      Ready to call
-                    </p>
-                    <p className="text-xs text-gray-500 mb-6">
-                      Customer ID: {customerId.slice(0, 8)}...
-                    </p>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mb-3 shadow-inner">
+                        <User size={24} className="text-gray-600" />
+                      </div>
 
-                    <div className="flex justify-center">
-                      <button
-                        onClick={startCall}
-                        className="w-16 h-16 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-lg"
-                      >
-                        <Phone size={24} />
-                      </button>
+                      {callStatus !== "idle" ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div
+                            className={`w-2 h-2 rounded-full animate-pulse ${
+                              callStatus === "in-call"
+                                ? "bg-green-500"
+                                : "bg-yellow-500"
+                            }`}
+                          />
+                          <p className="text-sm font-medium text-gray-700">
+                            {callStatus === "in-call"
+                              ? "On Call"
+                              : callStatus === "ringing"
+                              ? "Ringing..."
+                              : "Connecting..."}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm text-gray-500 mb-2">
+                            Ready to call
+                          </p>
+                          {peerCount < 2 && (
+                            <p className="text-xs text-gray-400 text-center">
+                              Waiting for peer to connect...
+                            </p>
+                          )}
+                        </>
+                      )}
                     </div>
+                  )}
+                </div>
+
+                {/* Call Controls - Fixed at bottom */}
+                <div className="p-3 border-t border-gray-100 bg-gray-50">
+                  <div className="flex items-center justify-center space-x-4">
+                    {callStatus === "idle" ? (
+                      <button
+                        onClick={placeCall}
+                        disabled={peerCount < 2}
+                        className="w-12 h-12 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-full flex items-center justify-center transition-colors shadow-lg"
+                        title={
+                          peerCount < 2 ? "Waiting for peer..." : "Start Call"
+                        }
+                      >
+                        <Phone size={18} />
+                      </button>
+                    ) : callStatus === "ringing" ? (
+                      <>
+                        <button
+                          onClick={acceptCall}
+                          className="w-12 h-12 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition-colors shadow-lg"
+                          title="Accept Call"
+                        >
+                          <Phone size={18} />
+                        </button>
+                        <button
+                          onClick={declineCall}
+                          className="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-lg"
+                          title="Decline Call"
+                        >
+                          <PhoneOff size={18} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setIsMuted(!isMuted)}
+                          className={`w-10 h-10 ${
+                            isMuted
+                              ? "bg-red-500 hover:bg-red-600"
+                              : "bg-gray-500 hover:bg-gray-600"
+                          } text-white rounded-full flex items-center justify-center transition-colors shadow-lg`}
+                          title={isMuted ? "Unmute" : "Mute"}
+                        >
+                          {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
+                        </button>
+                        <button
+                          onClick={hangupCall}
+                          className="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-lg"
+                          title="End Call"
+                        >
+                          <PhoneOff size={18} />
+                        </button>
+                      </>
+                    )}
                   </div>
-                ) : (
-                  // On call state
-                  <div className="text-center w-full">
-                    <div className="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center mb-4 mx-auto">
-                      <User size={32} className="text-gray-600" />
-                    </div>
-                    <h4 className="font-semibold text-gray-900 text-lg mb-2">
-                      {customerData.name}
-                    </h4>
-                    <div className="flex items-center justify-center space-x-2 mb-2">
-                      <div className={`w-2 h-2 rounded-full ${getConnectionStatusColor()}`} />
-                      <p className="text-green-600 text-sm font-medium">
-                        {connectionState === 'connected' ? 'On Call' : `Connecting... (${connectionState})`}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-center space-x-4 mb-6 text-xs text-gray-600">
-                      <span>You: {isMuted ? '🔇' : '🎤'}</span>
-                      <span>Customer: {isRemoteMicOn ? '🎤' : '🔇'}</span>
-                    </div>
-
-                    <div className="flex items-center justify-center space-x-6">
-                      <button
-                        onClick={toggleMute}
-                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg ${isMuted
-                          ? "bg-red-400 text-white"
-                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                          }`}
-                      >
-                        {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-                      </button>
-
-                      <button
-                        onClick={handleEndCall}
-                        className="w-14 h-14 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-lg"
-                      >
-                        <PhoneOff size={20} />
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          console.log('🔊 Manual play attempt');
-                          remoteAudio.current?.play().then(() => {
-                            console.log('✅ Manual play successful');
-                          }).catch(e => {
-                            console.error('❌ Manual play failed:', e);
-                          });
-                        }}
-                        className="w-14 h-14 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg"
-                      >
-                        <Volume2 size={20} />
-                      </button>
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
             )}
           </div>

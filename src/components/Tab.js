@@ -7,8 +7,8 @@ const TabComponent = () => {
   const [activeTab, setActiveTab] = useState('agent')
 
   const tabs = [
-    { id: 'agent', label: 'List Agent' },
-    { id: 'eskalasi', label: 'List Eskalasi' }
+    { id: 'agent', label: 'List Open Ticket' },
+    { id: 'eskalasi', label: 'List Progress' }
   ]
 
   const renderContent = () => {

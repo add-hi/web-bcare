@@ -31,7 +31,7 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'CX Communication - BNI',
+  title: 'B-Care Dashboard',
   description: 'Customer Experience Communication System',
 }
 

@@ -58,14 +58,11 @@ export default function LoginPage() {
         password: formData.password,
       });
 
-      // Prefer division from response payload; store will hydrate right after anyway
-      const division =
-        normalizeDivision(result?.data) ||
-        normalizeDivision(result?.user) ||
-        "";
-
-      if (division === "cxc") router.push("/dashboard/home");
-      else router.push("/dashboard/mockdgo");
+      // Optional: route by division code if you want (kept close to your old logic)
+      const div =
+        result?.user?.division_details?.division_code?.toLowerCase?.() || "";
+      if (div === "CXC") router.push("/dashboard/home");
+      else router.push("/dashboard/home");
     } catch (err) {
       alert(err?.message || "Login failed");
     }
