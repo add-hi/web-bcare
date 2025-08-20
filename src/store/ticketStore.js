@@ -3,18 +3,27 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 const initial = {
+    // list
     list: [],
     pagination: { limit: 10, offset: 0, total: 0, pages: 0 },
-    loading: false,
-    error: null,
+    loadingList: false,
+    errorList: null,
+
+    // detail
+    selectedId: null,
+    detailById: {},       // { [id]: normalizedDetail }
+    loadingDetail: false,
+    errorDetail: null,
 };
 
 const useTicketStore = create(
     persist(
-        (set) => ({
+        (set, get) => ({
             ...initial,
-            setLoading: (loading) => set({ loading }),
-            setError: (error) => set({ error }),
+
+            // list setters
+            setListLoading: (loadingList) => set({ loadingList }),
+            setListError: (errorList) => set({ errorList }),
             setTickets: (list) => set({ list }),
             setPagination: (p) =>
                 set({
@@ -25,6 +34,14 @@ const useTicketStore = create(
                         pages: Number(p?.pages ?? 0),
                     },
                 }),
+
+            // detail setters
+            setSelectedId: (selectedId) => set({ selectedId }),
+            setDetailLoading: (loadingDetail) => set({ loadingDetail }),
+            setDetailError: (errorDetail) => set({ errorDetail }),
+            upsertDetail: (id, detail) =>
+                set({ detailById: { ...get().detailById, [id]: detail } }),
+
             reset: () => set({ ...initial }),
         }),
         { name: "ticket" }

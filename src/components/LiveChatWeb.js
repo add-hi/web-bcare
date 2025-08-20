@@ -10,7 +10,7 @@ import io from "socket.io-client";
  */
 export default function LiveChatWeb({ room = "general" }) {
     // ====== Konfigurasi Socket ======
-    const SOCKET_URL = "https://t22bhmg5-4000.asse.devtunnels.ms/"
+    const SOCKET_URL = "http://34.50.84.251:3000/"
 
     // generate / ambil UID konsisten per browser
     const uid = useMemo(() => {
