@@ -75,15 +75,8 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
 
   // Chat State
   const MAX_MSG = 200;
-  // const initialMessages = [
-  //   {
-  //     id: 1,
-  //     text: "Halo! Saya BNI Assistant. Saya siap membantu Anda dengan keluhan atau masalah perbankan. Bisa ceritakan masalah yang Anda alami?",
-  //     isBot: true,
-  //     timestamp: "10:30",
-  //   },
-  // ];
-  const [messages, setMessages] = useState();
+  const initialMessages = [];
+  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const storageKey = `msgs:${ACTIVE_ROOM}`;
 
@@ -107,12 +100,10 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
   const pushMsg = useCallback(
     (msg) => {
       setMessages((prev) => {
-        const next = [...prev, msg].slice(-MAX_MSG);
+        const prevArray = Array.isArray(prev) ? prev : [];
+        const next = [...prevArray, msg].slice(-MAX_MSG);
         try {
-          const pure = next.filter(
-            (m) => !initialMessages.find((im) => im.id === m.id)
-          );
-          localStorage.setItem(storageKey, JSON.stringify(pure));
+          localStorage.setItem(storageKey, JSON.stringify(next));
         } catch {}
         return next;
       });
@@ -765,4 +756,3 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
     </>
   );
 }
-
