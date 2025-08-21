@@ -23,6 +23,8 @@ import {
   Building2,
 } from "lucide-react";
 import useTicket from "@/hooks/useTicket";
+import { useAuthStore } from "@/store/userStore";
+import useTicketStore from "@/store/ticketStore";
 
 const DivisionComplaintHandler = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -41,10 +43,18 @@ const DivisionComplaintHandler = () => {
 
   // Use the same ticket hook as ComplaintList
   const { list, loading, error, fetchTickets } = useTicket();
+  const { user } = useAuthStore();
+  const ticketStore = useTicketStore();
 
+  // Get current user's NPP for filtering
+  const currentUserNPP = user?.npp;
+
+  // Force refresh when user changes
   useEffect(() => {
-    fetchTickets({ limit: 100, offset: 0 });
-  }, [fetchTickets]);
+    if (currentUserNPP) {
+      fetchTickets({ limit: 100, offset: 0 });
+    }
+  }, [currentUserNPP, fetchTickets]);
 
   // Helper function to format date
   const fmtDate = (iso) => {
@@ -57,10 +67,16 @@ const DivisionComplaintHandler = () => {
     return `${dd}/${mm}/${yyyy}`;
   };
 
-  // Map API data to table format (same as ComplaintList)
+  // Map API data to table format and filter by assigned user
   const originalComplaints = useMemo(() => {
-    if (!Array.isArray(list)) return [];
-    return list.map((t) => {
+    if (!Array.isArray(list) || !currentUserNPP) return [];
+
+    // Filter tickets assigned to current user
+    const assignedTickets = list.filter((t) => {
+      return t?.employee?.npp === currentUserNPP;
+    });
+
+    return assignedTickets.map((t) => {
       const id = t?.ticket_id ?? null;
       return {
         id,
@@ -87,13 +103,13 @@ const DivisionComplaintHandler = () => {
         sla: t?.policy?.sla_days != null ? String(t.policy.sla_days) : "-",
         timeRemaining: "Calculating...", // You can add time calculation logic here
         lastUpdate: fmtDate(t?.updated_time || t?.created_time),
-        assignedTo: "Current User",
+        assignedTo: t?.employee?.full_name || "Current User",
         customerContact: t?.customer?.phone_number || "-",
         issueDescription: t?.complaint_description || "-",
         divisionNotes: [], // Add notes logic if available in API
       };
     });
-  }, [list]);
+  }, [list, currentUserNPP]);
 
   // Get unique values for filter options
   const getUniqueValues = (key) => {
@@ -102,6 +118,9 @@ const DivisionComplaintHandler = () => {
 
   // Apply filters and sorting
   const processedComplaints = useMemo(() => {
+    // Don't process if we don't have user data yet
+    if (!currentUserNPP) return [];
+
     let filtered = originalComplaints;
 
     // Apply filters
@@ -144,7 +163,7 @@ const DivisionComplaintHandler = () => {
     }
 
     return filtered;
-  }, [filters, sortConfig]);
+  }, [filters, sortConfig, originalComplaints, currentUserNPP]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => ({
@@ -738,6 +757,17 @@ const DivisionComplaintHandler = () => {
 
         {/* Filter Controls */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              ticketStore.reset();
+              fetchTickets({ limit: 100, offset: 0 });
+            }}
+            className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
+            disabled={loading}
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
           {Object.keys(filters).length > 0 && (
             <button
               onClick={clearAllFilters}
@@ -837,7 +867,7 @@ const DivisionComplaintHandler = () => {
 
       {/* Table */}
       <div className="overflow-x-auto bg-white rounded-lg shadow">
-        <table className="w-full border-collapse">
+        <table key={currentUserNPP} className="w-full border-collapse">
           <thead>
             <tr className="bg-gray-50">
               <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">
