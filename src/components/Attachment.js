@@ -21,6 +21,7 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle,
+  Trash2,
 } from "lucide-react";
 import httpClient from "@/lib/httpClient";
 import { useAuthStore } from "@/store/userStore";
@@ -38,12 +39,7 @@ const Attachment = ({ ticketId, ticketNumber, ticket }) => {
   const fileInputRef = useRef(null);
   const { accessToken } = useAuthStore();
 
-  // Debug logging
-  console.log('🔍 Attachment component props:', {
-    ticketId,
-    ticketNumber,
-    ticket: ticket ? 'provided' : 'not provided'
-  });
+
 
   // Load attachments for specific ticket
   const loadDocuments = async () => {
@@ -52,20 +48,13 @@ const Attachment = ({ ticketId, ticketNumber, ticket }) => {
       return;
     }
 
-    console.log('🔍 Loading attachments for ticketId:', ticketId);
-
     try {
-      // First try to get ticket details to see if attachments are included
       const response = await httpClient.get(`/tickets/${ticketId}`, {
         headers: { Authorization: accessToken },
       });
 
-      console.log('🔍 Ticket API response:', response.data);
-
       if (response.data.success) {
         const ticketData = response.data.data;
-        console.log('🔍 Ticket data:', ticketData);
-        console.log('🔍 Attachments in response:', ticketData.attachments);
 
         // Check if attachments exist in ticket response
         if (
@@ -73,7 +62,6 @@ const Attachment = ({ ticketId, ticketNumber, ticket }) => {
           Array.isArray(ticketData.attachments) &&
           ticketData.attachments.length > 0
         ) {
-          console.log('🔍 Found', ticketData.attachments.length, 'attachments');
           const formattedDocs = ticketData.attachments.map((attachment) => ({
             id: attachment.attachment_id,
             name: attachment.file_name,
@@ -91,11 +79,9 @@ const Attachment = ({ ticketId, ticketNumber, ticket }) => {
           }));
           setDocuments(formattedDocs);
         } else {
-          console.log('🔍 No attachments found in ticket response');
           setDocuments([]);
         }
       } else {
-        console.error('🔍 Ticket API failed:', response.data.message);
         showNotification(
           response.data.message || "Failed to load ticket",
           "error"
@@ -300,6 +286,37 @@ const Attachment = ({ ticketId, ticketNumber, ticket }) => {
         error.response?.data?.message || error.message || "Download failed";
       showNotification(
         `Failed to download ${doc.name}: ${errorMessage}`,
+        "error"
+      );
+    }
+  };
+
+  const handleDelete = async (doc) => {
+    if (!confirm(`Are you sure you want to delete ${doc.name}?`)) {
+      return;
+    }
+
+    try {
+      const response = await httpClient.delete(
+        `/attachments/${doc.attachmentId}`,
+        {
+          headers: { Authorization: accessToken },
+        }
+      );
+
+      if (response.data.success) {
+        // Remove document from state
+        setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+        showNotification(`File ${doc.name} deleted successfully!`);
+      } else {
+        throw new Error(response.data.message || "Delete failed");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      const errorMessage =
+        error.response?.data?.message || error.message || "Delete failed";
+      showNotification(
+        `Failed to delete ${doc.name}: ${errorMessage}`,
         "error"
       );
     }
@@ -598,6 +615,13 @@ const Attachment = ({ ticketId, ticketNumber, ticket }) => {
                           title="Download"
                         >
                           <Download size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(doc)}
+                          className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
