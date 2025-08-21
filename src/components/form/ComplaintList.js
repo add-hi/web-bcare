@@ -43,21 +43,23 @@ const ComplaintList = () => {
   );
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Ambil data saat halaman berubah
+  // Initialize with first page on mount
+  const [isInitialized, setIsInitialized] = useState(false);
+  
   useEffect(() => {
-    const offset = (currentPage - 1) * limit;
-    fetchTickets({ limit, offset });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, limit]);
-
-  // Sinkron bila offset store berubah (opsional, aman dibiarkan)
-  useEffect(() => {
-    if (pagination?.offset != null) {
-      const pageFromOffset = Math.floor((pagination.offset || 0) / limit) + 1;
-      if (pageFromOffset !== currentPage) setCurrentPage(pageFromOffset);
+    if (!isInitialized) {
+      fetchTickets({ limit: PAGE_SIZE, offset: 0 });
+      setIsInitialized(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination?.offset, limit]);
+  }, [isInitialized]);
+
+  // Fetch data when page changes (after initialization)
+  useEffect(() => {
+    if (isInitialized) {
+      const offset = (currentPage - 1) * limit;
+      fetchTickets({ limit, offset });
+    }
+  }, [currentPage, limit, isInitialized]);
 
   // helper tanggal dd/MM/yyyy
   const fmtDate = (iso) => {
