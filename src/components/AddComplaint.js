@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import CustomerForm from "@/components/add_form/CustomerForm";
 import DataForm from "@/components/add_form/DataForm";
 import ActionForm from "@/components/add_form/ActionForm";
@@ -12,7 +13,7 @@ function AddComplaint() {
   const inputFormRef = useRef();
   const {
     customerData, searchContext, inputType, dataFormData,
-    setCustomerData, setDataFormData, fetchDropdownData, fetchCurrentUser, reset
+    setCustomerData, setDataFormData, resetAllForms
   } = useAddComplaint();
 
   // Fetch initial data on mount
@@ -26,7 +27,7 @@ function AddComplaint() {
   };
 
   const handleFullReset = () => {
-    reset();
+    resetAllForms();
     if (inputFormRef.current) {
       inputFormRef.current.resetForm();
     }

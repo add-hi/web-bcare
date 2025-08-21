@@ -5,8 +5,17 @@ import useAddComplaint from "@/hooks/useAddComplaint";
 const DataForm = ({ detail, onChange, mode = "detail" }) => {
   const {
     channels, categories, sources, terminals, priorities, policies,
-    filterCategories, getSlaInfo
+    filterCategories, updateCategories, getSlaInfo
   } = useAddComplaint();
+  
+  // Debug logs
+  // console.log('DataForm render - Store data lengths:', {
+  //   channels: channels.length,
+  //   categories: categories.length,
+  //   sources: sources.length,
+  //   terminals: terminals.length,
+  //   priorities: priorities.length
+  // });
   const toInitial = (d) => {
     if (mode === "add") {
       // For add mode - use new structure with IDs
@@ -66,7 +75,6 @@ const DataForm = ({ detail, onChange, mode = "detail" }) => {
     return initial;
   });
 
-  
   useEffect(() => { 
     if (mode === "detail") {
       const n = toInitial(detail); 
@@ -75,19 +83,17 @@ const DataForm = ({ detail, onChange, mode = "detail" }) => {
     }
   }, [detail, mode]);
   
-
-  
   // Filter categories when channel changes (only for add mode)
   useEffect(() => {
     if (mode === "add" && form.channelId) {
       const filteredCategories = filterCategories(form.channelId);
+      updateCategories(filteredCategories);
       
-      // Reset category selection if current selection is not in filtered list
       if (form.categoryId && !filteredCategories.some(cat => cat.complaint_id === form.categoryId)) {
         update('categoryId', '');
       }
     }
-  }, [mode, form.channelId, filterCategories]);
+  }, [mode, form.channelId, filterCategories, updateCategories]);
   
   // Auto-fill SLA and description when both channel and category are selected (only for add mode)
   useEffect(() => {
@@ -104,9 +110,53 @@ const DataForm = ({ detail, onChange, mode = "detail" }) => {
     }
   }, [mode, form.channelId, form.categoryId, getSlaInfo]);
   
+  // Listen for reset event (only for add mode)
+  useEffect(() => {
+    if (mode === "add") {
+      const handleReset = () => {
+        const now = new Date();
+        const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+          .toISOString()
+          .slice(0, 16);
+        
+        const resetForm = {
+          description: "",
+          amount: "",
+          channelId: "",
+          categoryId: "",
+          sourceId: "",
+          terminalId: "",
+          transactionDate: "",
+          createdTime: localDateTime,
+          committedDueAt: "",
+          priorityId: "",
+          record: "",
+          slaDays: "",
+          slaHours: "",
+          slaStatus: "",
+          slaRemaining: "",
+        };
+        
+        setForm(resetForm);
+        onChange?.(resetForm);
+      };
 
+      window.addEventListener('resetAllForms', handleReset);
+      return () => window.removeEventListener('resetAllForms', handleReset);
+    }
+  }, [mode, onChange]);
 
-  const update = (k, v) => setForm((p) => { const n = { ...p, [k]: v }; onChange?.(n); return n; });
+  const update = (k, v) => {
+    setForm(p => {
+      const n = { ...p, [k]: v };
+      // Use setTimeout to avoid setState during render
+      setTimeout(() => {
+        console.log('DataForm onChange called with:', n);
+        onChange?.(n);
+      }, 0);
+      return n;
+    });
+  };
   
   const getSubmitData = () => ({
     description: form.description,
@@ -132,39 +182,57 @@ const DataForm = ({ detail, onChange, mode = "detail" }) => {
     
     const selectedOption = options.find(opt => getValue(opt) === value);
     
+    // Show search text when typing, selected label when not searching
+    const displayValue = isOpen && search ? search : (selectedOption ? getLabel(selectedOption) : search);
+    
     return (
       <div className="relative">
         <div className="relative">
           <input
             className={input + ' pr-8'}
-            value={selectedOption ? getLabel(selectedOption) : search}
+            value={displayValue}
             onChange={(e) => {
               setSearch(e.target.value);
               setIsOpen(true);
             }}
-            onFocus={() => setIsOpen(true)}
-            onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+            onFocus={() => {
+              setIsOpen(true);
+              // Clear search when focusing to allow new search
+              if (selectedOption) {
+                setSearch('');
+              }
+            }}
+            onBlur={() => setTimeout(() => {
+              setIsOpen(false);
+              setSearch('');
+            }, 200)}
             placeholder={placeholder}
           />
           <svg className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
-        {isOpen && filteredOptions.length > 0 && (
+        {isOpen && (
           <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b max-h-40 overflow-y-auto">
-            {filteredOptions.map((opt, idx) => (
-              <div
-                key={idx}
-                className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                onClick={() => {
-                  onChange(getValue(opt));
-                  setSearch('');
-                  setIsOpen(false);
-                }}
-              >
-                {getLabel(opt)}
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt, idx) => (
+                <div
+                  key={idx}
+                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                  onClick={() => {
+                    onChange(getValue(opt));
+                    setSearch('');
+                    setIsOpen(false);
+                  }}
+                >
+                  {getLabel(opt)}
+                </div>
+              ))
+            ) : (
+              <div className="px-3 py-2 text-sm text-gray-500">
+                No options found
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>
