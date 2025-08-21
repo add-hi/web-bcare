@@ -81,8 +81,27 @@ const CustomerForm = ({ detail, onChange, customerData, searchContext, inputType
           console.log('Customer data:', customerData);
           console.log('Looking for customer_id:', customerData.customer_id);
           
+          // Get authorization token
+          const getAccessToken = () => {
+            try {
+              const raw = localStorage.getItem("auth");
+              if (!raw) return "";
+              const parsed = JSON.parse(raw);
+              const token = parsed?.state?.accessToken || "";
+              return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+            } catch {
+              return "";
+            }
+          };
+          
+          const headers = {
+            'Accept': 'application/json',
+            'Authorization': getAccessToken(),
+            'ngrok-skip-browser-warning': 'true'
+          };
+          
           // Fetch accounts for this customer
-          const accountResponse = await fetch('/api/v1/account');
+          const accountResponse = await fetch('/api/v1/account', { headers });
           console.log('Account API response status:', accountResponse.status);
           if (accountResponse.ok) {
             accounts = await accountResponse.json();
@@ -104,7 +123,7 @@ const CustomerForm = ({ detail, onChange, customerData, searchContext, inputType
             console.log('Final account numbers:', accountNumbers);
             
             // Fetch cards for this customer's accounts
-            const cardResponse = await fetch('/api/v1/card');
+            const cardResponse = await fetch('/api/v1/card', { headers });
             console.log('Card API response status:', cardResponse.status);
             if (cardResponse.ok) {
               const cards = await cardResponse.json();

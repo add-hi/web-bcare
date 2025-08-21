@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import CustomerForm from "@/components/add_form/CustomerForm";
 import DataForm from "@/components/add_form/DataForm";
 import ActionForm from "@/components/add_form/ActionForm";
@@ -13,13 +14,8 @@ function AddComplaint() {
   const {
     customerData, searchContext, inputType, dataFormData,
     setCustomerData, setDataFormData, resetAllForms
+    setCustomerData, setDataFormData, resetAllForms
   } = useAddComplaint();
-
-  // Fetch initial data on mount
-  useEffect(() => {
-    fetchDropdownData();
-    fetchCurrentUser();
-  }, [fetchDropdownData, fetchCurrentUser]);
 
   const handleCustomerData = (data, context, type) => {
     setCustomerData(data, context, type);

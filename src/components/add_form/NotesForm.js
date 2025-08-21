@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import useAddComplaint from "@/hooks/useAddComplaint";
 import {
   MessageSquare,
   FileText,
@@ -11,119 +12,30 @@ import {
   User,
 } from "lucide-react";
 
-const InputForm = ({
-  // TODO: BACKEND - Add these props when integrating with parent form
-  formId = null, // The ID of the parent form/complaint
-  currentUser = null, // Current user info { id, name, role, division }
-  onNoteAdded = null, // Callback when note is successfully added
-  initialNotes = [], // Initial notes to display (from backend)
-}) => {
-  // TODO: BACKEND - Replace with actual API calls
-  const [divisionNotes, setDivisionNotes] = useState(initialNotes);
+const InputForm = () => {
+  const { currentEmployee, currentRole, setNotesFormData } = useAddComplaint();
+  const [divisionNotes, setDivisionNotes] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [newNote, setNewNote] = useState("");
 
-  // Mock data for development - REMOVE when backend is ready
-  const mockNotes = [
-    {
-      id: 1,
-      timestamp: "08/08/2025 14:20",
-      division: "Divisi CXC",
-      author: "System",
-      message: "Complaint received via Internet Banking channel.",
-      type: "system",
-    },
-    {
-      id: 2,
-      timestamp: "08/08/2025 15:30",
-      division: "Divisi CXC",
-      author: "John Doe",
-      message: "Initial review completed. All required fields are present.",
-      type: "note",
-    },
-  ];
-
-  // TODO: BACKEND - Replace this useEffect with actual API call
+  // Listen for reset event
   useEffect(() => {
-    // TODO: BACKEND - Implement this API call
-    // const fetchNotes = async () => {
-    //   if (formId) {
-    //     // For saved forms, fetch existing notes
-    //     try {
-    //       const response = await fetch(`/api/forms/${formId}/notes`);
-    //       const notes = await response.json();
-    //       setDivisionNotes(notes);
-    //     } catch (error) {
-    //       console.error('Failed to fetch notes:', error);
-    //     }
-    //   }
-    //   // For new forms, start with empty notes array (allow adding notes immediately)
-    // };
-    // fetchNotes();
-  }, [formId]);
+    const handleReset = () => {
+      setDivisionNotes([]);
+      setNewNote("");
+    };
 
-  // TODO: BACKEND - Implement actual API call
+    window.addEventListener('resetAllForms', handleReset);
+    return () => window.removeEventListener('resetAllForms', handleReset);
+  }, []);
+
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
 
     setIsProcessing(true);
 
     try {
-      // TODO: BACKEND - Replace with actual API call
-      /*
-      if (formId) {
-        // For saved forms, save to database immediately
-        const response = await fetch(`/api/forms/${formId}/notes`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${userToken}`, // Add auth token
-          },
-          body: JSON.stringify({
-            message: newNote,
-            type: 'note', // or allow user to select type
-            authorId: currentUser?.id,
-            division: currentUser?.division,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to add note');
-        }
-
-        const addedNote = await response.json();
-        setDivisionNotes(prev => [...prev, addedNote]);
-      } else {
-        // For unsaved forms, store notes locally until form is saved
-        // These notes will be saved when the form is eventually saved
-        const tempNote = {
-          id: `temp-${Date.now()}`, // temporary ID
-          timestamp: new Date().toLocaleDateString('id-ID', {
-            day: '2-digit',
-            month: '2-digit', 
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          }).replace(/\//g, '/').replace(',', ''),
-          division: currentUser?.division || "Current Division",
-          author: currentUser?.name || "Current User",
-          message: newNote,
-          type: "note",
-          isTemporary: true, // flag to indicate this needs to be saved to DB
-        };
-        
-        setDivisionNotes(prev => [...prev, tempNote]);
-      }
-      
-      // Call parent callback if provided
-      if (onNoteAdded) {
-        onNoteAdded(addedNote || tempNote);
-      }
-      */
-
-      // DEVELOPMENT ONLY - Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+      // Add to local display
       const mockNewNote = {
         id: Date.now(),
         timestamp: new Date()
@@ -136,18 +48,20 @@ const InputForm = ({
           })
           .replace(/\//g, "/")
           .replace(",", ""),
-        division: currentUser?.division || "Current Division",
-        author: currentUser?.name || "Current User",
+        division: currentRole?.role_name || "Unknown Division",
+        author: currentEmployee?.full_name || "Unknown User",
         message: newNote,
         type: "note",
       };
 
+      // Save to store for ticket creation
+      console.log('NotesForm setNotesFormData called with:', { newNote });
+      setNotesFormData({ newNote });
+      
       setDivisionNotes((prev) => [...prev, mockNewNote]);
-
-      console.log("Note added:", mockNewNote);
+      console.log("Note added to local display and store:", { newNote });
     } catch (error) {
       console.error("Failed to add note:", error);
-      // TODO: BACKEND - Add proper error handling
       alert("Failed to add note. Please try again.");
       return;
     } finally {
@@ -192,8 +106,7 @@ const InputForm = ({
       {/* Header */}
       <div className="bg-blue-500 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
         <h2 className="text-lg font-semibold">Notes</h2>
-        {/* TODO: BACKEND - Show form status or ID if needed */}
-        {formId && <p className="text-xs opacity-75">Form ID: {formId}</p>}
+
       </div>
 
       {/* Division Communication History */}
@@ -290,11 +203,7 @@ const InputForm = ({
             {isProcessing ? "Adding Note..." : "Add Note"}
           </button>
 
-          {!formId && divisionNotes.some((note) => note.isTemporary) && (
-            <p className="text-xs text-blue-600 mt-2 text-center">
-              💡 Notes will be permanently saved when you save the form
-            </p>
-          )}
+
         </div>
       </div>
 
