@@ -132,14 +132,16 @@ export default function useTicketDetail(ticketId) {
     const effectiveId = ticketId ?? selectedId;
     const detail = effectiveId ? detailById[effectiveId] : null;
 
-    const fetchTicketDetail = useCallback(async (id, { force = false } = {}) => {
+    const fetchTicketDetail = useCallback(async (id, { force = true } = {}) => {
+        console.log('fetch Detail Ticket hit');
+        
         const ticketIdToFetch = id ?? effectiveId;
         if (!ticketIdToFetch) return;
 
-        if (!force && detailById[ticketIdToFetch]) {
-            setSelectedId(ticketIdToFetch);
-            return; // pakai cache
-        }
+        // if (!force && detailById[ticketIdToFetch]) {
+        //     setSelectedId(ticketIdToFetch);
+        //     return; // pakai cache
+        // }
 
         setDetailLoading(true);
         setDetailError(null);
