@@ -43,7 +43,7 @@ const DivisionComplaintHandler = () => {
   const { list, loading, error, fetchTickets } = useTicket();
 
   useEffect(() => {
-    fetchTickets({ limit: 10, offset: 0 });
+    fetchTickets({ limit: 100, offset: 0 });
   }, [fetchTickets]);
 
   // Helper function to format date

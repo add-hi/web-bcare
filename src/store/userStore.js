@@ -16,7 +16,6 @@ const initialState = {
   accessToken: null, // "Bearer ..." (store as returned)
   refreshToken: null, // raw refresh token
   tokenType: "Bearer",
-  expiresAt: null, // epoch ms, optional
   error: null,
 };
 
@@ -31,7 +30,6 @@ export const useAuthStore = create(
       setAccessToken: (token) => set({ accessToken: token }),
       setRefreshToken: (rt) => set({ refreshToken: rt }),
       setTokenType: (tt) => set({ tokenType: tt }),
-      setExpiresAt: (ts) => set({ expiresAt: ts }),
       setError: (error) => set({ error }),
 
       // helpers
@@ -48,7 +46,6 @@ export const useAuthStore = create(
         accessToken: s.accessToken,
         refreshToken: s.refreshToken,
         tokenType: s.tokenType,
-        expiresAt: s.expiresAt,
       }),
     }
   )
