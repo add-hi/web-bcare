@@ -22,8 +22,10 @@ import {
     AlertCircle,
     CheckCircle
 } from 'lucide-react';
+import httpClient from '@/lib/httpClient';
+import { useAuthStore } from '@/store/userStore';
 
-const Attachment = () => {
+const Attachment = ({ ticketId }) => {
     const [documents, setDocuments] = useState([]);
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -34,34 +36,82 @@ const Attachment = () => {
     const [uploadProgress, setUploadProgress] = useState({});
     const [notification, setNotification] = useState(null);
     const fileInputRef = useRef(null);
+    const { accessToken } = useAuthStore();
 
-
-    // API Base URL
-    const API_BASE_URL = 'http://34.121.13.94:3001/api';
-
-    // Load documents dari server
+    // Load attachments from ticket
     const loadDocuments = async () => {
+        if (!ticketId) {
+            console.warn('No ticketId provided');
+            return;
+        }
+        
         try {
-            const response = await fetch(`${API_BASE_URL}/files`);
-            const result = await response.json();
+            // First try to get ticket details
+            const response = await httpClient.get(`/tickets/${ticketId}`, {
+                headers: { Authorization: accessToken }
+            });
             
-            if (result.success) {
-                const formattedDocs = result.data.map(file => ({
-                    id: Date.now() + Math.random(),
-                    name: file.filename,
-                    type: getFileType(file.filename),
-                    size: formatFileSize(file.size),
-                    uploadDate: new Date(file.uploadDate).toISOString().split('T')[0],
-                    uploadedBy: 'System User',
-                    category: file.category,
-                    url: `${API_BASE_URL}${file.path}`,
-                    description: `File dari kategori ${file.category}`
-                }));
-                setDocuments(formattedDocs);
+            if (response.data.success) {
+                const ticketData = response.data.data;
+                
+                // Check if attachments exist and is an array
+                if (ticketData.attachments && Array.isArray(ticketData.attachments) && ticketData.attachments.length > 0) {
+                    const formattedDocs = ticketData.attachments.map(attachment => ({
+                        id: attachment.attachment_id,
+                        name: attachment.file_name,
+                        type: getFileType(attachment.file_name),
+                        size: formatFileSize(attachment.file_size),
+                        uploadDate: new Date(attachment.upload_time).toISOString().split('T')[0],
+                        uploadedBy: 'User',
+                        category: attachment.file_type,
+                        url: null, // Will be fetched when needed
+                        description: `${attachment.file_type} file`,
+                        attachmentId: attachment.attachment_id,
+                        gcsPath: attachment.gcs_path
+                    }));
+                    setDocuments(formattedDocs);
+                } else {
+                    // Try alternative approach - check if there's a tickets/{id}/attachments endpoint
+                    try {
+                        const attachmentsResponse = await httpClient.get(`/tickets/${ticketId}/attachments`, {
+                            headers: { Authorization: accessToken }
+                        });
+                        
+                        if (attachmentsResponse.data.success && attachmentsResponse.data.data) {
+                            const attachments = Array.isArray(attachmentsResponse.data.data) 
+                                ? attachmentsResponse.data.data 
+                                : attachmentsResponse.data.data.attachments || [];
+                            
+                            const formattedDocs = attachments.map(attachment => ({
+                                id: attachment.attachment_id,
+                                name: attachment.file_name,
+                                type: getFileType(attachment.file_name),
+                                size: formatFileSize(attachment.file_size),
+                                uploadDate: new Date(attachment.upload_time).toISOString().split('T')[0],
+                                uploadedBy: 'User',
+                                category: attachment.file_type,
+                                url: null,
+                                description: `${attachment.file_type} file`,
+                                attachmentId: attachment.attachment_id,
+                                gcsPath: attachment.gcs_path
+                            }));
+                            setDocuments(formattedDocs);
+                        } else {
+                            setDocuments([]);
+                        }
+                    } catch (attachmentError) {
+                        console.log('No separate attachments endpoint available');
+                        setDocuments([]);
+                    }
+                }
+            } else {
+                showNotification(response.data.message || 'Failed to load ticket', 'error');
             }
         } catch (error) {
-            console.error('Error loading documents:', error);
-            showNotification('Gagal memuat dokumen', 'error');
+            console.error('Error loading attachments:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to load attachments';
+            showNotification(errorMessage, 'error');
+            setDocuments([]);
         }
     };
 
@@ -91,10 +141,12 @@ const Attachment = () => {
         setTimeout(() => setNotification(null), 5000);
     };
 
-    // Load documents on component mount
+    // Load documents when component mounts or ticketId changes
     useEffect(() => {
-        loadDocuments();
-    }, []);
+        if (ticketId) {
+            loadDocuments();
+        }
+    }, [ticketId, accessToken]);
 
     const getFileIcon = (type) => {
         switch (type) {
@@ -134,61 +186,77 @@ const Attachment = () => {
         const files = Array.from(event.target.files);
         
         if (files.length === 0) return;
+        if (!ticketId) {
+            showNotification('No ticket selected', 'error');
+            return;
+        }
+        if (files.length > 5) {
+            showNotification('Maximum 5 files allowed', 'error');
+            return;
+        }
 
         setUploading(true);
         
-        for (const file of files) {
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('category', 'general'); // Bisa diubah sesuai kebutuhan
-                formData.append('description', `Uploaded file: ${file.name}`);
-                formData.append('uploadedBy', 'Current User');
-
-                // Set progress untuk file ini
-                setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
-
-                const response = await fetch(`${API_BASE_URL}/upload`, {
-                    method: 'POST',
-                    body: formData,
-                    // Note: Jangan set Content-Type header, biarkan browser set otomatis untuk FormData
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    // Update progress
-                    setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
-                    
-                    // Tambahkan file ke state documents
-                    const newDoc = {
-                        id: result.data.id,
-                        name: result.data.originalName,
-                        type: getFileType(result.data.originalName),
-                        size: formatFileSize(result.data.size),
-                        uploadDate: new Date(result.data.uploadDate).toISOString().split('T')[0],
-                        uploadedBy: result.data.uploadedBy,
-                        category: result.data.category,
-                        url: result.data.mimetype.startsWith('image/') ? 
-                            `${API_BASE_URL}/files/${result.data.category}/${result.data.filename}` : 
-                            null,
-                        description: result.data.description
-                    };
-
-                    setDocuments(prev => [newDoc, ...prev]);
-                    showNotification(`File ${file.name} berhasil diupload!`);
-                } else {
-                    throw new Error(result.message || 'Upload gagal');
+        try {
+            const formData = new FormData();
+            files.forEach(file => {
+                if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                    throw new Error(`File ${file.name} exceeds 10MB limit`);
                 }
-            } catch (error) {
-                console.error('Upload error:', error);
-                showNotification(`Gagal upload ${file.name}: ${error.message}`, 'error');
-                setUploadProgress(prev => ({ ...prev, [file.name]: -1 })); // -1 for error
+                formData.append('files', file);
+            });
+
+            // Set progress
+            files.forEach(file => {
+                setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
+            });
+
+            const response = await httpClient.post(`/tickets/${ticketId}/attachments`, formData, {
+                headers: {
+                    Authorization: accessToken,
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            if (response.data.success) {
+                // Update progress
+                files.forEach(file => {
+                    setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
+                });
+                
+                // Add new attachments to documents
+                const newDocs = response.data.data.attachments.map(attachment => ({
+                    id: attachment.attachment_id,
+                    name: attachment.file_name,
+                    type: getFileType(attachment.file_name),
+                    size: formatFileSize(attachment.file_size),
+                    uploadDate: new Date(attachment.upload_time).toISOString().split('T')[0],
+                    uploadedBy: 'You',
+                    category: attachment.file_type,
+                    url: null,
+                    description: `${attachment.file_type} file`,
+                    attachmentId: attachment.attachment_id,
+                    gcsPath: attachment.gcs_path
+                }));
+
+                setDocuments(prev => [...newDocs, ...prev]);
+                showNotification(`Successfully uploaded ${files.length} file(s)!`);
+            } else {
+                throw new Error(response.data.message || 'Upload failed');
             }
+        } catch (error) {
+            console.error('Upload error:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Upload failed';
+            showNotification(errorMessage, 'error');
+            
+            // Set error state for all files
+            files.forEach(file => {
+                setUploadProgress(prev => ({ ...prev, [file.name]: -1 }));
+            });
         }
 
         setUploading(false);
-        setUploadProgress({});
+        setTimeout(() => setUploadProgress({}), 2000);
         
         // Reset file input
         if (fileInputRef.current) {
@@ -198,31 +266,56 @@ const Attachment = () => {
 
     const handleDownload = async (doc) => {
         try {
-            const response = await fetch(doc.url || `${API_BASE_URL}/files/${doc.category}/${doc.name}`);
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = doc.name;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                showNotification(`File ${doc.name} berhasil didownload!`);
+            // Get attachment with download URL
+            const response = await httpClient.get(`/attachments/${doc.attachmentId}`, {
+                headers: { Authorization: accessToken }
+            });
+            
+            if (response.data.success && response.data.data.download_url) {
+                // Create a temporary link and trigger download
+                const link = document.createElement('a');
+                link.href = response.data.data.download_url;
+                link.download = doc.name;
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showNotification(`File ${doc.name} download started!`);
             } else {
-                throw new Error('Download gagal');
+                throw new Error('Could not get download URL');
             }
         } catch (error) {
             console.error('Download error:', error);
-            showNotification(`Gagal download ${doc.name}`, 'error');
+            const errorMessage = error.response?.data?.message || error.message || 'Download failed';
+            showNotification(`Failed to download ${doc.name}: ${errorMessage}`, 'error');
         }
     };
 
-    const openPreview = (doc) => {
-        setSelectedDocument(doc);
-        setZoom(100);
-        setRotation(0);
+    const openPreview = async (doc) => {
+        try {
+            // For images, get the download URL for preview
+            if (doc.type === 'image') {
+                const response = await httpClient.get(`/attachments/${doc.attachmentId}`, {
+                    headers: { Authorization: accessToken }
+                });
+                
+                if (response.data.success && response.data.data.download_url) {
+                    const docWithUrl = { ...doc, url: response.data.data.download_url };
+                    setSelectedDocument(docWithUrl);
+                } else {
+                    setSelectedDocument(doc);
+                }
+            } else {
+                setSelectedDocument(doc);
+            }
+            setZoom(100);
+            setRotation(0);
+        } catch (error) {
+            console.error('Error getting preview URL:', error);
+            setSelectedDocument(doc);
+            setZoom(100);
+            setRotation(0);
+        }
     };
 
     const closePreview = () => {
@@ -272,6 +365,21 @@ const Attachment = () => {
             );
         }
     };
+
+    // Show message if no ticketId provided
+    if (!ticketId) {
+        return (
+            <div className="min-h-screen bg-gray-50 p-6 rounded-lg">
+                <div className="max-w-6xl mx-auto">
+                    <div className="text-center py-12 bg-white rounded-lg">
+                        <File className="mx-auto text-gray-300 mb-4" size={48} />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Ticket Selected</h3>
+                        <p className="text-gray-500">Please select a ticket to view its attachments</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 p-6 rounded-lg">
@@ -371,7 +479,7 @@ const Attachment = () => {
                         <input
                             ref={fileInputRef}
                             type="file"
-                            accept="image/*,.pdf,.doc,.docx,.txt"
+                            accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx"
                             multiple
                             onChange={handleFileUpload}
                             className="hidden"
