@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -22,6 +22,7 @@ import {
   RefreshCw,
   Building2,
 } from "lucide-react";
+import useTicket from "@/hooks/useTicket";
 
 const DivisionComplaintHandler = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -38,211 +39,61 @@ const DivisionComplaintHandler = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [newNote, setNewNote] = useState("");
 
-  // Sample data for division view with updated structure including communication history
-  const originalComplaints = [
-    {
-      id: 1,
-      tglInput: "10/08/2025",
-      noTiket: "123456778",
-      channel: "ATM",
-      category: "Tarik Tunai di Mesin ATM",
-      customerName: "John Doe",
-      number: "9027485",
-      cardNumber: "123456787642",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Inprogress",
-      sla: "7",
-      timeRemaining: "2 days",
-      lastUpdate: "10/08/2025 14:30",
-      assignedTo: "Current User",
-      customerContact: "+62-812-3456-7890",
-      issueDescription: "ATM tidak mengeluarkan uang tetapi saldo terpotong",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "10/08/2025 09:15",
-          division: "Divisi CXC",
-          author: "System",
-          message:
-            "Complaint received via ATM channel. Initial assessment required.",
-          type: "system",
-        },
-        {
-          id: 2,
-          timestamp: "10/08/2025 10:30",
-          division: "Divisi CXC",
-          author: "Ahmad Rahman",
-          message:
-            "Needs verification from finance department. Customer reported transaction failed but amount was deducted. Checking ATM logs.",
-          type: "note",
-        },
-        {
-          id: 3,
-          timestamp: "10/08/2025 14:30",
-          division: "Finance Division",
-          author: "Siti Nurhaliza",
-          message:
-            "Transaction logs reviewed. Amount deduction confirmed at 08:45. ATM maintenance team notified for physical inspection.",
-          type: "note",
-        },
-      ],
-    },
-    {
-      id: 2,
-      tglInput: "09/08/2025",
-      noTiket: "123456779",
-      channel: "Mobile Banking",
-      category: "Transfer Gagal",
-      customerName: "Jane Smith",
-      number: "9027486",
-      cardNumber: "123456787643",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Completed",
-      sla: "5",
-      timeRemaining: "1 day",
-      lastUpdate: "11/08/2025 09:15",
-      assignedTo: "Current User",
-      customerContact: "+62-813-9876-5432",
-      issueDescription: "Transfer ke rekening lain gagal namun saldo terpotong",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "09/08/2025 08:20",
-          division: "Divisi CXC",
-          author: "System",
-          message: "Complaint received via Mobile Banking channel.",
-          type: "system",
-        },
-        {
-          id: 2,
-          timestamp: "09/08/2025 11:45",
-          division: "IT Division",
-          author: "Budi Santoso",
-          message:
-            "Follow-up with IT division required. Transaction logs show incomplete process. Investigating database inconsistency.",
-          type: "note",
-        },
-        {
-          id: 3,
-          timestamp: "11/08/2025 09:15",
-          division: "Divisi CXC",
-          author: "Current User",
-          message:
-            "Issue resolved. Amount has been refunded to customer account. Customer notified via SMS.",
-          type: "resolution",
-        },
-      ],
-    },
-    {
-      id: 3,
-      tglInput: "08/08/2025",
-      noTiket: "123456780",
-      channel: "Internet Banking",
-      category: "Login Bermasalah",
-      customerName: "Bob Johnson",
-      number: "9027487",
-      cardNumber: "123456787644",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Inprogress",
-      sla: "3",
-      timeRemaining: "Overdue by 2 days",
-      lastUpdate: "08/08/2025 16:45",
-      assignedTo: "Current User",
-      customerContact: "+62-814-1111-2222",
-      issueDescription:
-        "Tidak bisa login ke internet banking sejak 3 hari lalu",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "08/08/2025 14:20",
-          division: "Divisi CXC",
-          author: "System",
-          message: "Complaint received via Internet Banking channel.",
-          type: "system",
-        },
-        {
-          id: 2,
-          timestamp: "08/08/2025 16:45",
-          division: "Security Division",
-          author: "Indira Sari",
-          message:
-            "Escalated to security team. Password reset attempted but issue persists. Account may be temporarily locked due to security protocols.",
-          type: "escalation",
-        },
-      ],
-    },
-    {
-      id: 4,
-      tglInput: "11/08/2025",
-      noTiket: "123456781",
-      channel: "ATM",
-      category: "Kartu Tertelan",
-      customerName: "Alice Brown",
-      number: "9027488",
-      cardNumber: "123456787645",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Inprogress",
-      sla: "7",
-      timeRemaining: "5 days",
-      lastUpdate: "11/08/2025 11:20",
-      assignedTo: "Current User",
-      customerContact: "+62-815-5555-6666",
-      issueDescription: "Kartu ATM tertelan di mesin ATM Cabang Sudirman",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "11/08/2025 09:30",
-          division: "Divisi CXC",
-          author: "System",
-          message: "Complaint received via ATM channel.",
-          type: "system",
-        },
-        {
-          id: 2,
-          timestamp: "11/08/2025 11:20",
-          division: "ATM Operations",
-          author: "Rudi Hartono",
-          message:
-            "Card retrieval requested from ATM maintenance team. Customer notified of process. Expected retrieval within 24 hours.",
-          type: "note",
-        },
-      ],
-    },
-    {
-      id: 5,
-      tglInput: "12/08/2025",
-      noTiket: "123456782",
-      channel: "Call Center",
-      category: "Informasi Saldo",
-      customerName: "Charlie Wilson",
-      number: "9027489",
-      cardNumber: "123456787646",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Inprogress",
-      sla: "1",
-      timeRemaining: "Same day",
-      lastUpdate: "12/08/2025 08:30",
-      assignedTo: "Current User",
-      customerContact: "+62-816-7777-8888",
-      issueDescription: "Meminta informasi saldo dan mutasi rekening",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "12/08/2025 08:30",
-          division: "Call Center",
-          author: "Maya Putri",
-          message:
-            "Information provided via secure channel. Customer satisfied with response. Waiting for final confirmation.",
-          type: "note",
-        },
-      ],
-    },
-  ];
+  // Use the same ticket hook as ComplaintList
+  const { list, loading, error, fetchTickets } = useTicket();
+
+  useEffect(() => {
+    fetchTickets({ limit: 10, offset: 0 });
+  }, [fetchTickets]);
+
+  // Helper function to format date
+  const fmtDate = (iso) => {
+    if (!iso) return "-";
+    const d = new Date(iso);
+    if (isNaN(d)) return "-";
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  // Map API data to table format (same as ComplaintList)
+  const originalComplaints = useMemo(() => {
+    if (!Array.isArray(list)) return [];
+    return list.map((t) => {
+      const id = t?.ticket_id ?? null;
+      return {
+        id,
+        tglInput: fmtDate(t?.created_time),
+        noTiket: t?.ticket_number ?? "-",
+        channel:
+          t?.issue_channel?.channel_code ||
+          t?.issue_channel?.channel_name ||
+          "-",
+        category:
+          t?.complaint?.complaint_name || t?.complaint?.complaint_code || "-",
+        customerName: t?.customer?.full_name || "-",
+        number: t?.related_account?.account_number
+          ? String(t.related_account.account_number)
+          : "-",
+        cardNumber: t?.related_card?.card_number
+          ? String(t.related_card.card_number)
+          : "-",
+        createdByUnit:
+          t?.intake_source?.source_name ||
+          (t?.employee?.npp ? `NPP ${t.employee.npp}` : "-"),
+        unitNow: t?.employee_status?.employee_status_name || "-",
+        status: t?.customer_status?.customer_status_name || "-",
+        sla: t?.policy?.sla_days != null ? String(t.policy.sla_days) : "-",
+        timeRemaining: "Calculating...", // You can add time calculation logic here
+        lastUpdate: fmtDate(t?.updated_time || t?.created_time),
+        assignedTo: "Current User",
+        customerContact: t?.customer?.phone_number || "-",
+        issueDescription: t?.complaint_description || "-",
+        divisionNotes: [], // Add notes logic if available in API
+      };
+    });
+  }, [list]);
 
   // Get unique values for filter options
   const getUniqueValues = (key) => {
@@ -897,11 +748,18 @@ const DivisionComplaintHandler = () => {
             </button>
           )}
           <div className="text-sm text-gray-600">
-            Showing {processedComplaints.length} of {originalComplaints.length}{" "}
-            entries
+            {loading
+              ? "Loading…"
+              : `Showing ${processedComplaints.length} of ${originalComplaints.length} entries`}
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-50 text-red-700 px-4 py-2">
+          {error}
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -912,11 +770,7 @@ const DivisionComplaintHandler = () => {
                 Total Assigned
               </p>
               <p className="text-2xl font-bold text-blue-700">
-                {
-                  originalComplaints.filter(
-                    (c) => c.assignedTo === "Current User"
-                  ).length
-                }
+                {loading ? "..." : originalComplaints.length}
               </p>
             </div>
             <User className="text-blue-600" size={24} />
@@ -927,10 +781,13 @@ const DivisionComplaintHandler = () => {
             <div>
               <p className="text-sm text-yellow-600 font-medium">In Progress</p>
               <p className="text-2xl font-bold text-yellow-700">
-                {
-                  originalComplaints.filter((c) => c.status === "Inprogress")
-                    .length
-                }
+                {loading
+                  ? "..."
+                  : originalComplaints.filter(
+                      (c) =>
+                        c.status.includes("Progress") ||
+                        c.status.includes("Processing")
+                    ).length}
               </p>
             </div>
             <Clock className="text-yellow-600" size={24} />
@@ -941,10 +798,13 @@ const DivisionComplaintHandler = () => {
             <div>
               <p className="text-sm text-green-600 font-medium">Completed</p>
               <p className="text-2xl font-bold text-green-700">
-                {
-                  originalComplaints.filter((c) => c.status === "Completed")
-                    .length
-                }
+                {loading
+                  ? "..."
+                  : originalComplaints.filter(
+                      (c) =>
+                        c.status.includes("Closed") ||
+                        c.status.includes("Completed")
+                    ).length}
               </p>
             </div>
             <CheckCircle className="text-green-600" size={24} />
@@ -1039,49 +899,69 @@ const DivisionComplaintHandler = () => {
             </tr>
           </thead>
           <tbody>
-            {processedComplaints.map((complaint, index) => (
-              <tr
-                key={complaint.id}
-                onClick={() => handleRowClick(complaint)}
-                className="hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-200"
-              >
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {index + 1}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {complaint.tglInput}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 font-medium">
-                  {complaint.noTiket}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {complaint.customerName}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {complaint.category}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {complaint.channel}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm">
-                  {getStatusBadge(complaint.status)}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  <span
-                    className={
-                      complaint.timeRemaining.includes("Overdue")
-                        ? "text-red-600 font-medium"
-                        : ""
-                    }
-                  >
-                    {complaint.timeRemaining}
-                  </span>
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm">
-                  {getActionButton(complaint)}
+            {loading ? (
+              <tr>
+                <td
+                  className="border border-gray-300 px-4 py-6 text-sm"
+                  colSpan={9}
+                >
+                  Loading…
                 </td>
               </tr>
-            ))}
+            ) : processedComplaints.length ? (
+              processedComplaints.map((complaint, index) => (
+                <tr
+                  key={complaint.id ?? `${complaint.noTiket}-${index}`}
+                  onClick={() => handleRowClick(complaint)}
+                  className="hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-200"
+                >
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {index + 1}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.tglInput}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 font-medium">
+                    {complaint.noTiket}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.customerName}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.category}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.channel}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm">
+                    {getStatusBadge(complaint.status)}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    <span
+                      className={
+                        complaint.timeRemaining.includes("Overdue")
+                          ? "text-red-600 font-medium"
+                          : ""
+                      }
+                    >
+                      {complaint.timeRemaining}
+                    </span>
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm">
+                    {getActionButton(complaint)}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  className="border border-gray-300 px-4 py-6 text-sm"
+                  colSpan={9}
+                >
+                  No data
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -1089,8 +969,9 @@ const DivisionComplaintHandler = () => {
       {/* Pagination */}
       <div className="mt-6 flex justify-between items-center">
         <div className="text-sm text-gray-600">
-          Showing {processedComplaints.length} of {originalComplaints.length}{" "}
-          entries
+          {loading
+            ? "Loading…"
+            : `Showing ${processedComplaints.length} of ${originalComplaints.length} entries`}
         </div>
         <div className="flex gap-2">
           <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">

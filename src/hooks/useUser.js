@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import httpClient from "@/lib/httpClient";
 import { useAuthStore, ensureBearer } from "@/store/userStore";
+import { extractUserFromToken } from "@/lib/jwtUtils";
 
 /**
  * Auth hook – NO cookies.
@@ -79,7 +80,14 @@ export default function useUser() {
         const refresh = data?.refresh_token || null;
         const tokenType = data?.token_type || "Bearer";
         const expiresIn = Number(data?.expires_in || 0);
-        const me = data?.data ?? null;
+        const apiUser = data?.data ?? null;
+        const tokenUser = extractUserFromToken(access);
+        
+        // Merge API user data with JWT token data
+        const me = {
+          ...tokenUser, // JWT data (includes npp, id, role_id, etc.)
+          ...apiUser,   // API data (includes full_name, role description)
+        };
 
         // store
         setAccessToken(access);
@@ -225,11 +233,25 @@ export default function useUser() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Extract user from token if user data is missing but token exists
+  const effectiveUser = useMemo(() => {
+    if (user) return user;
+    if (accessToken) {
+      const tokenUser = extractUserFromToken(accessToken);
+      if (tokenUser) {
+        // Update store with extracted user data
+        setUser(tokenUser);
+        return tokenUser;
+      }
+    }
+    return null;
+  }, [user, accessToken, setUser]);
+
   // what the app uses
   return useMemo(
     () => ({
       status,
-      user,
+      user: effectiveUser,
       accessToken,
       isAuthenticated: isAuthenticated(), // boolean
       login,
@@ -241,7 +263,7 @@ export default function useUser() {
     }),
     [
       status,
-      user,
+      effectiveUser,
       accessToken,
       isAuthenticated,
       login,
