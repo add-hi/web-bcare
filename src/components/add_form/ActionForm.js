@@ -6,6 +6,7 @@ import useAddComplaint from "@/hooks/useAddComplaint";
 const InputForm = () => {
   const {
     dataFormData, currentEmployee, currentRole, policies, uics, getUicName, saveTicket, setActionFormData
+    dataFormData, currentEmployee, currentRole, policies, uics, getUicName, saveTicket, setActionFormData
   } = useAddComplaint();
   
   const [formData, setFormData] = useState({
@@ -27,7 +28,13 @@ const InputForm = () => {
         setTimeout(() => setActionFormData(newData), 0);
         return newData;
       });
+      setFormData(prev => {
+        const newData = { ...prev, formUnit: currentRole.role_name };
+        setTimeout(() => setActionFormData(newData), 0);
+        return newData;
+      });
     }
+  }, [currentRole, setActionFormData]);
   }, [currentRole, setActionFormData]);
 
   // Auto-fill Unit To based on channel and category selection
@@ -37,11 +44,23 @@ const InputForm = () => {
     // console.log('ActionForm - channelId:', channelId, 'categoryId:', categoryId);
     // console.log('ActionForm - policies length:', policies.length, 'uics length:', uics.length);
     
+    // console.log('ActionForm - dataFormData:', dataFormData);
+    // console.log('ActionForm - channelId:', channelId, 'categoryId:', categoryId);
+    // console.log('ActionForm - policies length:', policies.length, 'uics length:', uics.length);
+    
     if (channelId && categoryId) {
       const uicName = getUicName(channelId, categoryId);
       // console.log('ActionForm - getUicName result:', uicName);
       
+      // console.log('ActionForm - getUicName result:', uicName);
+      
       if (uicName) {
+        setFormData(prev => {
+          const newData = { ...prev, unitTo: uicName };
+          setTimeout(() => setActionFormData(newData), 0);
+          return newData;
+        });
+      }
         setFormData(prev => {
           const newData = { ...prev, unitTo: uicName };
           setTimeout(() => setActionFormData(newData), 0);
@@ -85,15 +104,51 @@ const InputForm = () => {
     window.addEventListener('resetAllForms', handleReset);
     return () => window.removeEventListener('resetAllForms', handleReset);
   }, [currentRole, setActionFormData]);
+  }, [dataFormData, getUicName, policies, uics, setActionFormData]);
+  
+  // Reset form when dataFormData is cleared
+  useEffect(() => {
+    if (!dataFormData.channelId && !dataFormData.categoryId) {
+      const resetData = {
+        action: "",
+        formUnit: currentRole?.role_name || "",
+        unitTo: "",
+        closedTime: "",
+        solution: "",
+        reason: "",
+      };
+      setFormData(resetData);
+      setActionFormData(resetData);
+    }
+  }, [dataFormData, currentRole, setActionFormData]);
+
+  // Listen for reset event
+  useEffect(() => {
+    const handleReset = () => {
+      const resetData = {
+        action: "",
+        formUnit: currentRole?.role_name || "",
+        unitTo: "",
+        closedTime: "",
+        solution: "",
+        reason: "",
+      };
+      setFormData(resetData);
+      setActionFormData(resetData);
+    };
+
+    window.addEventListener('resetAllForms', handleReset);
+    return () => window.removeEventListener('resetAllForms', handleReset);
+  }, [currentRole, setActionFormData]);
 
   const handleInputChange = (field, value) => {
-    console.log('🔄 ActionForm handleInputChange:', field, '=', value);
+    // console.log('ActionForm handleInputChange:', field, '=', value);
     setFormData(prev => {
       const newData = { ...prev, [field]: value };
       // Use setTimeout to avoid setState during render
       setTimeout(() => {
-        console.log('💾 ActionForm setActionFormData called with:', newData);
-        console.log('🎯 ActionForm - action value being set:', newData.action);
+        // console.log('ActionForm setActionFormData called with:', newData);
+        // console.log('ActionForm - action value being set:', newData.action);
         setActionFormData(newData);
       }, 0);
       return newData;

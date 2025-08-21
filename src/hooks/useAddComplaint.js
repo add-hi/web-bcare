@@ -33,39 +33,7 @@ function getAccessToken() {
 
 //   } = store;
 
-function getAccessToken() {
-  try {
-    const raw = localStorage.getItem("auth");
-    if (!raw) return "";
-    const parsed = JSON.parse(raw);
-    const token = parsed?.state?.accessToken || "";
-    return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-  } catch {
-    return "";
-  }
-}
-
-// export default function useAddComplaint() {
-//   const store = useAddComplaintStore();
-//   const {
-//     // State
-//     customerData, searchContext, inputType,
-//     dataFormData, actionFormData, notesFormData,
-//     channels, categories, allCategories, policies, sources, terminals, priorities, uics,
-//     employees, roles, currentEmployee, currentRole,
-//     loadingData, isDataFetched, isUserFetched,
-    
-//     // Actions
-//     setCustomerData, setDataFormData, setActionFormData, setNotesFormData,
-//     setChannels, setCategories, setAllCategories, setPolicies, setSources, 
-//     setTerminals, setPriorities, setUics, setEmployees, setRoles,
-//     setCurrentEmployee, setCurrentRole, setLoadingData, reset,
-//     setIsDataFetched, setIsUserFetched    
-
-//   } = store;
-
 export default function useAddComplaint() {
-  const store = useAddComplaintStore();
   const store = useAddComplaintStore();
   const {
     // State
@@ -73,7 +41,6 @@ export default function useAddComplaint() {
     dataFormData, actionFormData, notesFormData,
     channels, categories, allCategories, policies, sources, terminals, priorities, uics,
     employees, roles, currentEmployee, currentRole,
-    loadingData, isDataFetched, isUserFetched,
     loadingData, isDataFetched, isUserFetched,
     
     // Actions
@@ -100,11 +67,6 @@ export default function useAddComplaint() {
       return;
     }
 
-    if (isDataFetched || loadingData) {
-      console.log('Skipping fetchDropdownData - already fetched or loading');
-      return;
-    }
-
     setLoadingData(true);
     try {
       const Authorization = getAccessToken();
@@ -120,27 +82,7 @@ export default function useAddComplaint() {
         'ngrok-skip-browser-warning': 'true'
       };
       
-      const Authorization = getAccessToken();
-      if (!Authorization) {
-        console.error('No authorization token found');
-        setLoadingData(false);
-        return;
-      }
-      
-      const headers = {
-        'Accept': 'application/json',
-        'Authorization': Authorization,
-        'ngrok-skip-browser-warning': 'true'
-      };
-      
       const [channelRes, categoryRes, sourceRes, terminalRes, priorityRes, policyRes, uicRes] = await Promise.all([
-        fetch('/api/v1/channel', { headers }),
-        fetch('/api/v1/complaint_category', { headers }),
-        fetch('/api/v1/source', { headers }),
-        fetch('/api/v1/terminal', { headers }),
-        fetch('/api/v1/priority', { headers }),
-        fetch('/api/v1/complaint_policy', { headers }),
-        fetch('/api/v1/uics', { headers })
         fetch('/api/v1/channel', { headers }),
         fetch('/api/v1/complaint_category', { headers }),
         fetch('/api/v1/source', { headers }),
@@ -169,12 +111,7 @@ export default function useAddComplaint() {
       } else {
         console.warn('UIC API failed with status:', uicRes.status, 'Continuing without UIC data');
         setUics([]);
-      } else {
-        console.warn('UIC API failed with status:', uicRes.status, 'Continuing without UIC data');
-        setUics([]);
       }
-      
-      setIsDataFetched(true);
       
       setIsDataFetched(true);
     } catch (error) {
@@ -182,7 +119,6 @@ export default function useAddComplaint() {
     } finally {
       setLoadingData(false);
     }
-  }, [isDataFetched, loadingData, setChannels, setCategories, setAllCategories, setSources, setTerminals, setPriorities, setPolicies, setUics, setLoadingData, setIsDataFetched]);
   }, [isDataFetched, loadingData, setChannels, setCategories, setAllCategories, setSources, setTerminals, setPriorities, setPolicies, setUics, setLoadingData, setIsDataFetched]);
 
   // Fetch current user data
@@ -226,14 +162,10 @@ export default function useAddComplaint() {
         setIsUserFetched(true);
       } else {
         console.error('Failed to fetch employee data:', employeeRes.status);
-        setIsUserFetched(true);
-      } else {
-        console.error('Failed to fetch employee data:', employeeRes.status);
       }
     } catch (error) {
       console.error('Error fetching current user:', error);
     }
-  }, [isUserFetched, currentEmployee, setCurrentEmployee, setCurrentRole, setIsUserFetched]);
   }, [isUserFetched, currentEmployee, setCurrentEmployee, setCurrentRole, setIsUserFetched]);
 
   // Filter categories based on selected channel
@@ -256,29 +188,15 @@ export default function useAddComplaint() {
   const updateCategories = useCallback((filteredCategories) => {
     setCategories(filteredCategories);
   }, [setCategories]);
-  }, [policies, allCategories]);
-  
-  // Update categories in store
-  const updateCategories = useCallback((filteredCategories) => {
-    setCategories(filteredCategories);
-  }, [setCategories]);
 
   // Get UIC name based on channel and category
   const getUicName = useCallback((channelId, categoryId) => {
-    if (channelId && categoryId && policies.length > 0) {
     if (channelId && categoryId && policies.length > 0) {
       const policy = policies.find(p => 
         p.channel_id === Number(channelId) && p.complaint_id === Number(categoryId)
       );
       
       if (policy && policy.uic_id) {
-        if (uics.length > 0) {
-          const uic = uics.find(u => u.uic_id === policy.uic_id);
-          return uic?.uic_name || '';
-        } else {
-          // Fallback when UIC data is not available
-          return `UIC ID: ${policy.uic_id}`;
-        }
         if (uics.length > 0) {
           const uic = uics.find(u => u.uic_id === policy.uic_id);
           return uic?.uic_name || '';
