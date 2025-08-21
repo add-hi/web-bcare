@@ -21,7 +21,7 @@ import useTicketStore from "@/store/ticketStore";
 
 const PAGE_SIZE = 10;
 
-const ComplaintList = () => {
+const ComplaintList = ({ isActive = false }) => {
   const [viewMode, setViewMode] = useState("table"); // 'table' | 'detail' | 'add' | 'attachments'
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [filters, setFilters] = useState({});
@@ -47,19 +47,19 @@ const ComplaintList = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   
   useEffect(() => {
-    if (!isInitialized) {
+    if (isActive && !isInitialized) {
       fetchTickets({ limit: PAGE_SIZE, offset: 0 });
       setIsInitialized(true);
     }
-  }, [isInitialized]);
+  }, [isActive, isInitialized, fetchTickets]);
 
   // Fetch data when page changes (after initialization)
   useEffect(() => {
-    if (isInitialized) {
+    if (isActive && isInitialized) {
       const offset = (currentPage - 1) * limit;
       fetchTickets({ limit, offset });
     }
-  }, [currentPage, limit, isInitialized]);
+  }, [isActive, currentPage, limit, isInitialized, fetchTickets]);
 
   // helper tanggal dd/MM/yyyy
   const fmtDate = (iso) => {
