@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import CustomerForm from "@/components/add_form/CustomerForm";
 import DataForm from "@/components/add_form/DataForm";
 import ActionForm from "@/components/add_form/ActionForm";
@@ -12,21 +12,15 @@ function AddComplaint() {
   const inputFormRef = useRef();
   const {
     customerData, searchContext, inputType, dataFormData,
-    setCustomerData, setDataFormData, fetchDropdownData, fetchCurrentUser, reset
+    setCustomerData, setDataFormData, resetAllForms
   } = useAddComplaint();
-
-  // Fetch initial data on mount
-  useEffect(() => {
-    fetchDropdownData();
-    fetchCurrentUser();
-  }, [fetchDropdownData, fetchCurrentUser]);
 
   const handleCustomerData = (data, context, type) => {
     setCustomerData(data, context, type);
   };
 
   const handleFullReset = () => {
-    reset();
+    resetAllForms();
     if (inputFormRef.current) {
       inputFormRef.current.resetForm();
     }
@@ -48,7 +42,16 @@ function AddComplaint() {
         </button>
       </div>
       <InputFormRow ref={inputFormRef} onCustomerData={handleCustomerData} />
-      <CustomerForm customerData={customerData} searchContext={searchContext} inputType={inputType} />
+      <CustomerForm 
+        customerData={customerData} 
+        searchContext={searchContext} 
+        inputType={inputType}
+        onChange={(data) => {
+          console.log('CustomerForm onChange called with:', data);
+          // Customer form data is already handled by setCustomerData
+          // We don't need to store it separately since it's managed by the hook
+        }}
+      />
       <DataForm mode="add" onChange={setDataFormData} />
       <NotesForm />
       <ActionForm />

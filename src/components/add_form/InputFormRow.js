@@ -2,6 +2,18 @@
 
 import React, { useEffect, useState, forwardRef, useImperativeHandle } from "react";
 
+function getAccessToken() {
+  try {
+    const raw = localStorage.getItem("auth");
+    if (!raw) return "";
+    const parsed = JSON.parse(raw);
+    const token = parsed?.state?.accessToken || "";
+    return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+  } catch {
+    return "";
+  }
+}
+
 const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
   const [inputType, setInputType] = useState("");
   const [sourceType, setSourceType] = useState("");
@@ -30,23 +42,45 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
   const fetchCustomerData = async () => {
     if (!numberValue.trim()) return;
     
+    console.log('=== SEARCH DEBUG ===');
+    console.log('Searching for:', numberValue.trim());
+    console.log('Source type:', sourceType);
+    
     setLoading(true);
     try {
       let customerId = null;
       
       if (sourceType === 'account') {
+        console.log('Searching in accounts...');
         // Search in accounts
-        const accountResponse = await fetch(`/api/v1/account`);
+        const accountResponse = await fetch(`/api/v1/account`, {
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': getAccessToken(),
+            'ngrok-skip-browser-warning': 'true'
+          }
+        });
+        console.log('Account API status:', accountResponse.status);
         if (accountResponse.ok) {
           const accounts = await accountResponse.json();
+          console.log('Total accounts:', accounts.length);
+          console.log('All account numbers:', accounts.map(a => a.account_number));
           const account = accounts.find(acc => acc.account_number.toString() === numberValue.trim());
+          console.log('Found account:', account);
           if (account) {
             customerId = account.customer_id;
+            console.log('Customer ID from account:', customerId);
           }
         }
       } else if (sourceType === 'debit' || sourceType === 'credit') {
         // Search in cards with proper type validation
-        const cardResponse = await fetch(`/api/v1/card`);
+        const cardResponse = await fetch(`/api/v1/card`, {
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': getAccessToken(),
+            'ngrok-skip-browser-warning': 'true'
+          }
+        });
         if (cardResponse.ok) {
           const cards = await cardResponse.json();
           console.log('All cards:', cards);
@@ -74,7 +108,13 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
           
           if (card) {
             // Get account to find customer_id
-            const accountResponse = await fetch(`/api/v1/account`);
+            const accountResponse = await fetch(`/api/v1/account`, {
+              headers: {
+                'Accept': 'application/json',
+                'Authorization': getAccessToken(),
+                'ngrok-skip-browser-warning': 'true'
+              }
+            });
             if (accountResponse.ok) {
               const accounts = await accountResponse.json();
               const account = accounts.find(acc => acc.account_id === card.account_id);
@@ -86,12 +126,24 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
         }
       }
       
+      console.log('Final customer ID:', customerId);
+      
       if (customerId) {
+        console.log('Fetching customer data for ID:', customerId);
         // Fetch customer data
-        const customerResponse = await fetch(`/api/v1/customer`);
+        const customerResponse = await fetch(`/api/v1/customer`, {
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': getAccessToken(),
+            'ngrok-skip-browser-warning': 'true'
+          }
+        });
+        console.log('Customer API status:', customerResponse.status);
         if (customerResponse.ok) {
           const customers = await customerResponse.json();
+          console.log('Total customers:', customers.length);
           const customer = customers.find(c => c.customer_id === customerId);
+          console.log('Found customer:', customer);
           if (customer) {
             setCustomerData(customer);
             setIsReadOnly(true);
@@ -99,19 +151,25 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
               searchedNumber: numberValue.trim(),
               searchType: sourceType
             };
+            console.log('Calling onCustomerData with:', { customer, searchContext, inputType });
             onCustomerData?.(customer, searchContext, inputType);
           } else {
+            console.log('Customer not found in customer list');
             alert('Customer data not found');
           }
         } else {
+          console.log('Customer API failed');
           alert('Error fetching customer data');
         }
       } else {
+        console.log('No customer ID found - number not found');
         alert('Number not found');
       }
+      
+      console.log('=== END SEARCH DEBUG ===');
     } catch (error) {
-      console.error('Error fetching data:', error);
-      alert('Error fetching data');
+      console.error('Search error:', error);
+      alert('Error fetching data: ' + error.message);
     } finally {
       setLoading(false);
     }
