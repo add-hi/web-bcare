@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Grid3X3,
   Edit,
@@ -27,220 +27,90 @@ import {
 } from "lucide-react";
 
 import Attachment from "@/components/Attachment";
+import useTicket from "@/hooks/useTicket";
+import useTicketDetail from "@/hooks/useTicketDetail";
+import useTicketStore from "@/store/ticketStore";
 
-const ComplaintTable = () => {
+const ComplaintTable = ({ isActive = false }) => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [viewMode, setViewMode] = useState("table"); // 'table' or 'detail'
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [filters, setFilters] = useState({});
   const [showFilterDropdown, setShowFilterDropdown] = useState(null);
   const [newNote, setNewNote] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Sample data
-  const originalComplaints = [
-    {
-      id: 1,
-      tglInput: "10/08/2025",
-      noTiket: "123456778",
-      channel: "ATM",
-      category: "Tarik Tunai di Mesin ATM",
-      customerName: "John Doe",
-      number: "9027485",
-      cardNumber: "123456787642",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Inprogress",
-      sla: "7",
-      timeRemaining: "2 days",
-      lastUpdate: "10/08/2025 14:30",
-      assignedTo: "Current User",
-      customerContact: "+62-812-3456-7890",
-      issueDescription: "ATM tidak mengeluarkan uang tetapi saldo terpotong",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "10/08/2025 09:15",
-          division: "Divisi CXC",
-          author: "System",
-          message:
-            "Complaint received via ATM channel. Initial assessment required.",
-          type: "system",
-        },
-        {
-          id: 2,
-          timestamp: "10/08/2025 10:30",
-          division: "Divisi CXC",
-          author: "Ahmad Rahman",
-          message:
-            "Needs verification from finance department. Customer reported transaction failed but amount was deducted. Checking ATM logs.",
-          type: "note",
-        },
-        {
-          id: 3,
-          timestamp: "10/08/2025 14:30",
-          division: "Finance Division",
-          author: "Siti Nurhaliza",
-          message:
-            "Transaction logs reviewed. Amount deduction confirmed at 08:45. ATM maintenance team notified for physical inspection.",
-          type: "note",
-        },
-      ],
-    },
-    {
-      id: 2,
-      tglInput: "09/08/2025",
-      noTiket: "123456779",
-      channel: "Mobile Banking",
-      category: "Transfer Gagal",
-      customerName: "Jane Smith",
-      number: "9027486",
-      cardNumber: "123456787643",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Completed",
-      sla: "5",
-      timeRemaining: "1 day",
-      lastUpdate: "11/08/2025 09:15",
-      assignedTo: "Current User",
-      customerContact: "+62-813-9876-5432",
-      issueDescription: "Transfer ke rekening lain gagal namun saldo terpotong",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "09/08/2025 08:20",
-          division: "Divisi CXC",
-          author: "System",
-          message: "Complaint received via Mobile Banking channel.",
-          type: "system",
-        },
-        {
-          id: 2,
-          timestamp: "09/08/2025 11:45",
-          division: "IT Division",
-          author: "Budi Santoso",
-          message:
-            "Follow-up with IT division required. Transaction logs show incomplete process. Investigating database inconsistency.",
-          type: "note",
-        },
-        {
-          id: 3,
-          timestamp: "11/08/2025 09:15",
-          division: "Divisi CXC",
-          author: "Current User",
-          message:
-            "Issue resolved. Amount has been refunded to customer account. Customer notified via SMS.",
-          type: "resolution",
-        },
-      ],
-    },
-    {
-      id: 3,
-      tglInput: "08/08/2025",
-      noTiket: "123456780",
-      channel: "Internet Banking",
-      category: "Login Bermasalah",
-      customerName: "Bob Johnson",
-      number: "9027487",
-      cardNumber: "123456787644",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Inprogress",
-      sla: "3",
-      timeRemaining: "Overdue by 2 days",
-      lastUpdate: "08/08/2025 16:45",
-      assignedTo: "Current User",
-      customerContact: "+62-814-1111-2222",
-      issueDescription:
-        "Tidak bisa login ke internet banking sejak 3 hari lalu",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "08/08/2025 14:20",
-          division: "Divisi CXC",
-          author: "System",
-          message: "Complaint received via Internet Banking channel.",
-          type: "system",
-        },
-        {
-          id: 2,
-          timestamp: "08/08/2025 16:45",
-          division: "Security Division",
-          author: "Indira Sari",
-          message:
-            "Escalated to security team. Password reset attempted but issue persists. Account may be temporarily locked due to security protocols.",
-          type: "escalation",
-        },
-      ],
-    },
-    {
-      id: 4,
-      tglInput: "11/08/2025",
-      noTiket: "123456781",
-      channel: "ATM",
-      category: "Kartu Tertelan",
-      customerName: "Alice Brown",
-      number: "9027488",
-      cardNumber: "123456787645",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Inprogress",
-      sla: "7",
-      timeRemaining: "5 days",
-      lastUpdate: "11/08/2025 11:20",
-      assignedTo: "Current User",
-      customerContact: "+62-815-5555-6666",
-      issueDescription: "Kartu ATM tertelan di mesin ATM Cabang Sudirman",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "11/08/2025 09:30",
-          division: "Divisi CXC",
-          author: "System",
-          message: "Complaint received via ATM channel.",
-          type: "system",
-        },
-        {
-          id: 2,
-          timestamp: "11/08/2025 11:20",
-          division: "ATM Operations",
-          author: "Rudi Hartono",
-          message:
-            "Card retrieval requested from ATM maintenance team. Customer notified of process. Expected retrieval within 24 hours.",
-          type: "note",
-        },
-      ],
-    },
-    {
-      id: 5,
-      tglInput: "12/08/2025",
-      noTiket: "123456782",
-      channel: "Call Center",
-      category: "Informasi Saldo",
-      customerName: "Charlie Wilson",
-      number: "9027489",
-      cardNumber: "123456787646",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Inprogress",
-      sla: "1",
-      timeRemaining: "Same day",
-      lastUpdate: "12/08/2025 08:30",
-      assignedTo: "Current User",
-      customerContact: "+62-816-7777-8888",
-      issueDescription: "Meminta informasi saldo dan mutasi rekening",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "12/08/2025 08:30",
-          division: "Call Center",
-          author: "Maya Putri",
-          message:
-            "Information provided via secure channel. Customer satisfied with response. Waiting for final confirmation.",
-          type: "note",
-        },
-      ],
-    },
-  ];
+  // API integration
+  const { list, loading, error, pagination, fetchTickets } = useTicket();
+  const { selectedId, fetchTicketDetail } = useTicketDetail();
+  const ticketStore = useTicketStore();
+
+  const PAGE_SIZE = 10;
+
+  useEffect(() => {
+    if (isActive) {
+      const offset = (currentPage - 1) * PAGE_SIZE;
+      fetchTickets({ limit: PAGE_SIZE, offset });
+    }
+  }, [isActive, currentPage, fetchTickets]);
+
+  // Helper function to format date
+  const fmtDate = (iso) => {
+    if (!iso) return "-";
+    const d = new Date(iso);
+    if (isNaN(d)) return "-";
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  // Map API data to table format and filter for escalated tickets only
+  const originalComplaints = useMemo(() => {
+    if (!Array.isArray(list)) return [];
+    
+    // Filter for escalated tickets (employee_status_id: 3)
+    const escalatedTickets = list.filter((t) => {
+      return t?.employee_status?.employee_status_id === 3;
+    });
+    
+    return escalatedTickets.map((t) => {
+      const id = t?.ticket_id ?? null;
+      return {
+        id,
+        tglInput: fmtDate(t?.created_time),
+        noTiket: t?.ticket_number ?? "-",
+        channel:
+          t?.issue_channel?.channel_code ||
+          t?.issue_channel?.channel_name ||
+          "-",
+        category:
+          t?.complaint?.complaint_name || t?.complaint?.complaint_code || "-",
+        customerName: t?.customer?.full_name || "-",
+        number: t?.related_account?.account_number
+          ? String(t.related_account.account_number)
+          : "-",
+        cardNumber: t?.related_card?.card_number
+          ? String(t.related_card.card_number)
+          : "-",
+        createdByUnit:
+          t?.intake_source?.source_name ||
+          (t?.employee?.npp ? `NPP ${t.employee.npp}` : "-"),
+        unitNow: t?.employee_status?.employee_status_name || "-",
+        status: t?.customer_status?.customer_status_name || "-",
+        sla: t?.policy?.sla_days != null ? String(t.policy.sla_days) : "-",
+        timeRemaining: t?.sla_info?.is_overdue ? "Overdue" : "Active",
+        lastUpdate: fmtDate(t?.updated_time || t?.created_time),
+        assignedTo: t?.employee?.full_name || "-",
+        customerContact: t?.customer?.phone_number || "-",
+        issueDescription: t?.description || "-",
+        divisionNotes: t?.division_notes || [],
+        fullTicketData: t,
+      };
+    });
+  }, [list]);
+
+
 
   // Get unique values for filter options
   const getUniqueValues = (key) => {
@@ -345,9 +215,14 @@ const ComplaintTable = () => {
     setSortConfig({ key: null, direction: "asc" });
   };
 
-  const handleRowClick = (complaint) => {
-    setSelectedComplaint(complaint);
-    setViewMode("detail");
+  const handleRowClick = async (complaint) => {
+    try {
+      await fetchTicketDetail(complaint.id, { force: false });
+      setSelectedComplaint(complaint);
+      setViewMode("detail");
+    } catch {
+      // Error handling - could show toast notification
+    }
   };
 
   const handleBackToTable = () => {
@@ -363,26 +238,28 @@ const ComplaintTable = () => {
     }
   };
 
-  const getNoteTypeStyle = (type) => {
+  const getNoteStyle = (type, division) => {
     const typeConfig = {
-      system: {
-        color: "border-gray-400",
-        bgColor: "bg-gray-50",
-        icon: MessageSquare,
-      },
-      note: { color: "border-blue-400", bgColor: "bg-blue-50", icon: FileText },
-      escalation: {
-        color: "border-orange-400",
-        bgColor: "bg-orange-50",
-        icon: AlertTriangle,
-      },
-      resolution: {
-        color: "border-green-400",
-        bgColor: "bg-green-50",
-        icon: CheckCircle,
-      },
+      system: { icon: MessageSquare },
+      note: { icon: FileText },
+      escalation: { icon: AlertTriangle },
+      resolution: { icon: CheckCircle },
     };
-    return typeConfig[type] || typeConfig.note;
+    
+    const divisionConfig = {
+      "CXC": { color: "border-blue-400", bgColor: "bg-blue-50" },
+      "OPR": { color: "border-green-400", bgColor: "bg-green-50" },
+      "IT": { color: "border-purple-400", bgColor: "bg-purple-50" },
+      "Finance": { color: "border-yellow-400", bgColor: "bg-yellow-50" },
+      "Security": { color: "border-red-400", bgColor: "bg-red-50" },
+      "ATM Operations": { color: "border-orange-400", bgColor: "bg-orange-50" },
+      "Call Center": { color: "border-pink-400", bgColor: "bg-pink-50" },
+    };
+    
+    const typeStyle = typeConfig[type] || typeConfig.note;
+    const divisionStyle = divisionConfig[division] || { color: "border-gray-400", bgColor: "bg-gray-50" };
+    
+    return { ...typeStyle, ...divisionStyle };
   };
 
   const getStatusBadge = (status) => {
@@ -719,48 +596,33 @@ const ComplaintTable = () => {
           </button>
         </div>
 
-        {/* Pass id/objek ticket kalau diperlukan oleh Attachment */}
-        <Attachment ticketId={selectedComplaint?.noTiket} ticket={selectedComplaint} />
+        {/* Pass proper ticket data to Attachment component */}
+        <Attachment 
+          ticketId={selectedComplaint?.id} 
+          ticketNumber={selectedComplaint?.noTiket}
+          ticket={selectedComplaint?.fullTicketData} 
+        />
       </div>
     );
   }
 
   if (viewMode === "detail") {
-    // Timeline steps for tracking
-    const timelineSteps = [
-      {
-        id: 1,
-        title: "Sudah terkirim ke UIC terkait",
-        status: "completed",
-        icon: CheckCircle,
-        color: "bg-gray-400",
-        timestamp: "10/08/2025 09:15",
-      },
-      {
-        id: 2,
-        title: "Belum Over SLA",
-        status: "current",
-        icon: Clock,
-        color: "bg-orange-600",
-        timestamp: "10/08/2025 10:30",
-      },
-      {
-        id: 3,
-        title: "Over SLA → Sending Notification (UIC Terkait)",
-        status: "current",
-        icon: AlertTriangle,
-        color: "bg-orange-600",
-        timestamp: "11/08/2025 08:00",
-      },
-      {
-        id: 4,
-        title: "Call",
-        status: "pending",
-        icon: Clock,
-        color: "bg-gray-300",
-        timestamp: "Pending",
-      },
+    // Generate timeline steps based on employee_status_id
+    const currentStatusId = selectedComplaint?.fullTicketData?.employee_status?.employee_status_id || 1;
+    
+    const allSteps = [
+      { id: 1, title: "Open", icon: Clock, color: "bg-blue-500" },
+      { id: 2, title: "Handled by CXC", icon: User, color: "bg-yellow-500" },
+      { id: 3, title: "Escalated", icon: AlertTriangle, color: "bg-orange-500" },
+      { id: 6, title: "Done by UIC", icon: CheckSquare, color: "bg-purple-500" },
+      { id: 4, title: "Closed", icon: CheckCircle, color: "bg-green-500" },
     ];
+    
+    const timelineSteps = allSteps.map(step => ({
+      ...step,
+      status: step.id <= currentStatusId ? "completed" : "pending",
+      timestamp: step.id <= currentStatusId ? selectedComplaint?.lastUpdate || "Completed" : "Pending",
+    }));
 
     return (
       <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
@@ -808,7 +670,9 @@ const ComplaintTable = () => {
 
                       {/* Icon Circle */}
                       <div
-                        className={`flex-shrink-0 w-12 h-12 rounded-full ${step.color} flex items-center justify-center text-white shadow-lg`}
+                        className={`flex-shrink-0 w-12 h-12 rounded-full ${
+                          step.status === "pending" ? "bg-gray-300" : step.color
+                        } flex items-center justify-center text-white shadow-lg`}
                       >
                         <IconComponent size={20} />
                       </div>
@@ -841,14 +705,14 @@ const ComplaintTable = () => {
                 </div>
 
                 <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {selectedComplaint?.divisionNotes?.map((note) => {
-                    const typeStyle = getNoteTypeStyle(note.type);
-                    const IconComponent = typeStyle.icon;
+                  {selectedComplaint?.divisionNotes?.map((note, index) => {
+                    const noteStyle = getNoteStyle(note.type, note.division);
+                    const IconComponent = noteStyle.icon;
 
                     return (
                       <div
-                        key={note.id}
-                        className={`border-l-4 ${typeStyle.color} pl-4 ${typeStyle.bgColor} rounded-r-lg p-3`}
+                        key={note.id || index}
+                        className={`border-l-4 ${noteStyle.color} pl-4 ${noteStyle.bgColor} rounded-r-lg p-3`}
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <IconComponent size={14} className="text-gray-600" />
@@ -868,7 +732,7 @@ const ComplaintTable = () => {
                           </span>
                         </div>
                         <p className="text-sm text-gray-900 leading-relaxed">
-                          {note.message}
+                          {note.msg || note.message || 'No message'}
                         </p>
                       </div>
                     );
@@ -1167,8 +1031,12 @@ const ComplaintTable = () => {
             </button>
           )}
           <div className="text-sm text-gray-600">
-            Showing {processedComplaints.length} of {originalComplaints.length}{" "}
-            entries
+            {loading
+              ? "Loading…"
+              : `Showing ${(pagination?.offset ?? (currentPage - 1) * PAGE_SIZE) + 1}-${Math.min(
+                  (pagination?.offset ?? (currentPage - 1) * PAGE_SIZE) + (list?.length || 0),
+                  pagination?.total ?? 0
+                )} of ${pagination?.total ?? 0} entries (${processedComplaints.length} escalated)`}
           </div>
         </div>
       </div>
@@ -1295,12 +1163,22 @@ const ComplaintTable = () => {
             </tr>
           </thead>
           <tbody>
-            {processedComplaints.map((complaint, index) => (
-              <tr
-                key={complaint.id}
-                onClick={() => handleRowClick(complaint)}
-                className="hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-200"
-              >
+            {loading ? (
+              <tr>
+                <td
+                  className="border border-gray-300 px-4 py-6 text-sm text-center"
+                  colSpan={10}
+                >
+                  Loading escalated tickets...
+                </td>
+              </tr>
+            ) : processedComplaints.length ? (
+              processedComplaints.map((complaint, index) => (
+                <tr
+                  key={complaint.id}
+                  onClick={() => handleRowClick(complaint)}
+                  className="hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-200"
+                >
                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                   {index + 1}
                 </td>
@@ -1332,7 +1210,17 @@ const ComplaintTable = () => {
                   {complaint.unitNow}
                 </td>
               </tr>
-            ))}
+              ))
+            ) : (
+              <tr>
+                <td
+                  className="border border-gray-300 px-4 py-6 text-sm text-center"
+                  colSpan={10}
+                >
+                  No escalated tickets found
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -1340,18 +1228,46 @@ const ComplaintTable = () => {
       {/* Pagination */}
       <div className="mt-6 flex justify-between items-center">
         <div className="text-sm text-gray-600">
-          Showing {processedComplaints.length} of {originalComplaints.length}{" "}
-          entries
+          {loading
+            ? "Loading…"
+            : `Showing ${(pagination?.offset ?? (currentPage - 1) * PAGE_SIZE) + 1}-${Math.min(
+                (pagination?.offset ?? (currentPage - 1) * PAGE_SIZE) + (list?.length || 0),
+                pagination?.total ?? 0
+              )} of ${pagination?.total ?? 0} entries`}
         </div>
-        <div className="flex gap-2">
-          <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
+        <div className="flex gap-1">
+          <button
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1 || loading}
+            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            First
+          </button>
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage <= 1 || loading}
+            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
+          >
             Previous
           </button>
-          <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm">
-            1
+          <button
+            className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
+          >
+            {currentPage}
           </button>
-          <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
+          <button
+            onClick={() => setCurrentPage((p) => p + 1)}
+            disabled={loading || (list?.length || 0) < PAGE_SIZE}
+            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
+          >
             Next
+          </button>
+          <button
+            onClick={() => setCurrentPage(Math.ceil((pagination?.total ?? 0) / PAGE_SIZE))}
+            disabled={loading || (list?.length || 0) < PAGE_SIZE}
+            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            Last
           </button>
         </div>
       </div>
