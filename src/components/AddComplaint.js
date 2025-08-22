@@ -47,12 +47,12 @@ function AddComplaint() {
         searchContext={searchContext} 
         inputType={inputType}
         onChange={(data) => {
-          // Only update if data actually changed to prevent infinite loop
-          const hasAccountCard = data.accountNumber || data.cardNumber;
-          const currentHasAccountCard = customerData?.accountNumber || customerData?.cardNumber;
+          // Prevent infinite loop by checking if data actually changed
+          const currentData = JSON.stringify(customerData || {});
+          const newData = JSON.stringify({ ...customerData, ...data });
           
-          if (hasAccountCard && !currentHasAccountCard) {
-            setCustomerData({ ...customerData, ...data });
+          if (currentData !== newData) {
+            setCustomerData({ ...customerData, ...data }, searchContext, inputType);
           }
         }}
       />
