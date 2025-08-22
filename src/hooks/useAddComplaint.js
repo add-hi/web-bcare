@@ -507,8 +507,6 @@ const fetchCurrentUserOnce = useCallback(async () => {
         employee_status_id: statusIds.employee_status_id,
       };
 
-      console.log("   - Update data:", updateData);
-
       const response = await fetch(`/api/v1/ticket/${ticketId}`, {
         method: "PATCH",
         headers: {
@@ -520,16 +518,10 @@ const fetchCurrentUserOnce = useCallback(async () => {
         body: JSON.stringify(updateData),
       });
 
- if (!response.ok) {
-   const errorText = await response.text();
-+   console.log('   - Error response body:', errorText);
-+   // 🔔 Alert gagal
-   alert(
-     `❌ Gagal membuat ticket (${response.status} ${response.statusText}).\n\n` +
-     `${errorText?.slice(0, 500) || 'Tidak ada detail error dari server.'}`
-   );
-   throw new Error(`Failed to save ticket: ${response.status} - ${errorText}`);
- }
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to save ticket: ${response.status} - ${errorText}`);
+      }
 
       const result = await response.json();
 
@@ -543,12 +535,9 @@ const fetchCurrentUserOnce = useCallback(async () => {
     // Get fresh store state
     const storeState = get();
 
-    // CRITICAL: Check if actionFormData exists in fresh store
+    // Check if actionFormData exists in fresh store
     if (!storeState.actionFormData) {
-      console.error(
-        "CRITICAL: actionFormData is missing from fresh store state!"
-      );
-      console.log("Available store keys:", Object.keys(storeState));
+      // Handle missing actionFormData
     }
     try {
       const Authorization = getAccessToken();
@@ -586,11 +575,7 @@ const fetchCurrentUserOnce = useCallback(async () => {
       // Lookup account ID by account number from form
       if (customerData?.accountNumber) {
         const accountNum = customerData.accountNumber.split(",")[0].trim();
-        console.log(
-          "   - Looking up account_id for account number:",
-          accountNum
-        );
-
+        
         try {
           const accountResponse = await fetch("/api/v1/account", {
             headers: {
@@ -600,58 +585,25 @@ const fetchCurrentUserOnce = useCallback(async () => {
             },
           });
 
-          console.log(
-            "   - Account API response status:",
-            accountResponse.status
-          );
-
           if (accountResponse.ok) {
             const accounts = await accountResponse.json();
-            console.log("   - Total accounts from API:", accounts.length);
-            console.log("   - First 3 accounts:", accounts.slice(0, 3));
-
-            const matchedAccount = accounts.find((acc) => {
-              const match = acc.account_number.toString() === accountNum;
-              console.log(
-                `   - Checking account ${acc.account_number} === ${accountNum}:`,
-                match
-              );
-              return match;
-            });
-
+            const matchedAccount = accounts.find((acc) => 
+              acc.account_number.toString() === accountNum
+            );
+            
             if (matchedAccount) {
               related_account_id = matchedAccount.account_id;
-              console.log(
-                "   ✅ Found account_id:",
-                related_account_id,
-                "for account number:",
-                accountNum
-              );
-            } else {
-              console.log("   ❌ No account found for number:", accountNum);
-              console.log(
-                "   - Available account numbers:",
-                accounts.map((a) => a.account_number).slice(0, 10)
-              );
             }
-          } else {
-            console.log(
-              "   ❌ Account API failed with status:",
-              accountResponse.status
-            );
           }
         } catch (error) {
-          console.log("   ❌ Error looking up account:", error.message);
+          // Silent fail
         }
-      } else {
-        console.log("   ⚠️ No accountNumber in customerData");
       }
 
       // Lookup card ID by card number from form
       if (customerData?.cardNumber) {
         const cardNum = customerData.cardNumber.split(",")[0].trim();
-        console.log("   - Looking up card_id for card number:", cardNum);
-
+        
         try {
           const cardResponse = await fetch("/api/v1/card", {
             headers: {
@@ -661,64 +613,22 @@ const fetchCurrentUserOnce = useCallback(async () => {
             },
           });
 
-          console.log("   - Card API response status:", cardResponse.status);
-
           if (cardResponse.ok) {
             const cards = await cardResponse.json();
-            console.log("   - Total cards from API:", cards.length);
-            console.log("   - First 3 cards:", cards.slice(0, 3));
-
-            const matchedCard = cards.find((card) => {
-              const match = card.card_number.toString() === cardNum;
-              console.log(
-                `   - Checking card ${card.card_number} === ${cardNum}:`,
-                match
-              );
-              return match;
-            });
-
+            const matchedCard = cards.find((card) => 
+              card.card_number.toString() === cardNum
+            );
+            
             if (matchedCard) {
               related_card_id = matchedCard.card_id;
-              console.log(
-                "   ✅ Found card_id:",
-                related_card_id,
-                "for card number:",
-                cardNum
-              );
-            } else {
-              console.log("   ❌ No card found for number:", cardNum);
-              console.log(
-                "   - Available card numbers:",
-                cards.map((c) => c.card_number).slice(0, 10)
-              );
             }
-          } else {
-            console.log(
-              "   ❌ Card API failed with status:",
-              cardResponse.status
-            );
           }
         } catch (error) {
-          console.log("   ❌ Error looking up card:", error.message);
+          // Silent fail
         }
-      } else {
-        console.log("   ⚠️ No cardNumber in customerData");
       }
 
-      console.log("🎯 FINAL LOOKUP RESULTS:");
-      console.log("   - related_account_id:", related_account_id);
-      console.log("   - related_card_id:", related_card_id);
-
-      // Priority works (value=2), Terminal needs to be selected in DataForm dropdown
-
       // Build ticket data matching exact body format
-      console.log("🔍 CRITICAL ACTION CHECK:");
-      console.log("   - currentActionData:", currentActionData);
-      console.log("   - currentActionData?.action:", currentActionData?.action);
-      console.log(
-        "   - Action being sent to API:",
-        currentActionData?.action || null
-      );
 
       const ticketData = {
         action: currentActionData?.action || null,
@@ -780,75 +690,12 @@ const fetchCurrentUserOnce = useCallback(async () => {
           author: authorName,              // ✅ use robust author
         };
 
-        // Try different formats to see which one backend accepts
-        console.log("Testing division_notes formats:");
-        console.log("   - As JSON string:", JSON.stringify([noteObject]));
-        console.log("   - As array:", [noteObject]);
-        console.log("   - As single object:", noteObject);
-
         // Send as array of objects (backend expects this format)
         ticketData.division_notes = [noteObject];
       }
 
       // Don't remove any fields - send everything including null values
       // Backend should handle null values properly
-
-      console.log("5. Final Ticket Data Check:");
-      console.log("   - record:", ticketData.record);
-      console.log(
-        "   - responsible_employee_id:",
-        ticketData.responsible_employee_id
-      );
-      console.log("   - related_account_id:", ticketData.related_account_id);
-      console.log("   - related_card_id:", ticketData.related_card_id);
-      console.log("   - customer_id:", ticketData.customer_id);
-      console.log(
-        "5. Complete Ticket Data:",
-        JSON.stringify(ticketData, null, 2)
-      );
-
-      console.log("6. Data being sent to API:");
-      const apiPayload = JSON.stringify(ticketData);
-      console.log("   - API Payload:", apiPayload);
-      console.log("   - Payload size:", apiPayload.length, "characters");
-
-      console.log("=== DETAILED SAVE DEBUG ===");
-      console.log("1. Store States (from hook):");
-      console.log("   - customerData:", customerData);
-      console.log("   - currentEmployee:", currentEmployee);
-      console.log("   - dataFormData:", dataFormData);
-      console.log("   - actionFormData:", actionFormData);
-      console.log("   - notesFormData:", notesFormData);
-
-      console.log("1b. Store States (fresh from store):");
-      console.log("   - customerData:", storeState.customerData);
-      console.log("   - currentEmployee:", storeState.currentEmployee);
-      console.log("   - dataFormData:", storeState.dataFormData);
-
-      console.log("2. Critical Fields Check:");
-      console.log("   - record field:", dataFormData?.record);
-      console.log("   - account number raw:", customerData?.accountNumber);
-      console.log("   - card number raw:", customerData?.cardNumber);
-      console.log("   - employee ID:", currentEmployee?.employee_id);
-      console.log(
-        "   - employee object keys:",
-        currentEmployee ? Object.keys(currentEmployee) : "null"
-      );
-
-      console.log("3. Account/Card Processing:");
-      if (customerData?.accountNumber) {
-        const accountNum = customerData.accountNumber.split(",")[0].trim();
-        console.log("   - processed account number:", accountNum);
-      }
-      if (customerData?.cardNumber) {
-        const cardNum = customerData.cardNumber.split(",")[0].trim();
-        console.log("   - processed card number:", cardNum);
-      }
-      console.log("================================");
-      console.log("   - Account/Card lookup completed");
-      console.log("================================");
-
-      console.log("4. Building ticket data...");
 
       const response = await fetch("/api/v1/tickets", {
         method: "POST",
@@ -862,125 +709,39 @@ const fetchCurrentUserOnce = useCallback(async () => {
         body: JSON.stringify(ticketData),
       });
 
-      console.log(
-        "7. API Response Status:",
-        response.status,
-        response.statusText
-      );
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.log("   - Error response body:", errorText);
+        alert(
+          `❌ Gagal membuat ticket (${response.status} ${response.statusText}).\n\n` +
+          `${errorText?.slice(0, 500) || 'Tidak ada detail error dari server.'}`
+        );
         throw new Error(
           `Failed to save ticket: ${response.status} - ${errorText}`
         );
       }
 
       const result = await response.json();
-      console.log("7. API Response Analysis:");
-      console.log("   - Full API Response:", JSON.stringify(result, null, 2));
-      console.log("   - Response success:", result.success);
-
-       // 🔔 Alert sukses – tampilkan ticket number & id (fallback aman)
- try {
-   const d = result?.data ?? result ?? {};
-   const ticketNumber = d.ticket_number ?? d.ticketNo ?? d.ticket ?? d.number ?? '-';
-   const ticketId     = d.ticket_id     ?? d.id       ?? d.ticketId ?? '-';
-  alert(
-     `✅ Ticket berhasil dibuat!\n\n` +
-     `Ticket Number: ${ticketNumber}\n` +
-     `Ticket ID: ${ticketId}`
-   );
- } catch (e) {
-   // kalau struktur result beda, tetap kasih info minimal
-   alert('✅ Ticket berhasil dibuat!');
- }
-      if (result.data) {
-        console.log("   - Returned record:", result.data.record);
-        console.log(
-          "   - Returned responsible_employee_id:",
-          result.data.responsible_employee_id
+      
+      // Alert sukses
+      try {
+        const d = result?.data ?? result ?? {};
+        const ticketNumber = d.ticket_number ?? d.ticketNo ?? d.ticket ?? d.number ?? '-';
+        const ticketId = d.ticket_id ?? d.id ?? d.ticketId ?? '-';
+        alert(
+          `✅ Ticket berhasil dibuat!\n\n` +
+          `Ticket Number: ${ticketNumber}\n` +
+          `Ticket ID: ${ticketId}`
         );
-        console.log(
-          "   - Returned division_notes:",
-          result.data.division_notes
-        );
+      } catch (e) {
+        alert('✅ Ticket berhasil dibuat!');
       }
-      console.log("8. Data Sent vs Received:");
-      console.log(
-        "   - Sent customer_status_id:",
-        ticketData.customer_status_id,
-        "| Received:",
-        result.data?.customer_status?.customer_status_id
-      );
-      console.log(
-        "   - Sent employee_status_id:",
-        ticketData.employee_status_id,
-        "| Received:",
-        result.data?.employee_status?.employee_status_id
-      );
-      console.log(
-        "   - Sent record:",
-        ticketData.record,
-        "| Received:",
-        result.data?.record
-      );
-      console.log(
-        "   - Sent responsible_employee_id:",
-        ticketData.responsible_employee_id,
-        "| Received:",
-        result.data?.responsible_employee_id
-      );
-      console.log(
-        "   - Sent division_notes:",
-        ticketData.division_notes,
-        "| Received:",
-        result.data?.division_notes
-      );
 
-      console.log("\n🚨 BACKEND LIMITATION CONFIRMED:");
-      console.log(
-        "   ❌ Backend POST /api/v1/tickets does NOT support customer_status_id and employee_status_id fields"
-      );
-      console.log("   ❌ These fields are ignored and always default to 1");
-      console.log(
-        "   ✅ Frontend is working correctly - this is a backend API limitation"
-      );
-
-      // Backend should handle action field directly, no need for status update
-      console.log(
-        "\n✅ Backend will process action field directly:",
-        currentActionData?.action
-      );
-      console.log("Ticket saved successfully:", result.data?.ticket_number);
-
-      // Check if division_notes was actually saved
-      if (result.success && result.data && notesFormData?.newNote) {
-        console.log("9. Checking if division_notes was saved...");
-        console.log("   - Sent division_notes:", ticketData.division_notes);
-        console.log(
-          "   - Received division_notes:",
-          result.data.division_notes
-        );
-
-        if (!result.data.division_notes) {
-          console.log(
-            "   - Division notes not saved by backend - this is a backend limitation"
-          );
-        }
-      }
 
       resetAllForms();
 
       return result;
     } catch (error) {
-      console.error("Save error:", error);
-      console.log("Error details:", {
-        message: error.message,
-        stack: error.stack,
-      });
-       // 🔔 Alert fallback kalau error ketangkap di sini
-  alert(`❌ Gagal membuat ticket.\n\n${error?.message || 'Unknown error'}`);
+      alert(`❌ Gagal membuat ticket.\n\n${error?.message || 'Unknown error'}`);
       throw error;
     }
   }, [
