@@ -8,9 +8,10 @@ import useAddComplaint from "@/hooks/useAddComplaint";
    ========================= */
 const HOLIDAYS = [
   // contoh libur (format 'YYYY-MM-DD') – ganti dari BE kalau ada
-  "2025-01-01",
-  "2025-03-31",
-  "2025-06-01",
+  "2025-09-05",
+  "2025-12-25",
+  "2025-12-26",
+  "2026-01-01",
 ];
 
 const weekendDays = new Set([0, 6]); // 0=Sun, 6=Sat

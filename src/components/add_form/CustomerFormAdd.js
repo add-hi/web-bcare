@@ -244,8 +244,9 @@ const autoFilled = useMemo(() => {
           email: customerData.email || "",
           faxPhone: customerData.fax_phone || "",
         };
-        setForm(prev => ({ ...prev, ...mappedData }));
-        onChange?.({ ...form, ...mappedData });
+        const newFormData = { ...form, ...mappedData };
+        setForm(newFormData);
+        onChange?.(newFormData);
       };
 
       fetchRelatedData();

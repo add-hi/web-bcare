@@ -1,5 +1,6 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import useAddComplaint from "@/hooks/useAddComplaint";
 import {
   MessageSquare,
   FileText,
@@ -10,105 +11,94 @@ import {
   Clock,
   User,
 } from "lucide-react";
-import useUser from "@/hooks/useUser";
 
-const InputForm = ({ detail }) => {
-  // Ambil user (sumber sama dengan Sidebar)
-  const { user } = useUser();
-
-  // Derive field yang dipakai UI
-  const displayName =
-    user?.full_name ||
-    user?.fullName ||
-    user?.name ||
-    user?.username ||
-    user?.email ||
-    user?.user?.full_name ||
-    user?.profile?.full_name ||
-    "Unknown User";
-
-  const displayRole =
-    user?.role_details?.role_name ||
-    user?.role_name ||
-    user?.role ||
-    "Unknown Division/Role";
-
-  const divisionCode = (
-    user?.division_details?.division_code ||
-    user?.division_code ||
-    user?.division ||
-    ""
-  )
-    .toString()
-    .toUpperCase();
-
-  // State Notes
-  const [divisionNotes, setDivisionNotes] = useState(
-    detail?.notes?.division || []
-  );
+const InputForm = () => {
+  const { currentEmployee, currentRole, setNotesFormData } = useAddComplaint();
+  const [divisionNotes, setDivisionNotes] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [newNote, setNewNote] = useState("");
 
+  // Listen for reset event
+  useEffect(() => {
+    const handleReset = () => {
+      setDivisionNotes([]);
+      setNewNote("");
+    };
+
+    window.addEventListener('resetAllForms', handleReset);
+    return () => window.removeEventListener('resetAllForms', handleReset);
+  }, []);
+
   const handleAddNote = async () => {
-    if (!newNote.trim() || !user) return; // pastikan user ada
+    if (!newNote.trim()) return;
+
     setIsProcessing(true);
 
     try {
-      const timestamp = new Date().toLocaleString("id-ID", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-
-      const newNoteObj = {
+      // Add to local display
+      const mockNewNote = {
         id: Date.now(),
-        timestamp,
-        division: displayRole,   // teks yang ditampilkan (contoh: CX Communication Agent)
-        divisionCode,            // untuk pewarnaan (CXC/DGO/…)
-        author: displayName,     // nama user login
+        timestamp: new Date()
+          .toLocaleDateString("id-ID", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+          .replace(/\//g, "/")
+          .replace(",", ""),
+        division: currentRole?.role_name || "Unknown Division",
+        author: currentEmployee?.full_name || "Unknown User",
         message: newNote,
         type: "note",
       };
 
-      setDivisionNotes((prev) => [...prev, newNoteObj]);
+      // Save to store for ticket creation
+      console.log('NotesForm setNotesFormData called with:', { newNote });
+      setNotesFormData({ newNote });
+      
+      setDivisionNotes((prev) => [...prev, mockNewNote]);
+      console.log("Note added to local display and store:", { newNote });
     } catch (error) {
       console.error("Failed to add note:", error);
       alert("Failed to add note. Please try again.");
+      return;
     } finally {
       setIsProcessing(false);
       setNewNote("");
     }
   };
 
-  // Pewarnaan berdasarkan division code (pakai UPPERCASE)
-  const getNoteStyle = (division, type = "note") => {
-    const divisionConfig = {
-      CXC: { color: "border-blue-400", bgColor: "bg-blue-50" },
-      DGO: { color: "border-green-400", bgColor: "bg-green-50" },
-      IT: { color: "border-purple-400", bgColor: "bg-purple-50" },
-      FINANCE: { color: "border-yellow-400", bgColor: "bg-yellow-50" },
-      SECURITY: { color: "border-red-400", bgColor: "bg-red-50" },
-      "ATM OPERATIONS": { color: "border-orange-400", bgColor: "bg-orange-50" },
-      "CALL CENTER": { color: "border-pink-400", bgColor: "bg-pink-50" },
-    };
-
+  // Get note type styling
+  const getNoteTypeStyle = (type) => {
     const typeConfig = {
-      system: { icon: MessageSquare },
-      note: { icon: FileText },
-      escalation: { icon: AlertTriangle },
-      resolution: { icon: CheckCircle },
+      system: {
+        color: "border-gray-400",
+        bgColor: "bg-gray-50",
+        icon: MessageSquare,
+      },
+      note: {
+        color: "border-blue-400",
+        bgColor: "bg-blue-50",
+        icon: FileText,
+      },
+      escalation: {
+        color: "border-orange-400",
+        bgColor: "bg-orange-50",
+        icon: AlertTriangle,
+      },
+      resolution: {
+        color: "border-green-400",
+        bgColor: "bg-green-50",
+        icon: CheckCircle,
+      },
     };
 
-    const key = (division || "").toUpperCase();
-    const divisionStyle =
-      divisionConfig[key] || { color: "border-gray-400", bgColor: "bg-gray-50" };
-    const typeStyle = typeConfig[type] || typeConfig.note;
-
-    return { ...divisionStyle, ...typeStyle };
+    return typeConfig[type] || typeConfig.note;
   };
 
+  // Show empty state when no notes exist
   const showEmptyState = divisionNotes.length === 0;
 
   return (
@@ -116,9 +106,10 @@ const InputForm = ({ detail }) => {
       {/* Header */}
       <div className="bg-blue-500 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
         <h2 className="text-lg font-semibold">Notes</h2>
+
       </div>
 
-      {/* History */}
+      {/* Division Communication History */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 mt-6">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
@@ -137,21 +128,26 @@ const InputForm = ({ detail }) => {
                 <h4 className="text-lg font-medium text-gray-900 mb-2">
                   No Notes yet
                 </h4>
-                <p className="text-gray-500 text-sm mb-4">
-                  No communication notes available for this ticket.
-                </p>
+                {/* <p className="text-gray-500 text-sm mb-4">
+                  Start by adding a communication note to track progress and
+                  updates.
+                </p> */}
+                {/* Development helper - remove in production */}
+                {/* <button
+                  onClick={() => setDivisionNotes(mockNotes)}
+                  className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded border border-yellow-300"
+                >
+                  DEV: Load Mock Data
+                </button> */}
               </div>
             ) : (
-              divisionNotes.map((note, index) => {
-                const noteStyle = getNoteStyle(
-                  note.divisionCode || note.division,
-                  note.type
-                );
-                const IconComponent = noteStyle.icon;
+              divisionNotes.map((note) => {
+                const typeStyle = getNoteTypeStyle(note.type);
+                const IconComponent = typeStyle.icon;
                 return (
                   <div
-                    key={note.id || `note-${index}`}
-                    className={`border-l-4 ${noteStyle.color} pl-4 ${noteStyle.bgColor} rounded-r-lg p-3`}
+                    key={note.id}
+                    className={`border-l-4 ${typeStyle.color} pl-4 ${typeStyle.bgColor} rounded-r-lg p-3`}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <IconComponent size={14} className="text-gray-600" />
@@ -175,7 +171,7 @@ const InputForm = ({ detail }) => {
                       </div>
                     </div>
                     <p className="text-sm text-gray-900 leading-relaxed">
-                      {note.msg || note.message}
+                      {note.message}
                     </p>
                   </div>
                 );
@@ -200,16 +196,18 @@ const InputForm = ({ detail }) => {
 
           <button
             onClick={handleAddNote}
-            disabled={
-              !newNote.trim() || isProcessing || !user || displayName === "Unknown User"
-            }
+            disabled={!newNote.trim() || isProcessing}
             className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <Send size={16} />
             {isProcessing ? "Adding Note..." : "Add Note"}
           </button>
+
+
         </div>
       </div>
+
+
     </div>
   );
 };
