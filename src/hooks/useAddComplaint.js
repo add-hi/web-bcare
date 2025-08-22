@@ -6,7 +6,10 @@ import useAddComplaintStore from "@/store/addComplaintStore";
 // === Single-flight guards (dipakai bareng semua komponen) ===
 let dropdownOnce = null; // untuk /channel, /category, dst
 let userOnce = null;     // untuk /me atau /employee
+let dropdownLoaded = false; // flag lokal, anti-refetch walau store tak punya isDataFetched
+let userLoaded = false;     // flag lokal, anti-refetch walau store tak punya isUserFetched
 
+const isFn = (f) => typeof f === "function";
 
 function getAccessToken() {
   try {
@@ -273,12 +276,15 @@ export default function useAddComplaint() {
   // ]);
 // === DROPDOWN: sekali saja untuk semua komponen ===
 const fetchDropdownDataOnce = useCallback(async () => {
-  if (isDataFetched) return;         // sudah ada datanya di store
-  if (dropdownOnce) return dropdownOnce; // ada request yang lagi jalan? ikut yang itu
+  // kalau sudah pernah sukses (flag lokal) atau store sudah tandai fetched, stop
+  if (dropdownLoaded || isDataFetched) return;
+
+  // kalau sudah ada request yang lagi jalan, re-use
+  if (dropdownOnce) return dropdownOnce;
 
   dropdownOnce = (async () => {
-    if (loadingData) return;         // kalau store lagi loading, biarin
-    setLoadingData(true);
+    // kalau store punya setLoadingData baru dipanggil
+    if (isFn(setLoadingData)) setLoadingData(true);
     try {
       const Authorization = getAccessToken();
       if (!Authorization) return;
@@ -326,26 +332,32 @@ const fetchDropdownDataOnce = useCallback(async () => {
         setUics([]);
       }
 
-      setIsDataFetched(true);
+      // tandai loaded pakai flag lokal
+      dropdownLoaded = true;
+      // kalau store menyediakan setter, update juga (opsional)
+      if (isFn(setIsDataFetched)) setIsDataFetched(true);
     } finally {
-      setLoadingData(false);
+      if (isFn(setLoadingData)) setLoadingData(false);
     }
   })().catch(err => {
-    // biar bisa retry kalo error
+    // kalau gagal, biar bisa retry
     dropdownOnce = null;
     throw err;
   });
 
   return dropdownOnce;
 }, [
-  isDataFetched, loadingData,
+  isDataFetched, // aman meski undefined (falsy)
+  setLoadingData,
   setChannels, setCategories, setAllCategories, setSources, setTerminals,
-  setPriorities, setPolicies, setUics, setLoadingData, setIsDataFetched
+  setPriorities, setPolicies, setUics
 ]);
+
 
 // === USER: sekali saja untuk semua komponen ===
 const fetchCurrentUserOnce = useCallback(async () => {
-  if (isUserFetched || currentEmployee) return;
+  // hindari refetch: pakai flag lokal + guard store
+  if (userLoaded || isUserFetched || currentEmployee) return;
   if (userOnce) return userOnce;
 
   userOnce = (async () => {
@@ -358,7 +370,6 @@ const fetchCurrentUserOnce = useCallback(async () => {
       "ngrok-skip-browser-warning": "true",
     };
 
-    // coba /me dulu
     try {
       const meRes = await fetch("/api/v1/me", { headers });
       if (meRes.ok) {
@@ -369,12 +380,13 @@ const fetchCurrentUserOnce = useCallback(async () => {
         });
         const roleName = me.role_details?.role_name || me.role_name || me.role || "";
         setCurrentRole({ role_name: roleName });
-        setIsUserFetched(true);
+
+        userLoaded = true;                 // flag lokal
+        if (isFn(setIsUserFetched)) setIsUserFetched(true); // opsional
         return;
       }
     } catch (_) {}
 
-    // fallback /employee + /role
     const employeeRes = await fetch("/api/v1/employee", { headers });
     if (employeeRes.ok) {
       const employeeData = await employeeRes.json();
@@ -389,15 +401,18 @@ const fetchCurrentUserOnce = useCallback(async () => {
           setCurrentRole(role);
         }
       }
-      setIsUserFetched(true);
+
+      userLoaded = true;                 // flag lokal
+      if (isFn(setIsUserFetched)) setIsUserFetched(true); // opsional
     }
   })().catch(err => {
-    userOnce = null; // biar bisa retry
+    userOnce = null;
     throw err;
   });
 
   return userOnce;
 }, [isUserFetched, currentEmployee, setCurrentEmployee, setCurrentRole, setIsUserFetched]);
+
 
   // Filter categories based on selected channel
   const filterCategories = useCallback(
