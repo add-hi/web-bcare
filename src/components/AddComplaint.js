@@ -1,11 +1,11 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import CustomerForm from "@/components/add_form/CustomerForm";
-import DataForm from "@/components/add_form/DataForm";
-import ActionForm from "@/components/add_form/ActionForm";
-import NotesForm from "@/components/add_form/NotesForm";
-import InputFormRow from "@/components/add_form/InputFormRow";
+import CustomerForm from "@/components/add_form/CustomerFormAdd";
+import DataForm from "@/components/add_form/DataFormAdd";
+import ActionForm from "@/components/add_form/ActionFormAdd";
+import NotesForm from "@/components/add_form/NotesFormAdd";
+import InputFormRow from "@/components/add_form/InputFormRowAdd";
 import useAddComplaint from "@/hooks/useAddComplaint";
 
 function AddComplaint() {
