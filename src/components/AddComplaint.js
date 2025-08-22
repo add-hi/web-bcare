@@ -1,17 +1,62 @@
 "use client";
 
-import CustomerForm from "@/components/form/CustomerForm";
-import DataForm from "@/components/form/DataForm";
-import ActionForm from "@/components/form/ActionForm";
-import NotesForm from "@/components/form/NotesForm";
-import InputFormRow from "@/components/form/InputFormRow";
+import { useRef, useEffect, useState } from "react";
+import CustomerForm from "@/components/add_form/CustomerFormAdd";
+import DataForm from "@/components/add_form/DataFormAdd";
+import ActionForm from "@/components/add_form/ActionFormAdd";
+import NotesForm from "@/components/add_form/NotesFormAdd";
+import InputFormRow from "@/components/add_form/InputFormRowAdd";
+import useAddComplaint from "@/hooks/useAddComplaint";
 
 function AddComplaint() {
+  const inputFormRef = useRef();
+  const {
+    customerData, searchContext, inputType, dataFormData,
+    setCustomerData, setDataFormData, resetAllForms
+  } = useAddComplaint();
+
+  const handleCustomerData = (data, context, type) => {
+    setCustomerData(data, context, type);
+  };
+
+  const handleFullReset = () => {
+    resetAllForms();
+    if (inputFormRef.current) {
+      inputFormRef.current.resetForm();
+    }
+  };
+
   return (
     <div>
-      <InputFormRow />
-      <CustomerForm />
-      <DataForm />
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Add Complaint</h1>
+        <button
+          onClick={handleFullReset}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+          title="Reset All Forms"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Reset All
+        </button>
+      </div>
+      <InputFormRow ref={inputFormRef} onCustomerData={handleCustomerData} />
+      <CustomerForm 
+        customerData={customerData} 
+        searchContext={searchContext} 
+        inputType={inputType}
+        onChange={(data) => {
+          // Only update if data actually changed to prevent infinite loop
+          const hasAccountCard = data.accountNumber || data.cardNumber;
+          const currentHasAccountCard = customerData?.accountNumber || customerData?.cardNumber;
+          
+          if (hasAccountCard && !currentHasAccountCard) {
+            setCustomerData({ ...customerData, ...data });
+          }
+        }}
+      />
+      <DataForm mode="add" onChange={setDataFormData} />
       <NotesForm />
       <ActionForm />
     </div>

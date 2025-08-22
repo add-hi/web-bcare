@@ -12,7 +12,10 @@ This bundle gives you:
 ## 1) Set the base URL
 Create `.env.local` at the project root:
 ```
-NEXT_PUBLIC_API_BASE_URL=https://4af813bf189d.ngrok-free.app
+<<<<<<< HEAD
+NEXT_PUBLIC_API_BASE_URL=https://8fc9f60f4dbd.ngrok-free.app
+=======
+NEXT_PUBLIC_API_BASE_URL=https://bcare.my.id
 ```
 
 ## 2) Drop-in files
