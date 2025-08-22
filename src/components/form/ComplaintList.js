@@ -94,11 +94,9 @@ const ComplaintList = ({ isActive = false }) => {
         cardNumber: t?.related_card?.card_number
           ? String(t.related_card.card_number)
           : "-",
-        createdByUnit:
-          t?.intake_source?.source_name ||
-          (t?.employee?.npp ? `NPP ${t.employee.npp}` : "-"),
-        unitNow: t?.employee_status?.employee_status_name || "-",
-        status: t?.customer_status?.customer_status_name || "-",
+        createdByUnit: t?.intake_source?.source_name || "-",
+        unitNow: t?.division?.division_name || "-",
+        status: t?.employee_status?.employee_status_name || "-",
         sla: t?.policy?.sla_days != null ? String(t.policy.sla_days) : "-",
         createdIso: t?.created_time || null, // untuk filter tanggal
       };
@@ -264,7 +262,7 @@ const ComplaintList = ({ isActive = false }) => {
           </button>
         </div>
         <Attachment
-          ticketId={detail?.ids?.ticketId}
+          ticketId={selectedId}
           ticketNumber={detail?.ids?.ticketNumber}
           ticket={detail}
         />

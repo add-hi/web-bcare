@@ -101,7 +101,7 @@ const ComplaintTable = ({ isActive = false }) => {
         lastUpdate: fmtDate(t?.created_time),
         assignedTo: t?.division?.division_name || "-",
         customerContact: t?.customer?.email || "-",
-        issueDescription: t?.complaint?.complaint_name || "-",
+        issueDescription: t?.description || "-",
         divisionNotes: [],
         fullTicketData: t,
       };
@@ -910,7 +910,7 @@ const ComplaintTable = ({ isActive = false }) => {
                     Description
                   </span>
                   <p className="text-base text-gray-900 bg-gray-50 rounded-lg p-3">
-                    {selectedComplaint?.issueDescription}
+                    {ticketStore.detailById[selectedComplaint?.id]?.ticket?.description || selectedComplaint?.fullTicketData?.description || selectedComplaint?.issueDescription || "-"}
                   </p>
                 </div>
               </div>
