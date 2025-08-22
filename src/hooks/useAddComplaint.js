@@ -51,13 +51,7 @@ export default function useAddComplaint() {
     setIsDataFetched, setIsUserFetched, reset
   } = store;
 
-  
-  const get = () => store;
-    setCurrentEmployee, setCurrentRole, setLoadingData, 
-    setIsDataFetched, setIsUserFetched, reset
-  } = store;
-
-  
+    
   const get = () => store;
 
   // Fetch all dropdown data on mount
