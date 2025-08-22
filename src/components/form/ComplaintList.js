@@ -48,7 +48,7 @@ const ComplaintList = ({ isActive = false }) => {
   
   useEffect(() => {
     if (isActive && !isInitialized) {
-      fetchTickets({ limit: PAGE_SIZE, offset: 0 });
+      fetchTickets({ limit: PAGE_SIZE, offset: 0, force: false });
       setIsInitialized(true);
     }
   }, [isActive, isInitialized, fetchTickets]);
@@ -57,7 +57,7 @@ const ComplaintList = ({ isActive = false }) => {
   useEffect(() => {
     if (isActive && isInitialized) {
       const offset = (currentPage - 1) * limit;
-      fetchTickets({ limit, offset });
+      fetchTickets({ limit, offset, force: false });
     }
   }, [isActive, currentPage, limit, isInitialized, fetchTickets]);
 

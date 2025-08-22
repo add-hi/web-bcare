@@ -36,7 +36,17 @@ export default function useTicket() {
   );
 
   const fetchTickets = useCallback(
-    async ({ limit = 100, offset = 0 } = {}) => {
+    async ({ limit = 100, offset = 0, force = false } = {}) => {
+      // Check if data already exists and matches current pagination
+      const currentPagination = pagination;
+      const hasData = list.length > 0;
+      const sameParams = currentPagination.limit === limit && currentPagination.offset === offset;
+      
+      if (!force && hasData && sameParams) {
+        console.log('Using cached ticket data');
+        return; // Use cached data
+      }
+
       setListLoading(true);
       setListError(null);
       try {
@@ -75,7 +85,7 @@ export default function useTicket() {
         setListLoading(false);
       }
     },
-    [BASE, setListLoading, setListError, setTickets, setPagination]
+    [BASE, setListLoading, setListError, setTickets, setPagination, list, pagination]
   );
 
   return {
@@ -84,5 +94,6 @@ export default function useTicket() {
     loading: loadingList,
     error: errorList,
     fetchTickets,
+    hasData: list.length > 0,
   };
 }

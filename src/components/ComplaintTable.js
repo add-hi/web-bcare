@@ -50,7 +50,7 @@ const ComplaintTable = ({ isActive = false }) => {
   useEffect(() => {
     if (isActive) {
       const offset = (currentPage - 1) * PAGE_SIZE;
-      fetchTickets({ limit: PAGE_SIZE, offset });
+      fetchTickets({ limit: PAGE_SIZE, offset, force: false });
     }
   }, [isActive, currentPage, fetchTickets]);
 
