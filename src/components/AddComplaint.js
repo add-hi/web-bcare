@@ -71,13 +71,11 @@ function AddComplaint() {
         searchContext={searchContext} 
         inputType={inputType}
         onChange={(data) => {
-          console.log('CustomerForm onChange called with:', data);
           // Only update if data actually changed to prevent infinite loop
           const hasAccountCard = data.accountNumber || data.cardNumber;
           const currentHasAccountCard = customerData?.accountNumber || customerData?.cardNumber;
           
           if (hasAccountCard && !currentHasAccountCard) {
-            console.log('Updating customerData with account/card info');
             setCustomerData({ ...customerData, ...data });
           }
         }}
