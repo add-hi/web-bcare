@@ -22,7 +22,7 @@ import io from "socket.io-client";
 
 export default function FloatingCustomerContact({ room = "general", detail }) {
   // ====== Socket Configuration ======
-  const SOCKET_URL = "https://aa7d282b0702.ngrok-free.app";
+  const SOCKET_URL = "https://8fc9f60f4dbd.ngrok-free.app";
 
   // console.log(`CUS-${detail.ids.customerId}`);
 
