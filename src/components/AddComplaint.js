@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { useRef, useEffect, useState } from "react";
 import CustomerForm from "@/components/add_form/CustomerForm";
 import DataForm from "@/components/add_form/DataForm";
 import ActionForm from "@/components/add_form/ActionForm";
