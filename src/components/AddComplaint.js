@@ -48,8 +48,14 @@ function AddComplaint() {
         inputType={inputType}
         onChange={(data) => {
           console.log('CustomerForm onChange called with:', data);
-          // Customer form data is already handled by setCustomerData
-          // We don't need to store it separately since it's managed by the hook
+          // Only update if data actually changed to prevent infinite loop
+          const hasAccountCard = data.accountNumber || data.cardNumber;
+          const currentHasAccountCard = customerData?.accountNumber || customerData?.cardNumber;
+          
+          if (hasAccountCard && !currentHasAccountCard) {
+            console.log('Updating customerData with account/card info');
+            setCustomerData({ ...customerData, ...data });
+          }
         }}
       />
       <DataForm mode="add" onChange={setDataFormData} />

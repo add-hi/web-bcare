@@ -16,7 +16,7 @@ import io from "socket.io-client";
  */
 export default function LiveChatWeb({ room = "general" }) {
   // ====== Konfigurasi Socket ======
-  const SOCKET_URL = "https://bcare.my.id";
+  const SOCKET_URL = "https://2ac77297606f.ngrok-free.app";
 
   // generate / ambil UID konsisten per browser
   const uid = useMemo(() => {

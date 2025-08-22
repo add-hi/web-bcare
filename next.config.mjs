@@ -1,5 +1,5 @@
 // next.config.mjs
-const API_BASE = process.env.API_BASE || "https://bcare.my.id";
+const API_BASE = process.env.API_BASE || "https://2ac77297606f.ngrok-free.app";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

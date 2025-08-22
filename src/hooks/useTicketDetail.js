@@ -135,7 +135,7 @@ export default function useTicketDetail(ticketId) {
     } = useTicketStore();
 
     const BASE = useMemo(() =>
-        (process.env.NEXT_PUBLIC_TICKET_API_BASE_URL || "https://bcare.my.id").replace(/\/$/, ""),
+        (process.env.NEXT_PUBLIC_TICKET_API_BASE_URL || "https://2ac77297606f.ngrok-free.app").replace(/\/$/, ""),
         []);
 
     const effectiveId = ticketId ?? selectedId;
