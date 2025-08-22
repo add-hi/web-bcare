@@ -102,12 +102,12 @@ const InputForm = () => {
 
   const handleSave = async () => {
     try {
-      console.log("Saving ticket data...");
+     
       await saveTicket();
-      alert('Ticket saved successfully!');
+     
     } catch (error) {
       console.error('Save failed:', error);
-      alert('Failed to save ticket: ' + error.message);
+      
     }
   };
 

@@ -12,6 +12,9 @@ This bundle gives you:
 ## 1) Set the base URL
 Create `.env.local` at the project root:
 ```
+<<<<<<< HEAD
+NEXT_PUBLIC_API_BASE_URL=https://aa7d282b0702.ngrok-free.app
+=======
 NEXT_PUBLIC_API_BASE_URL=https://bcare.my.id
 ```
 

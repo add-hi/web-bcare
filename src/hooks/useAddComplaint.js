@@ -118,7 +118,7 @@ export default function useAddComplaint() {
   // Fetch current user data
   const fetchCurrentUser = useCallback(async () => {
     if (isUserFetched || currentEmployee) {
-      console.log('Skipping fetchCurrentUser - already fetched');
+      
       return;
     }
 
@@ -126,7 +126,7 @@ export default function useAddComplaint() {
       const Authorization = getAccessToken();
       
       if (!Authorization) {
-        console.error('No authorization token found for user data');
+        
         return;
       }
       
@@ -140,17 +140,16 @@ export default function useAddComplaint() {
       const employeeRes = await fetch('/api/v1/employee', { headers });
       if (employeeRes.ok) {
         const employeeData = await employeeRes.json();
-        console.log('Employee API response:', employeeData);
+      
         const employee = employeeData[0]; // Assuming first employee is current user
-        console.log('Selected employee:', employee);
-        setCurrentEmployee(employee);
+       
         
         if (employee?.role_id) {
           const roleRes = await fetch('/api/v1/role', { headers });
           if (roleRes.ok) {
             const roleData = await roleRes.json();
             const role = roleData.find(r => r.role_id === employee.role_id);
-            console.log('Selected role:', role);
+            
             setCurrentRole(role);
           }
         }
@@ -223,7 +222,7 @@ export default function useAddComplaint() {
   }, [policies]);
 
   const resetAllForms = useCallback(() => {
-    console.log('resetAllForms called - resetting store and dispatching event');
+  
     reset();
     window.dispatchEvent(new CustomEvent('resetAllForms'));
   }, [reset]);
@@ -235,7 +234,7 @@ export default function useAddComplaint() {
       throw new Error('No authorization token for status update');
     }
 
-    console.log('   - Trying PATCH /api/v1/ticket/' + ticketId);
+  
     
     const updateData = {
       customer_status_id: statusIds.customer_status_id,
@@ -255,38 +254,28 @@ export default function useAddComplaint() {
       body: JSON.stringify(updateData)
     });
     
-    console.log('   - PATCH response status:', response.status);
+
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.log('   - PATCH error:', errorText);
+     
       throw new Error(`Status update failed: ${response.status}`);
     }
     
     const result = await response.json();
-    console.log('   - PATCH success:', result);
-    console.log('   ✅ Status updated successfully to:', statusIds.customer_status_id);
+   
     
     return result;
   }, []);
 
   // Save ticket function
   const saveTicket = useCallback(async () => {
-    console.log('=== SAVE FUNCTION CALLED ===');
+   
     
     // Get fresh store state
     const storeState = get();
-    console.log('Fresh store state:', {
-      customerData: storeState.customerData,
-      dataFormData: storeState.dataFormData,
-      actionFormData: storeState.actionFormData,
-      currentEmployee: storeState.currentEmployee
-    });
-    
-    console.log('DEBUG: actionFormData from hook:', actionFormData);
-    console.log('DEBUG: actionFormData from fresh store:', storeState.actionFormData);
-    console.log('DEBUG: action value:', storeState.actionFormData?.action || actionFormData?.action);
-    
+   
+   
     // CRITICAL: Check if actionFormData exists in fresh store
     if (!storeState.actionFormData) {
       console.error('CRITICAL: actionFormData is missing from fresh store state!');
@@ -306,34 +295,36 @@ export default function useAddComplaint() {
 
       // Map action to status IDs
       const getStatusIds = (action) => {
-        console.log('Mapping action to status IDs:', action);
-        if (action === 'Escalated') {
-          console.log('   - Action is Escalated -> status IDs = 3');
+        
+        if (action === 'ESCALATED') {
+        
           return { customer_status_id: 3, employee_status_id: 3 };
-        } else if (action === 'Closed') {
-          console.log('   - Action is Closed -> status IDs = 4');
+        } else if (action === 'CLOSED') {
+        
           return { customer_status_id: 4, employee_status_id: 4 };
         }
-        console.log('   - Action is default/empty -> status IDs = 1');
+        
         return { customer_status_id: 1, employee_status_id: 1 };
       };
 
       // Use actionFormData from hook (more reliable than store state)
       const currentActionData = actionFormData;
-      console.log('DEBUG: Using action data:', currentActionData);
-      console.log('DEBUG: Action value for mapping:', currentActionData?.action);
+      
       
       const statusIds = getStatusIds(currentActionData?.action);
-      console.log('Final status IDs:', statusIds);
-
-      // Get related account and card IDs based on customer_id
+   
+      // Get related account and card IDs from form input numbers
       let related_account_id = null;
       let related_card_id = null;
       
-      console.log('   - Starting account/card lookup for customer_id:', customerData?.customer_id);
+     
       
-      if (customerData?.customer_id) {
-        console.log('   - Fetching accounts from API...');
+      
+      // Lookup account ID by account number from form
+      if (customerData?.accountNumber) {
+        const accountNum = customerData.accountNumber.split(',')[0].trim();
+        console.log('   - Looking up account_id for account number:', accountNum);
+        
         try {
           const accountResponse = await fetch('api/v1/account', {
             headers: {
@@ -586,14 +577,7 @@ export default function useAddComplaint() {
         }
       }
       
-      if (result.success && result.data) {
-        const ticket = result.data;
-        alert(`Ticket berhasil disimpan!\nTicket Number: ${ticket.ticket_number}\nTicket ID: ${ticket.ticket_id}`);
-      } else {
-        alert('Ticket berhasil disimpan!');
-      }
-      
-      console.log('Calling resetAllForms...');
+
       resetAllForms();
       
       return result;
