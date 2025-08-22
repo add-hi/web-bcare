@@ -414,35 +414,49 @@ export default function useAddComplaint() {
         console.log('   - Looking up account_id for account number:', accountNum);
         
         try {
-          const accountResponse = await fetch('api/v1/account', {
+          const accountResponse = await fetch('/api/v1/account', {
             headers: {
               'Accept': 'application/json',
               'Authorization': Authorization,
               'ngrok-skip-browser-warning': 'true'
             }
           });
+          
           console.log('   - Account API response status:', accountResponse.status);
           
           if (accountResponse.ok) {
             const accounts = await accountResponse.json();
             console.log('   - Total accounts from API:', accounts.length);
-            const customerAccounts = accounts.filter(acc => acc.customer_id === customerData.customer_id);
-            console.log('   - Customer accounts found:', customerAccounts.length);
+            console.log('   - First 3 accounts:', accounts.slice(0, 3));
             
-            if (customerAccounts.length > 0) {
-              related_account_id = customerAccounts[0].account_id;
-              console.log('   - Using account ID:', related_account_id, 'from account number:', customerAccounts[0].account_number);
+            const matchedAccount = accounts.find(acc => {
+              const match = acc.account_number.toString() === accountNum;
+              console.log(`   - Checking account ${acc.account_number} === ${accountNum}:`, match);
+              return match;
+            });
+            
+            if (matchedAccount) {
+              related_account_id = matchedAccount.account_id;
+              console.log('   ✅ Found account_id:', related_account_id, 'for account number:', accountNum);
             } else {
-              console.log('   - No accounts found for customer_id:', customerData.customer_id);
+              console.log('   ❌ No account found for number:', accountNum);
+              console.log('   - Available account numbers:', accounts.map(a => a.account_number).slice(0, 10));
             }
           } else {
-            console.log('   - Account API failed with status:', accountResponse.status);
+            console.log('   ❌ Account API failed with status:', accountResponse.status);
           }
         } catch (error) {
-          console.log('   - Account API error:', error.message);
+          console.log('   ❌ Error looking up account:', error.message);
         }
+      } else {
+        console.log('   ⚠️ No accountNumber in customerData');
+      }
+      
+      // Lookup card ID by card number from form
+      if (customerData?.cardNumber) {
+        const cardNum = customerData.cardNumber.split(',')[0].trim();
+        console.log('   - Looking up card_id for card number:', cardNum);
         
-        console.log('   - Fetching cards from API...');
         try {
           const cardResponse = await fetch('/api/v1/card', {
             headers: {
@@ -451,74 +465,70 @@ export default function useAddComplaint() {
               'ngrok-skip-browser-warning': 'true'
             }
           });
+          
           console.log('   - Card API response status:', cardResponse.status);
           
           if (cardResponse.ok) {
             const cards = await cardResponse.json();
             console.log('   - Total cards from API:', cards.length);
+            console.log('   - First 3 cards:', cards.slice(0, 3));
             
-            if (related_account_id) {
-              const customerCards = cards.filter(card => card.account_id === related_account_id);
-              console.log('   - Customer cards found:', customerCards.length);
-              
-              if (customerCards.length > 0) {
-                related_card_id = customerCards[0].card_id;
-                console.log('   - Using card ID:', related_card_id, 'from card number:', customerCards[0].card_number);
-              } else {
-                console.log('   - No cards found for account_id:', related_account_id);
-                // Fallback: use any available card
-                if (cards.length > 0) {
-                  related_card_id = cards[0].card_id;
-                  console.log('   - Fallback: Using first available card ID:', related_card_id, 'from card number:', cards[0].card_number);
-                } else {
-                  console.log('   - No cards available in system');
-                }
-              }
+            const matchedCard = cards.find(card => {
+              const match = card.card_number.toString() === cardNum;
+              console.log(`   - Checking card ${card.card_number} === ${cardNum}:`, match);
+              return match;
+            });
+            
+            if (matchedCard) {
+              related_card_id = matchedCard.card_id;
+              console.log('   ✅ Found card_id:', related_card_id, 'for card number:', cardNum);
             } else {
-              console.log('   - Skipping card lookup (no account_id)');
+              console.log('   ❌ No card found for number:', cardNum);
+              console.log('   - Available card numbers:', cards.map(c => c.card_number).slice(0, 10));
             }
           } else {
-            console.log('   - Card API failed with status:', cardResponse.status);
+            console.log('   ❌ Card API failed with status:', cardResponse.status);
           }
         } catch (error) {
-          console.log('   - Card API error:', error.message);
+          console.log('   ❌ Error looking up card:', error.message);
         }
       } else {
-        console.log('   - No customer_id available for account/card lookup');
+        console.log('   ⚠️ No cardNumber in customerData');
       }
       
-      console.log('   - Final IDs: account_id =', related_account_id, ', card_id =', related_card_id);
+      console.log('🎯 FINAL LOOKUP RESULTS:');
+      console.log('   - related_account_id:', related_account_id);
+      console.log('   - related_card_id:', related_card_id);
+      
+      // Priority works (value=2), Terminal needs to be selected in DataForm dropdown
 
-      // Build ticket data from actual form data
+      // Build ticket data matching exact body format
+      console.log('🔍 CRITICAL ACTION CHECK:');
+      console.log('   - currentActionData:', currentActionData);
+      console.log('   - currentActionData?.action:', currentActionData?.action);
+      console.log('   - Action being sent to API:', currentActionData?.action || null);
+      
       const ticketData = {
+        action: currentActionData?.action || null,
         description: dataFormData?.description || '',
-        record: dataFormData?.record || '',
-        customer_status_id: statusIds.customer_status_id,
-        employee_status_id: statusIds.employee_status_id,
-        priority_id: dataFormData?.priorityId ? Number(dataFormData.priorityId) : null,
         issue_channel_id: dataFormData?.channelId ? Number(dataFormData.channelId) : null,
-        intake_source_id: dataFormData?.sourceId ? Number(dataFormData.sourceId) : null,
-        customer_id: customerData?.customer_id || null,
-        related_account_id: related_account_id || null,
-        related_card_id: related_card_id || null,
         complaint_id: dataFormData?.categoryId ? Number(dataFormData.categoryId) : null,
-        responsible_employee_id: currentEmployee?.employee_id || null,
-        policy_id: policy?.policy_id || null,
-        committed_due_at: dataFormData?.committedDueAt ? new Date(dataFormData.committedDueAt).toISOString() : null,
+        customer_id: customerData?.customer_id || null,
         transaction_date: dataFormData?.transactionDate ? new Date(dataFormData.transactionDate).toISOString() : null,
         amount: dataFormData?.amount ? Number(dataFormData.amount) : null,
-        terminal_id: dataFormData?.terminalId ? Number(dataFormData.terminalId) : null,
-        created_time: dataFormData?.createdTime ? new Date(dataFormData.createdTime).toISOString() : new Date().toISOString(),
-        closed_time: currentActionData?.closedTime ? new Date(currentActionData.closedTime).toISOString() : null
+        record: dataFormData?.record || '',
+        related_account_id: related_account_id,
+        related_card_id: related_card_id,
+        terminal_id: dataFormData?.terminalId || null,
+        intake_source_id: dataFormData?.sourceId ? Number(dataFormData.sourceId) : null,
+        priority_id: dataFormData?.priorityId || null,
+        reason: currentActionData?.reason || '',
+        solution: currentActionData?.solution || ''
       };
       
-      // Only add reason and solution if they have values
-      if (currentActionData?.reason && currentActionData.reason.trim()) {
-        ticketData.reason = currentActionData.reason;
-      }
-      if (currentActionData?.solution && currentActionData.solution.trim()) {
-        ticketData.solution = currentActionData.solution;
-      }
+      // Remove fields that should not be sent to backend
+      const fieldsToRemove = ['customer_status_id', 'employee_status_id', 'responsible_employee_id', 'policy_id', 'committed_due_at', 'created_time', 'closed_time'];
+      fieldsToRemove.forEach(field => delete ticketData[field]);
       
       // Add division_notes in correct JSON format
       if (notesFormData?.newNote) {
@@ -539,8 +549,8 @@ export default function useAddComplaint() {
         console.log('   - As array:', [noteObject]);
         console.log('   - As single object:', noteObject);
         
-        // Send as JSON string first (most common format)
-        ticketData.division_notes = JSON.stringify([noteObject]);
+        // Send as array of objects (backend expects this format)
+        ticketData.division_notes = [noteObject];
       }
       
       // Don't remove any fields - send everything including null values
@@ -635,23 +645,8 @@ export default function useAddComplaint() {
       console.log('   ❌ These fields are ignored and always default to 1');
       console.log('   ✅ Frontend is working correctly - this is a backend API limitation');
       
-      // Try to update status after ticket creation if action is not default
-      console.log('\n🔍 Checking if status update is needed...');
-      console.log('   - currentActionData?.action:', currentActionData?.action);
-      console.log('   - result.data?.ticket_id:', result.data?.ticket_id);
-      console.log('   - statusIds:', statusIds);
-      
-      if (currentActionData?.action && currentActionData.action !== '' && result.data?.ticket_id) {
-        console.log('\n🔄 Attempting to update ticket status after creation...');
-        try {
-          await updateTicketStatus(result.data.ticket_id, statusIds, currentActionData.action);
-        } catch (updateError) {
-          console.log('   ❌ Status update failed:', updateError.message);
-          console.log('   ℹ️  Ticket created successfully but status remains default (ID: 1)');
-        }
-      } else {
-        console.log('   ⏭️  Skipping status update (no action selected or missing ticket ID)');
-      }
+      // Backend should handle action field directly, no need for status update
+      console.log('\n✅ Backend will process action field directly:', currentActionData?.action);
       console.log('Ticket saved successfully:', result.data?.ticket_number);
       
       // Check if division_notes was actually saved

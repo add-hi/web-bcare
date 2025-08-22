@@ -151,7 +151,6 @@ const DataForm = ({ detail, onChange, mode = "detail" }) => {
       const n = { ...p, [k]: v };
       // Use setTimeout to avoid setState during render
       setTimeout(() => {
-        console.log('DataForm onChange called with:', n);
         onChange?.(n);
       }, 0);
       return n;
