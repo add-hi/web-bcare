@@ -46,15 +46,12 @@ const DivisionComplaintHandler = () => {
   const { user } = useAuthStore();
   const ticketStore = useTicketStore();
 
-  // Get current user's NPP for filtering
-  const currentUserNPP = user?.npp;
-
   // Force refresh when user changes
   useEffect(() => {
-    if (currentUserNPP) {
+    if (user) {
       fetchTickets({ limit: 100, offset: 0 });
     }
-  }, [currentUserNPP, fetchTickets]);
+  }, [user, fetchTickets]);
 
   // Helper function to format date
   const fmtDate = (iso) => {
@@ -67,14 +64,12 @@ const DivisionComplaintHandler = () => {
     return `${dd}/${mm}/${yyyy}`;
   };
 
-  // Map API data to table format and filter by assigned user
+  // Map API data to table format (API already filters by user/division)
   const originalComplaints = useMemo(() => {
-    if (!Array.isArray(list) || !currentUserNPP) return [];
+    if (!Array.isArray(list)) return [];
 
-    // Filter tickets assigned to current user
-    const assignedTickets = list.filter((t) => {
-      return t?.employee?.npp === currentUserNPP;
-    });
+    // API already returns tickets for current user's division
+    const assignedTickets = list;
 
     return assignedTickets.map((t) => {
       const id = t?.ticket_id ?? null;
@@ -95,21 +90,20 @@ const DivisionComplaintHandler = () => {
         cardNumber: t?.related_card?.card_number
           ? String(t.related_card.card_number)
           : "-",
-        createdByUnit:
-          t?.intake_source?.source_name ||
-          (t?.employee?.npp ? `NPP ${t.employee.npp}` : "-"),
+        createdByUnit: t?.intake_source?.source_name || "-",
         unitNow: t?.employee_status?.employee_status_name || "-",
-        status: t?.customer_status?.customer_status_name || "-",
+        status: t?.employee_status?.employee_status_name || "-",
         sla: t?.policy?.sla_days != null ? String(t.policy.sla_days) : "-",
-        timeRemaining: "Calculating...", // You can add time calculation logic here
-        lastUpdate: fmtDate(t?.updated_time || t?.created_time),
-        assignedTo: t?.employee?.full_name || "Current User",
-        customerContact: t?.customer?.phone_number || "-",
-        issueDescription: t?.complaint_description || "-",
-        divisionNotes: [], // Add notes logic if available in API
+        timeRemaining: t?.sla_info?.is_overdue ? "Overdue" : `${t?.sla_info?.remaining_hours || 0}h remaining`,
+        lastUpdate: fmtDate(t?.created_time),
+        assignedTo: "Current Division",
+        customerContact: t?.customer?.email || "-",
+        issueDescription: t?.complaint?.complaint_name || "-",
+        divisionNotes: [],
+        fullTicketData: t,
       };
     });
-  }, [list, currentUserNPP]);
+  }, [list]);
 
   // Get unique values for filter options
   const getUniqueValues = (key) => {
@@ -118,8 +112,7 @@ const DivisionComplaintHandler = () => {
 
   // Apply filters and sorting
   const processedComplaints = useMemo(() => {
-    // Don't process if we don't have user data yet
-    if (!currentUserNPP) return [];
+    if (!user) return [];
 
     let filtered = originalComplaints;
 
@@ -163,7 +156,7 @@ const DivisionComplaintHandler = () => {
     }
 
     return filtered;
-  }, [filters, sortConfig, originalComplaints, currentUserNPP]);
+  }, [filters, sortConfig, originalComplaints, user]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => ({
@@ -867,7 +860,7 @@ const DivisionComplaintHandler = () => {
 
       {/* Table */}
       <div className="overflow-x-auto bg-white rounded-lg shadow">
-        <table key={currentUserNPP} className="w-full border-collapse">
+        <table key={user?.npp} className="w-full border-collapse">
           <thead>
             <tr className="bg-gray-50">
               <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">
