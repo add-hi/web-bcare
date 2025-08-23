@@ -302,7 +302,7 @@ const fetchDropdownDataOnce = useCallback(async () => {
         fetch("/api/v1/channel", { headers }),
         fetch("/api/v1/complaint_category", { headers }),
         fetch("/api/v1/source", { headers }),
-        fetch("/api/v1/terminal", { headers }),
+        fetch("/api/v1/terminals", { headers }),
         fetch("/api/v1/priority", { headers }),
         fetch("/api/v1/complaint_policy", { headers }),
         fetch("/api/v1/uics", { headers }),
@@ -317,7 +317,12 @@ const fetchDropdownDataOnce = useCallback(async () => {
       }
 
       if (sourceRes.ok)   setSources(await sourceRes.json());
-      if (terminalRes.ok) setTerminals(await terminalRes.json());
+      if (terminalRes.ok) {
+        const terminalData = await terminalRes.json();
+        // Handle different response formats
+        const terminals = Array.isArray(terminalData) ? terminalData : (terminalData.data || []);
+        setTerminals(terminals);
+      }
       if (priorityRes.ok) setPriorities(await priorityRes.json());
 
       if (policyRes.ok) {
