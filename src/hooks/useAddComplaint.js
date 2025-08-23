@@ -302,7 +302,7 @@ const fetchDropdownDataOnce = useCallback(async () => {
         fetch("/api/v1/channel", { headers }),
         fetch("/api/v1/complaint_category", { headers }),
         fetch("/api/v1/source", { headers }),
-        fetch("/api/v1/terminal", { headers }),
+        fetch("/api/v1/terminals", { headers }),
         fetch("/api/v1/priority", { headers }),
         fetch("/api/v1/complaint_policy", { headers }),
         fetch("/api/v1/uics", { headers }),
@@ -317,7 +317,12 @@ const fetchDropdownDataOnce = useCallback(async () => {
       }
 
       if (sourceRes.ok)   setSources(await sourceRes.json());
-      if (terminalRes.ok) setTerminals(await terminalRes.json());
+      if (terminalRes.ok) {
+        const terminalData = await terminalRes.json();
+        // Handle different response formats
+        const terminals = Array.isArray(terminalData) ? terminalData : (terminalData.data || []);
+        setTerminals(terminals);
+      }
       if (priorityRes.ok) setPriorities(await priorityRes.json());
 
       if (policyRes.ok) {
@@ -643,6 +648,25 @@ const fetchCurrentUserOnce = useCallback(async () => {
         transaction_date: dataFormData?.transactionDate
           ? new Date(dataFormData.transactionDate).toISOString()
           : null,
+        committed_due_at: (() => {
+          // Try multiple sources for committed_due_at
+          const committedDue = dataFormData?.committedDueAt || dataFormData?.committed_due_at;
+          
+          if (committedDue) {
+            return new Date(committedDue).toISOString();
+          }
+          
+          // Fallback: calculate from created_time + SLA if available
+          if (dataFormData?.createdTime && dataFormData?.slaDays) {
+            const createdDate = new Date(dataFormData.createdTime);
+            const committedDate = new Date(createdDate);
+            committedDate.setDate(committedDate.getDate() + parseInt(dataFormData.slaDays));
+            committedDate.setHours(0, 0, 0, 0);
+            return committedDate.toISOString();
+          }
+          
+          return null;
+        })(),
         amount: dataFormData?.amount ? Number(dataFormData.amount) : null,
         record: dataFormData?.record || "",
         related_account_id: related_account_id,
@@ -662,7 +686,6 @@ const fetchCurrentUserOnce = useCallback(async () => {
         "employee_status_id",
         "responsible_employee_id",
         "policy_id",
-        "committed_due_at",
         "created_time",
         "closed_time",
       ];
@@ -696,6 +719,23 @@ const fetchCurrentUserOnce = useCallback(async () => {
 
       // Don't remove any fields - send everything including null values
       // Backend should handle null values properly
+      
+      // 🔍 DEBUG: Log data yang dikirim ke backend
+      console.log('=== TICKET DATA SENT TO BACKEND ===');
+      console.log('📦 dataFormData from store:', dataFormData);
+      console.log('📅 dataFormData.committedDueAt:', dataFormData?.committedDueAt);
+      console.log('📅 dataFormData.transactionDate:', dataFormData?.transactionDate);
+      console.log('📤 Full ticketData:', JSON.stringify(ticketData, null, 2));
+      console.log('📅 committed_due_at value:', ticketData.committed_due_at);
+      console.log('📅 transaction_date value:', ticketData.transaction_date);
+      console.log('🎯 Key fields check:');
+      console.log('   - action:', ticketData.action);
+      console.log('   - customer_id:', ticketData.customer_id);
+      console.log('   - issue_channel_id:', ticketData.issue_channel_id);
+      console.log('   - complaint_id:', ticketData.complaint_id);
+      console.log('   - priority_id:', ticketData.priority_id);
+      console.log('   - terminal_id:', ticketData.terminal_id);
+      console.log('=====================================');
 
       const response = await fetch("/api/v1/tickets", {
         method: "POST",
