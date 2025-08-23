@@ -924,7 +924,7 @@ const ComplaintTable = ({ isActive = false }) => {
               <div className="space-y-3">
                 <div>
                   <span className="text-sm font-medium text-gray-600">
-                    Created By Unit
+                    UIC
                   </span>
                   <p className="text-base text-gray-900">
                     {selectedComplaint?.createdByUnit}

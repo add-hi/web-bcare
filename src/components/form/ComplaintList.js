@@ -28,7 +28,7 @@ const ComplaintList = ({ isActive = false }) => {
   const [showFilterDropdown, setShowFilterDropdown] = useState(null);
 
   // list + pagination dari hook (PASTIKAN hook mengembalikan `pagination`)
-  const { list, loading, error, pagination, fetchTickets } = useTicket();
+  const { list, loading, error, pagination, fetchTickets, updateTicket } = useTicket();
 
   // detail
   const { selectedId, fetchTicketDetail } = useTicketDetail();
@@ -45,7 +45,7 @@ const ComplaintList = ({ isActive = false }) => {
 
   // Initialize with first page on mount
   const [isInitialized, setIsInitialized] = useState(false);
-  
+
   useEffect(() => {
     if (isActive && !isInitialized) {
       fetchTickets({ limit: PAGE_SIZE, offset: 0, force: false });
@@ -105,6 +105,13 @@ const ComplaintList = ({ isActive = false }) => {
 
   const getUniqueValues = (key) =>
     [...new Set(originalComplaints.map((i) => i[key] || "-"))].sort();
+
+  const onDetailSubmitSuccess = async () => {
+    // re-fetch list sesuai halaman aktif
+    const offset = (currentPage - 1) * limit;
+    await fetchTickets({ limit, offset }); // asumsi fetchTickets menerima {limit, offset}
+    setViewMode("table");
+  };
 
   // filter & (opsional) sort — tidak mengganggu pagination server
   const processedComplaints = useMemo(() => {
@@ -187,9 +194,16 @@ const ComplaintList = ({ isActive = false }) => {
 
   const handleRowClick = async (row) => {
     try {
+      const isOpen = String(row?.status || "").toLowerCase() === "open";
+      if (isOpen) {
+        await updateTicket(row.id, { action: "HANDLEDCXC" });
+      }
+
       await fetchTicketDetail(row.id, { force: false });
       setViewMode("detail");
-    } catch {}
+    } catch {
+      // biarkan ditangani global / UI error yang sudah ada
+    }
   };
 
   const openAttachments = () => setViewMode("attachments");
@@ -290,7 +304,7 @@ const ComplaintList = ({ isActive = false }) => {
             Attachments
           </button>
         </div>
-        <DetailComplaint ticketId={selectedId} />
+        <DetailComplaint ticketId={selectedId} onSuccess={onDetailSubmitSuccess} />
       </div>
     );
   }
@@ -341,7 +355,7 @@ const ComplaintList = ({ isActive = false }) => {
     },
     {
       key: "createdByUnit",
-      label: "Created By Unit",
+      label: "UIC",
       sortable: true,
       filterable: true,
     },
@@ -704,9 +718,8 @@ const ComplaintList = ({ isActive = false }) => {
                               showFilterDropdown === col.key ? null : col.key
                             )
                           }
-                          className={`hover:text-blue-600 ${
-                            filters[col.key] ? "text-blue-600" : "text-gray-400"
-                          }`}
+                          className={`hover:text-blue-600 ${filters[col.key] ? "text-blue-600" : "text-gray-400"
+                            }`}
                         >
                           <Filter size={14} />
                         </button>
@@ -832,11 +845,10 @@ const ComplaintList = ({ isActive = false }) => {
                 key={p}
                 onClick={() => setCurrentPage(p)}
                 disabled={loading}
-                className={`px-3 py-1 rounded text-sm ${
-                  p === currentPage
-                    ? "bg-blue-600 text-white"
-                    : "border border-gray-300 hover:bg-gray-50"
-                }`}
+                className={`px-3 py-1 rounded text-sm ${p === currentPage
+                  ? "bg-blue-600 text-white"
+                  : "border border-gray-300 hover:bg-gray-50"
+                  }`}
               >
                 {p}
               </button>
