@@ -16,17 +16,37 @@ function getAccessToken() {
 }
 
 function mapDetail(data) {
-    // activities -> notes ringkas (division log) + raw division_notes
+    // Extract employee status history for division notes and complaint tracking
+    const statusHistory = data?.status_history || {};
+    const employeeStatusHistory = Array.isArray(statusHistory?.employee_status_history) ? statusHistory.employee_status_history : [];
+    const customerStatusHistory = Array.isArray(statusHistory?.customer_status_history) ? statusHistory.customer_status_history : [];
+    
+    // Create division notes from employee status history
+    const divisionNotesFromHistory = employeeStatusHistory.map((h) => ({
+        division: h?.status_name || h?.status_code || "Unknown",
+        timestamp: h?.changed_at || null,
+        msg: `Status changed to ${h?.status_name || h?.status_code} by ${h?.changed_by || 'System'}`,
+        author: h?.changed_by || "System",
+        type: "status_change",
+        statusCode: h?.status_code,
+        statusName: h?.status_name,
+        actionType: h?.action_type
+    }));
+    
+    // Fallback to activities if no status history
     const activities = Array.isArray(data?.activities) ? data.activities : [];
     const divisionNotesFromActivities = activities.map((a) => ({
         division: a?.sender_type?.sender_type_name || a?.sender_type?.sender_type_code || "-",
         timestamp: a?.ticket_activity_time || null,
         msg: a?.content || "",
         author: (a?.sender_type?.sender_type_name || "Unknown"),
+        type: "activity"
     }));
 
-    // Use division_notes from API if available, otherwise use activities
-    const divisionNotes = Array.isArray(data?.division_notes) ? data.division_notes : divisionNotesFromActivities;
+    // Use status history first, then activities, then division_notes
+    const divisionNotes = employeeStatusHistory.length > 0 
+        ? divisionNotesFromHistory 
+        : (Array.isArray(data?.division_notes) ? data.division_notes : divisionNotesFromActivities);
 
     const customer = data?.customer || {};
     const relatedAcc = data?.related_account || {};
@@ -119,6 +139,10 @@ function mapDetail(data) {
         notes: {
             division: divisionNotes,
             raw: data?.division_notes ?? null,
+        },
+        tracking: {
+            employeeStatusHistory: employeeStatusHistory,
+            customerStatusHistory: customerStatusHistory,
         },
         activities: activities || [],
         attachments: Array.isArray(data?.attachments) ? data.attachments : [],

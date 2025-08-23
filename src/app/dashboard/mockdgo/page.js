@@ -23,6 +23,7 @@ import {
   Building2,
 } from "lucide-react";
 import useTicket from "@/hooks/useTicket";
+import useTicketDetail from "@/hooks/useTicketDetail";
 import { useAuthStore } from "@/store/userStore";
 import useTicketStore from "@/store/ticketStore";
 
@@ -43,6 +44,7 @@ const DivisionComplaintHandler = () => {
 
   // Use the same ticket hook as ComplaintList
   const { list, loading, error, fetchTickets } = useTicket();
+  const { selectedId, detail, fetchTicketDetail } = useTicketDetail();
   const { user } = useAuthStore();
   const ticketStore = useTicketStore();
 
@@ -185,9 +187,14 @@ const DivisionComplaintHandler = () => {
     setSortConfig({ key: null, direction: "asc" });
   };
 
-  const handleRowClick = (complaint) => {
-    setSelectedComplaint(complaint);
-    setViewMode("detail");
+  const handleRowClick = async (complaint) => {
+    try {
+      await fetchTicketDetail(complaint.id, { force: false });
+      setSelectedComplaint(complaint);
+      setViewMode("detail");
+    } catch {
+      // Error handling - could show toast notification
+    }
   };
 
   const handleBackToTable = () => {
@@ -305,27 +312,37 @@ const DivisionComplaintHandler = () => {
     );
   };
 
-  const getNoteTypeStyle = (type) => {
+  const getNoteStyle = (type, division) => {
     const typeConfig = {
-      system: {
-        color: "border-gray-400",
-        bgColor: "bg-gray-50",
-        icon: MessageSquare,
-      },
-      note: { color: "border-blue-400", bgColor: "bg-blue-50", icon: FileText },
-      escalation: {
-        color: "border-orange-400",
-        bgColor: "bg-orange-50",
-        icon: AlertTriangle,
-      },
-      resolution: {
-        color: "border-green-400",
-        bgColor: "bg-green-50",
-        icon: CheckCircle,
-      },
+      system: { icon: MessageSquare },
+      note: { icon: FileText },
+      escalation: { icon: AlertTriangle },
+      resolution: { icon: CheckCircle },
+      status_change: { icon: Clock },
+      activity: { icon: MessageSquare },
     };
-
-    return typeConfig[type] || typeConfig.note;
+    
+    const divisionConfig = {
+      "Open": { color: "border-blue-400", bgColor: "bg-blue-50" },
+      "Handled by CxC": { color: "border-yellow-400", bgColor: "bg-yellow-50" },
+      "Escalated": { color: "border-orange-400", bgColor: "bg-orange-50" },
+      "Done by UIC": { color: "border-purple-400", bgColor: "bg-purple-50" },
+      "Closed": { color: "border-green-400", bgColor: "bg-green-50" },
+      "CXC": { color: "border-blue-400", bgColor: "bg-blue-50" },
+      "OPR": { color: "border-green-400", bgColor: "bg-green-50" },
+      "IT": { color: "border-purple-400", bgColor: "bg-purple-50" },
+      "Finance": { color: "border-yellow-400", bgColor: "bg-yellow-50" },
+      "Security": { color: "border-red-400", bgColor: "bg-red-50" },
+      "ATM Operations": { color: "border-orange-400", bgColor: "bg-orange-50" },
+      "Call Center": { color: "border-pink-400", bgColor: "bg-pink-50" },
+      "Customer": { color: "border-gray-400", bgColor: "bg-gray-50" },
+      "Employee": { color: "border-indigo-400", bgColor: "bg-indigo-50" },
+    };
+    
+    const typeStyle = typeConfig[type] || typeConfig.note;
+    const divisionStyle = divisionConfig[division] || { color: "border-gray-400", bgColor: "bg-gray-50" };
+    
+    return { ...typeStyle, ...divisionStyle };
   };
 
   // Action Modal Component
@@ -642,43 +659,81 @@ const DivisionComplaintHandler = () => {
                     Division Communication
                   </h3>
                   <span className="text-sm text-gray-500">
-                    {selectedComplaint?.divisionNotes?.length || 0} messages
+                    {(() => {
+                      const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
+                      const statusHistoryNotes = ticketDetail?.notes?.division || [];
+                      const rawDivisionNotes = ticketDetail?.__raw?.division_notes || [];
+                      return statusHistoryNotes.length + rawDivisionNotes.length;
+                    })()} messages
                   </span>
                 </div>
 
                 <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {selectedComplaint?.divisionNotes?.map((note) => {
-                    const typeStyle = getNoteTypeStyle(note.type);
-                    const IconComponent = typeStyle.icon;
+                  {(() => {
+                    const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
+                    const statusHistoryNotes = ticketDetail?.notes?.division || [];
+                    const rawDivisionNotes = ticketDetail?.__raw?.division_notes || [];
+                    
+                    // Combine both sources and sort by timestamp
+                    const allNotes = [...statusHistoryNotes, ...rawDivisionNotes]
+                      .sort((a, b) => {
+                        const dateA = new Date(a.timestamp);
+                        const dateB = new Date(b.timestamp);
+                        return dateA - dateB;
+                      });
+                    
+                    if (allNotes.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-gray-500">
+                          <MessageSquare size={48} className="mx-auto mb-2 text-gray-300" />
+                          <p>No division notes available</p>
+                        </div>
+                      );
+                    }
+                    
+                    return allNotes.map((note, index) => {
+                      const noteStyle = getNoteStyle(note.type || 'note', note.division);
+                      const IconComponent = noteStyle.icon;
+                      
+                      // Handle different timestamp formats
+                      const displayTimestamp = note.timestamp?.includes('/') 
+                        ? note.timestamp 
+                        : fmtDate(note.timestamp);
 
-                    return (
-                      <div
-                        key={note.id}
-                        className={`border-l-4 ${typeStyle.color} pl-4 ${typeStyle.bgColor} rounded-r-lg p-3`}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <IconComponent size={14} className="text-gray-600" />
-                          <span className="text-xs text-gray-600 font-medium">
-                            {note.timestamp}
-                          </span>
-                          <span className="text-xs text-gray-500">•</span>
-                          <div className="flex items-center gap-1">
-                            <Building2 size={12} className="text-gray-500" />
+                      return (
+                        <div
+                          key={note.id || `${note.division}-${index}`}
+                          className={`border-l-4 ${noteStyle.color} pl-4 ${noteStyle.bgColor} rounded-r-lg p-3`}
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <IconComponent size={14} className="text-gray-600" />
                             <span className="text-xs text-gray-600 font-medium">
-                              {note.division}
+                              {displayTimestamp}
+                            </span>
+                            <span className="text-xs text-gray-500">•</span>
+                            <div className="flex items-center gap-1">
+                              <Building2 size={12} className="text-gray-500" />
+                              <span className="text-xs text-gray-600 font-medium">
+                                {note.division}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-500">•</span>
+                            <span className="text-xs text-gray-500">
+                              {note.author}
                             </span>
                           </div>
-                          <span className="text-xs text-gray-500">•</span>
-                          <span className="text-xs text-gray-500">
-                            {note.author}
-                          </span>
+                          <p className="text-sm text-gray-900 leading-relaxed">
+                            {note.msg || note.message || 'No message'}
+                          </p>
+                          {note.statusCode && (
+                            <div className="mt-2 text-xs text-gray-500">
+                              Status: {note.statusName} ({note.statusCode})
+                            </div>
+                          )}
                         </div>
-                        <p className="text-sm text-gray-900 leading-relaxed">
-                          {note.message}
-                        </p>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             </div>
