@@ -11,9 +11,50 @@ import {
   User,
 } from "lucide-react";
 
-const InputForm = ({ detail }) => {
-  const [divisionNotes, setDivisionNotes] = useState(detail?.notes?.division || []);
+const InputForm = ({ detail, onChange }) => {
+  // Normalize initial notes: ensure array of {division, timestamp, msg, author}
+  const initialDivisionNotes = (() => {
+    try {
+      if (Array.isArray(detail?.notes?.division)) return detail.notes.division.map(n => ({
+        division: n.division ?? n.Division ?? n.division_name ?? "CXC",
+        timestamp: n.timestamp ?? n.time ?? n.date ?? "",
+        msg: n.msg ?? n.message ?? n.content ?? "",
+        author: n.author ?? n.Author ?? "Unknown",
+      }));
+      if (typeof detail?.__raw?.division_notes === "string") {
+        const parsed = JSON.parse(detail.__raw.division_notes);
+        if (Array.isArray(parsed)) return parsed.map(n => ({
+          division: n.division ?? n.Division ?? "CXC",
+          timestamp: n.timestamp ?? n.time ?? "",
+          msg: n.msg ?? n.message ?? "",
+          author: n.author ?? "Unknown",
+        }));
+      }
+      if (Array.isArray(detail?.__raw?.division_notes)) {
+        return detail.__raw.division_notes.map(n => ({
+          division: n.division ?? "CXC",
+          timestamp: n.timestamp ?? "",
+          msg: n.msg ?? "",
+          author: n.author ?? "Unknown",
+        }));
+      }
+    } catch {}
+    return [];
+  })();
+
+  const [divisionNotes, setDivisionNotes] = useState(initialDivisionNotes);
   const [isProcessing, setIsProcessing] = useState(false);
+  // propagate to parent
+  useEffect(() => {
+    onChange && onChange(divisionNotes.map(n => ({
+      division: n.division ?? "CXC",
+      timestamp: n.timestamp ?? "",
+      msg: n.msg ?? n.message ?? "",
+      author: n.author ?? "Unknown",
+    })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [divisionNotes]);
+
   const [newNote, setNewNote] = useState("");
 
   const handleAddNote = async () => {
@@ -33,7 +74,7 @@ const InputForm = ({ detail }) => {
         }).replace(/\//g, "/").replace(",", ""),
         division: "Current Division",
         author: "Current User",
-        message: newNote,
+        msg: newNote,
         type: "note",
       };
 

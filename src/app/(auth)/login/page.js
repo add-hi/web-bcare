@@ -117,7 +117,7 @@ export default function LoginPage() {
               />
             </div>
             <p className="text-blue-600 text-m font-semibold tracking-wide uppercase opacity-80">
-              CX Communication Portal
+              B-Care Dashboard
             </p>
             <div className="w-16 h-1 bg-gradient-to-r from-orange-400 to-orange-500 rounded-full mx-auto mt-3"></div>
           </div>

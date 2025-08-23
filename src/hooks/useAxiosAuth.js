@@ -1,8 +1,16 @@
+// src/hooks/useAxiosAuth.js
 "use client";
 
 import { useEffect } from "react";
 import httpClient from "@/lib/httpClient";
 import { useAuthStore, ensureBearer } from "@/store/userStore";
+
+/**
+ * Interceptor Axios untuk:
+ * - Inject Authorization dari store
+ * - Refresh token saat 419 (atau 401) lalu retry request awal
+ * - Deduplicate refresh via refreshPromise
+ */
 
 let installed = false;
 let refreshPromise = null;
@@ -12,67 +20,108 @@ export default function useAxiosAuth() {
         if (installed) return;
         installed = true;
 
-        // Inject Authorization bila ada
+        // === REQUEST INTERCEPTOR ===
         const reqId = httpClient.interceptors.request.use((config) => {
             const { accessToken } = useAuthStore.getState();
+            // sisipkan Authorization kalau belum ada
             if (accessToken && !config.headers?.Authorization) {
                 config.headers = { ...(config.headers || {}), Authorization: accessToken };
             }
             return config;
         });
 
+        // === RESPONSE INTERCEPTOR ===
         const resId = httpClient.interceptors.response.use(
             (res) => res,
             async (error) => {
                 const status = error?.response?.status;
                 const original = error?.config || {};
-                const isRefresh = String(original?.url || "").includes("/auth/refresh");
+                const url = String(original?.url || "");
+                const isRefreshCall = url.includes("/auth/refresh");
 
-                // Handle expired: 419 (atau 401 bila backend pakai itu)
-                if ((status === 419 || status === 401) && !original._retry && !isRefresh) {
-                    original._retry = true;
+                // Tidak ada response (network error) -> lempar saja
+                if (!error?.response) return Promise.reject(error);
 
-                    try {
-                        if (!refreshPromise) {
-                            const { refreshToken, setAccessToken, setStatus, reset } = useAuthStore.getState();
-                            if (!refreshToken) {
-                                reset(); setStatus("unauthenticated");
-                                throw error;
-                            }
-                            refreshPromise = httpClient
-                                .post("/auth/refresh", { refresh_token: refreshToken })
-                                .then(({ data }) => {
-                                    const next = ensureBearer(data?.access_token || "");
-                                    if (!next) throw new Error("No access_token on refresh");
-                                    setAccessToken(next);
-                                    setStatus("authenticated");
-                                    return next;
-                                })
-                                .catch((e) => {
-                                    const { reset, setStatus } = useAuthStore.getState();
-                                    reset(); setStatus("unauthenticated");
-                                    throw e;
-                                })
-                                .finally(() => { refreshPromise = null; });
-                        }
+                // Hanya tangani 419 / 401 dan bukan panggilan refresh itu sendiri
+                const shouldRefresh =
+                    (status === 419 || status === 401) && !original._retry && !isRefreshCall;
 
-                        const newToken = await refreshPromise;
-
-                        // Retry request awal dengan token baru
-                        original.headers = { ...(original.headers || {}), Authorization: newToken };
-                        if ((original.method || "get").toLowerCase() === "get") {
-                            original.params = { ...(original.params || {}), _t: Date.now() }; // anti cache
-                        }
-                        return httpClient(original);
-                    } catch (e) {
-                        return Promise.reject(e);
-                    }
+                if (!shouldRefresh) {
+                    return Promise.reject(error);
                 }
 
-                return Promise.reject(error);
+                original._retry = true;
+
+                try {
+                    // Deduplicate refresh antar request paralel
+                    if (!refreshPromise) {
+                        const {
+                            refreshToken,
+                            setAccessToken,
+                            setRefreshToken,
+                            setStatus,
+                            reset,
+                        } = useAuthStore.getState();
+
+                        if (!refreshToken) {
+                            // Tidak bisa refresh -> logout lokal
+                            reset();
+                            setStatus("unauthenticated");
+                            return Promise.reject(error);
+                        }
+
+                        // Lakukan refresh token
+                        refreshPromise = httpClient
+                            .post(
+                                "/auth/refresh",
+                                { refresh_token: refreshToken }
+                                // Jika perlu header khusus (misal ngrok), tambahkan di sini:
+                                // , { headers: { "ngrok-skip-browser-warning": "true" } }
+                            )
+                            .then(({ data }) => {
+                                const nextAccess = ensureBearer(data?.access_token || "");
+                                if (!nextAccess) throw new Error("No access_token on refresh");
+
+                                // Simpan access token baru
+                                setAccessToken(nextAccess);
+                                // Jika server memberi refresh token baru, simpan juga
+                                if (data?.refresh_token) setRefreshToken(data.refresh_token);
+
+                                setStatus("authenticated");
+                                return nextAccess;
+                            })
+                            .catch((e) => {
+                                // Refresh gagal -> bersihkan session
+                                const { reset, setStatus } = useAuthStore.getState();
+                                reset();
+                                setStatus("unauthenticated");
+                                throw e;
+                            })
+                            .finally(() => {
+                                refreshPromise = null;
+                            });
+                    }
+
+                    // Tunggu refresh selesai (atau reuse promise yang sedang berjalan)
+                    const newToken = await refreshPromise;
+
+                    // Retry request awal dengan token baru
+                    original.headers = { ...(original.headers || {}), Authorization: newToken };
+
+                    // Tambah cache-buster untuk GET agar tidak di-cache
+                    const method = (original.method || "get").toLowerCase();
+                    if (method === "get") {
+                        original.params = { ...(original.params || {}), _t: Date.now() };
+                    }
+
+                    return httpClient(original);
+                } catch (e) {
+                    return Promise.reject(e);
+                }
             }
         );
 
+        // Cleanup saat unmount (mis. navigasi penuh)
         return () => {
             httpClient.interceptors.request.eject(reqId);
             httpClient.interceptors.response.eject(resId);

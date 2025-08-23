@@ -17,7 +17,6 @@ export default function useUser() {
     setStatus("unauthenticated");
   }, [reset, setStatus]);
 
-  /** POST /auth/login/employee */
   const login = useCallback(async ({ npp, password }) => {
     setError(null);
     setStatus("authenticating");
@@ -49,7 +48,6 @@ export default function useUser() {
     }
   }, [setError, setStatus, setAccessToken, setRefreshToken, setTokenType, setUser]);
 
-  /** GET /auth/me */
   const fetchMe = useCallback(async () => {
     if (!isAuthenticated() || !accessToken) return null;
     try {

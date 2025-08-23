@@ -15,7 +15,6 @@ function getAccessToken() {
     }
 }
 
-// normalizer: response GET /v1/tickets/:id -> shape yang dipakai layar
 function mapDetail(data) {
     // activities -> notes ringkas (division log) + raw division_notes
     const activities = Array.isArray(data?.activities) ? data.activities : [];
@@ -25,7 +24,7 @@ function mapDetail(data) {
         msg: a?.content || "",
         author: (a?.sender_type?.sender_type_name || "Unknown"),
     }));
-    
+
     // Use division_notes from API if available, otherwise use activities
     const divisionNotes = Array.isArray(data?.division_notes) ? data.division_notes : divisionNotesFromActivities;
 
@@ -135,22 +134,16 @@ export default function useTicketDetail(ticketId) {
     } = useTicketStore();
 
     const BASE = useMemo(() =>
-        (process.env.NEXT_PUBLIC_TICKET_API_BASE_URL || "https://8fc9f60f4dbd.ngrok-free.app").replace(/\/$/, ""),
+        (process.env.NEXT_PUBLIC_API_URL).replace(/\/$/, ""),
         []);
 
     const effectiveId = ticketId ?? selectedId;
     const detail = effectiveId ? detailById[effectiveId] : null;
 
     const fetchTicketDetail = useCallback(async (id, { force = true } = {}) => {
-        console.log('fetch Detail Ticket hit');
-        
+
         const ticketIdToFetch = id ?? effectiveId;
         if (!ticketIdToFetch) return;
-
-        // if (!force && detailById[ticketIdToFetch]) {
-        //     setSelectedId(ticketIdToFetch);
-        //     return; // pakai cache
-        // }
 
         setDetailLoading(true);
         setDetailError(null);

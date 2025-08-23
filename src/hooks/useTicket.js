@@ -30,7 +30,7 @@ export default function useTicket() {
   const BASE = useMemo(
     () =>
       (
-        process.env.NEXT_PUBLIC_TICKET_API_BASE_URL || "https://8fc9f60f4dbd.ngrok-free.app"
+        process.env.NEXT_PUBLIC_API_URL
       ).replace(/\/$/, ""),
     []
   );
@@ -41,7 +41,7 @@ export default function useTicket() {
       const currentPagination = pagination;
       const hasData = list.length > 0;
       const sameParams = currentPagination.limit === limit && currentPagination.offset === offset;
-      
+
       if (!force && hasData && sameParams) {
         console.log('Using cached ticket data');
         return; // Use cached data
@@ -78,14 +78,36 @@ export default function useTicket() {
       } catch (e) {
         setListError(
           e?.response?.data?.message ||
-            e?.message ||
-            "Terjadi kesalahan saat mengambil tiket"
+          e?.message ||
+          "Terjadi kesalahan saat mengambil tiket"
         );
       } finally {
         setListLoading(false);
       }
     },
     [BASE, setListLoading, setListError, setTickets, setPagination, list, pagination]
+  );
+
+  const updateTicket = useCallback(
+
+    async (id, payload) => {
+      if (!id) throw new Error("Ticket id tidak valid");
+
+      const Authorization = getAccessToken();
+      if (!Authorization) throw new Error("Token tidak ditemukan. Silakan login ulang.");
+
+      const res = await httpClient.patch(`/v1/tickets/${id}`, payload, {
+        baseURL: BASE,
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization,
+          "ngrok-skip-browser-warning": "true",
+        },
+      });
+      return res?.data; // kembalikan respons ke pemanggil
+    },
+    [BASE]
   );
 
   return {
@@ -95,5 +117,6 @@ export default function useTicket() {
     error: errorList,
     fetchTickets,
     hasData: list.length > 0,
+    updateTicket,
   };
 }

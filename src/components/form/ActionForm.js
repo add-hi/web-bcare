@@ -1,146 +1,208 @@
+// src/components/form/ActionForm.js
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import SearchableSelect from "../SearchableSelect";
+import toast from "react-hot-toast";
 
-const InputForm = ({ detail }) => {
-  const [formData, setFormData] = useState({
-    action: detail?.statuses?.employee?.name || "",
-    formUnit: detail?.ticket?.employee?.fullName || "",
-    unitTo: detail?.policy?.uicName || "",
-    closedTime: detail?.timestamps?.closedTime ? new Date(detail.timestamps.closedTime).toISOString().split('T')[0] : "",
-    solution: detail?.ticket?.solution || "",
-    reason: detail?.ticket?.reason || "",
-  });
+const unitOptions = [
+  "BCC - Customer Care",
+  "DGO USER 1 (UIC1)",
+  "BCC - Customer Care / DGO USER 1 (UIC1)",
+  "DGO USER 1 (UIC3)",
+  "DGO USER 1 (UIC6)",
+  "DGO USER 1 (UIC7)",
+  "BCC - Customer Care / DGO USER 1 (UIC8)",
+  "DGO USER 1 (UIC10)",
+  "DGO USER 1 (UIC11)",
+  "Divisi OPR",
+  "Divisi TBS",
+];
 
-  const handleInputChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
+function toDateInputValue(raw) {
+  if (!raw) return "";
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+}
 
-  const handleSave = () => {
-    console.log("Saving data:", formData);
-  };
+const toInitial = (d) => ({
+  action: "",
+  formUnit: "CXC",
+  unitTo: d?.policy?.uicName || "",
+  closedTime: toDateInputValue(d?.timestamps?.closedTime),
+  solution: d?.ticket?.solution || "",
+  reason: d?.ticket?.reason || "",
+  customerStatus: d?.statuses?.customer?.name || "",
+  employeeStatus: d?.statuses?.employee?.name || "",
+  slaDays: d?.policy?.slaDays ?? "",
+  slaHours: d?.policy?.slaHours ?? "",
+  slaStatus: d?.sla?.status ?? "",
+  slaRemaining: d?.sla?.remainingHours ?? "",
+});
+
+/**
+ * Props:
+ * - detail
+ * - onChange(payloadDariActionForm)
+ * - onSubmit()               // dipanggil TANPA argumen (parent yang handle)
+ * - submitting: boolean      // loading state tombol
+ * - submitOk: boolean        // true jika update sukses
+ * - submitError: string|null // pesan error jika gagal
+ */
+export default function ActionForm({
+  detail,
+  onChange,
+  onSubmit,
+  submitting,
+  submitOk,
+  submitError,
+}) {
+  const [form, setForm] = useState(toInitial(detail));
+
+  useEffect(() => {
+    const next = toInitial(detail);
+    setForm(next);
+    onChange?.(next);
+  }, [detail, onChange]);
+
+  // toast global
+  useEffect(() => {
+    if (submitOk) toast.success("Ticket berhasil diupdate!");
+    if (submitError) toast.error(`${submitError}`);
+  }, [submitOk, submitError]);
+
+  const update = (k, v) =>
+    setForm((p) => {
+      const n = { ...p, [k]: v };
+      onChange?.(n);
+      return n;
+    });
+
+  const handleSubmit = () => onSubmit?.();
+
+  const inputBase =
+    "w-full px-3 py-2 border border-gray-300 rounded text-sm text-black outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent";
+
+  // helper visibilitas field
+  const isDecline = form.action === "Decline";
+  const isClosed = form.action === "Closed";
+  const isEscalate = form.action === "Eskalasi";
+
+  // tombol disabled jika belum pilih action / sedang submit
+  const disableSubmit = submitting || !form.action;
 
   return (
-    <div className="w-full bg-green-100 rounded-lg shadow-lg p-6 mb-6 border border-gray-200">
-      {/* Header */}
-
-      <div className="bg-green-600 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
+    <div className="w-full rounded-lg border border-gray-200 bg-green-100 p-6 shadow-lg">
+      <div className="-m-6 mb-6 rounded-t-lg bg-green-600 px-4 py-2 text-center text-white">
         <h2 className="text-lg font-semibold">Action</h2>
       </div>
-      <div className="w-full bg-white rounded-lg shadow-lg p-4 border border-gray-200">
-        <div className="p-1  text-black mt-3">
-          <div className="flex items-center gap-4 flex-wrap">
-            {/* Action */}
-            <div className="flex gap-3 items-end min-w-[140px] flex-grow min-w-0">
-              <label className="text-sm font-medium text-black whitespace-nowrap self-center">
-                Action
-              </label>
-              <div className="flex-1">
-                <SearchableSelect
-                  options={["Decline", "Eskalasi", "Closed"]}
-                  value={formData.action}
-                  onChange={(value) => handleInputChange("action", value)}
-                  placeholder="-- Pilih Action --"
-                />
-              </div>
-            </div>
 
-            {/* Form Unit */}
-            <div className="flex items-center space-x-2 min-w-[140px] flex-grow min-w-0">
-              <label className="text-sm font-medium text-black whitespace-nowrap">
-                Form Unit
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm"
-                value={formData.formUnit}
-                onChange={(e) => handleInputChange("formUnit", e.target.value)}
-                placeholder="Isi Form Unit"
-              />
-            </div>
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
+        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
+          {/* Action */}
+          <div className="flex min-w-0 items-center gap-3">
+            <label className="whitespace-nowrap text-sm font-medium text-black">
+              Action
+            </label>
+            <select
+              className="w-full rounded bg-white px-3 py-2 text-sm text-black outline-none border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              value={form.action}
+              onChange={(e) => update("action", e.target.value)}
+            >
+              <option value="">-- Pilih Action --</option>
+              <option value="Decline">Decline</option>
+              <option value="Eskalasi">Eskalasi</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
 
-            {/* Unit to */}
-            <div className="flex items-center space-x-2 min-w-[180px] flex-grow min-w-0">
-              <label className="text-sm font-medium text-black whitespace-nowrap">
-                Unit to <span className="text-red-500">*</span>
-              </label>
+          {/* Form Unit (default CXC, read-only) */}
+          <div className="flex min-w-0 items-center gap-2">
+            <label className="whitespace-nowrap text-sm font-medium text-black">
+              Form Unit
+            </label>
+            <input type="text" className={`${inputBase} bg-gray-50`} value={form.formUnit} readOnly />
+          </div>
+
+          {/* Unit to */}
+          <div className="flex min-w-0 items-center gap-2">
+            <label className="whitespace-nowrap text-sm font-medium text-black">
+              Unit to <span className="text-red-500">*</span>
+            </label>
+            <div className="w-full">
               <SearchableSelect
-                options={[
-                  "BCC - Customer Care", "DGO USER 1 (UIC1)",
-                  "BCC - Customer Care / DGO USER 1 (UIC1)", "DGO USER 1 (UIC3)",
-                  "DGO USER 1 (UIC6)", "DGO USER 1 (UIC7)",
-                  "BCC - Customer Care / DGO USER 1 (UIC8)", "DGO USER 1 (UIC10)",
-                  "DGO USER 1 (UIC11)", "Divisi OPR", "Divisi TBS"
-                ]}
-                value={formData.unitTo}
-                onChange={(value) => handleInputChange("unitTo", value)}
+                options={unitOptions}
+                value={form.unitTo}
+                onChange={(v) => update("unitTo", v)}
                 placeholder="-- Pilih Unit --"
               />
             </div>
+          </div>
 
-            {/* Closed Time */}
-            <div className="flex items-center space-x-2 min-w-[140px] flex-grow min-w-0">
-              <label className="text-sm font-medium text-black whitespace-nowrap">
+          {/* Closed Time — hanya tampil saat Closed */}
+          {isClosed && (
+            <div className="flex min-w-0 items-center gap-2">
+              <label className="whitespace-nowrap text-sm font-medium text-black">
                 Closed Time
               </label>
               <input
                 type="date"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm"
-                value={formData.closedTime}
-                onChange={(e) =>
-                  handleInputChange("closedTime", e.target.value)
-                }
-              />
-            </div>
-
-            {/* Save Button */}
-            <button
-              onClick={handleSave}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded text-sm font-medium transition-colors duration-200 ml-auto flex-shrink-0"
-            >
-              Save
-            </button>
-          </div>
-
-          {/* Solution - muncul kalau action === "Closed" */}
-          {formData.action === "Closed" && (
-            <div className="flex items-center space-x-2 min-w-[140px] flex-grow min-w-0 mt-3">
-              <label className="text-sm font-medium text-black whitespace-nowrap">
-                Solution
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black "
-                value={formData.solution}
-                onChange={(e) => handleInputChange("solution", e.target.value)}
-                placeholder="Isi Solution"
+                className={inputBase}
+                value={form.closedTime}
+                onChange={(e) => update("closedTime", e.target.value)}
               />
             </div>
           )}
 
-          {/* Reason - muncul kalau action === "Decline" */}
-          {formData.action === "Decline" && (
-            <div className="flex items-center space-x-2 min-w-[140px] flex-grow min-w-0 mt-3">
-              <label className="text-sm font-medium text-black whitespace-nowrap">
-                Reason
-              </label>
+          {/* Reason — khusus Decline */}
+          {isDecline && (
+            <div className="md:col-span-4 flex items-center gap-2 min-w-0">
+              <label className="whitespace-nowrap text-sm font-medium text-black">Reason</label>
               <input
                 type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm"
-                value={formData.reason}
-                onChange={(e) => handleInputChange("reason", e.target.value)}
+                className={inputBase}
+                value={form.reason}
+                onChange={(e) => update("reason", e.target.value)}
                 placeholder="Isi Reason"
               />
             </div>
           )}
+
+          {/* Solution — khusus Closed */}
+          {isClosed && (
+            <div className="md:col-span-4 flex items-center gap-2 min-w-0">
+              <label className="whitespace-nowrap text-sm font-medium text-black">Solution</label>
+              <input
+                type="text"
+                className={inputBase}
+                value={form.solution}
+                onChange={(e) => update("solution", e.target.value)}
+                placeholder="Isi Solution"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Submit area */}
+        <div className="mt-4 flex flex-col items-end gap-2 border-t border-gray-200 pt-4">
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={disableSubmit}
+            aria-busy={submitting ? "true" : "false"}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-white transition
+              ${disableSubmit ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+          >
+            {submitting && (
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4A4 4 0 008 12H4z" />
+              </svg>
+            )}
+            {submitting ? "Menyimpan..." : "Submit Update"}
+          </button>
         </div>
       </div>
     </div>
   );
-};
-
-export default InputForm;
+}

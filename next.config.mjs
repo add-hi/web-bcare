@@ -1,5 +1,5 @@
 // next.config.mjs
-const API_BASE = process.env.API_BASE || "https://bcare.my.id";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
