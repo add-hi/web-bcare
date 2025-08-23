@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 import Attachment from "@/components/Attachment";
-import useTicket from "@/hooks/useTicket";
+import useEscalatedTicket from "@/hooks/useEscalatedTicket";
 import useTicketDetail from "@/hooks/useTicketDetail";
 import useTicketStore from "@/store/ticketStore";
 
@@ -41,18 +41,17 @@ const ComplaintTable = ({ isActive = false }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
   // API integration
-  const { list, loading, error, pagination, fetchTickets } = useTicket();
-  const { selectedId, fetchTicketDetail } = useTicketDetail();
+  const { list, loading, error, pagination, fetchEscalatedTickets, refreshEscalatedTickets } = useEscalatedTicket();
+  const { selectedId, detail, fetchTicketDetail } = useTicketDetail();
   const ticketStore = useTicketStore();
 
   const PAGE_SIZE = 10;
 
   useEffect(() => {
     if (isActive) {
-      const offset = (currentPage - 1) * PAGE_SIZE;
-      fetchTickets({ limit: PAGE_SIZE, offset, force: false });
+      fetchEscalatedTickets({ limit: PAGE_SIZE, offset: 0, force: false });
     }
-  }, [isActive, currentPage, fetchTickets]);
+  }, [isActive, fetchEscalatedTickets]);
 
   // Helper function to format date
   const fmtDate = (iso) => {
@@ -65,16 +64,16 @@ const ComplaintTable = ({ isActive = false }) => {
     return `${dd}/${mm}/${yyyy}`;
   };
 
-  // Map API data to table format and filter for escalated tickets only
+  // Map API data to table format and apply client-side pagination
   const originalComplaints = useMemo(() => {
     if (!Array.isArray(list)) return [];
     
-    // Filter for escalated tickets (employee_status_id: 3)
-    const escalatedTickets = list.filter((t) => {
-      return t?.employee_status?.employee_status_id === 3;
-    });
+    // Apply client-side pagination
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const endIndex = startIndex + PAGE_SIZE;
+    const paginatedList = list.slice(startIndex, endIndex);
     
-    return escalatedTickets.map((t) => {
+    return paginatedList.map((t) => {
       const id = t?.ticket_id ?? null;
       return {
         id,
@@ -106,7 +105,7 @@ const ComplaintTable = ({ isActive = false }) => {
         fullTicketData: t,
       };
     });
-  }, [list]);
+  }, [list, currentPage]);
 
 
 
@@ -180,7 +179,7 @@ const ComplaintTable = ({ isActive = false }) => {
     }
 
     return filtered;
-  }, [filters, sortConfig]);
+  }, [filters, sortConfig, originalComplaints]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => ({
@@ -242,9 +241,16 @@ const ComplaintTable = ({ isActive = false }) => {
       note: { icon: FileText },
       escalation: { icon: AlertTriangle },
       resolution: { icon: CheckCircle },
+      status_change: { icon: Clock },
+      activity: { icon: MessageSquare },
     };
     
     const divisionConfig = {
+      "Open": { color: "border-blue-400", bgColor: "bg-blue-50" },
+      "Handled by CxC": { color: "border-yellow-400", bgColor: "bg-yellow-50" },
+      "Escalated": { color: "border-orange-400", bgColor: "bg-orange-50" },
+      "Done by UIC": { color: "border-purple-400", bgColor: "bg-purple-50" },
+      "Closed": { color: "border-green-400", bgColor: "bg-green-50" },
       "CXC": { color: "border-blue-400", bgColor: "bg-blue-50" },
       "OPR": { color: "border-green-400", bgColor: "bg-green-50" },
       "IT": { color: "border-purple-400", bgColor: "bg-purple-50" },
@@ -252,6 +258,8 @@ const ComplaintTable = ({ isActive = false }) => {
       "Security": { color: "border-red-400", bgColor: "bg-red-50" },
       "ATM Operations": { color: "border-orange-400", bgColor: "bg-orange-50" },
       "Call Center": { color: "border-pink-400", bgColor: "bg-pink-50" },
+      "Customer": { color: "border-gray-400", bgColor: "bg-gray-50" },
+      "Employee": { color: "border-indigo-400", bgColor: "bg-indigo-50" },
     };
     
     const typeStyle = typeConfig[type] || typeConfig.note;
@@ -655,38 +663,64 @@ const ComplaintTable = ({ isActive = false }) => {
                 Complaint Tracking
               </h3>
               <div className="space-y-6">
-                {timelineSteps.map((step, index) => {
-                  const IconComponent = step.icon;
-                  const isLast = index === timelineSteps.length - 1;
+                {(() => {
+                  const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
+                  const currentStatusId = selectedComplaint?.fullTicketData?.employee_status?.employee_status_id || 1;
+                  const employeeStatusHistory = ticketDetail?.tracking?.employeeStatusHistory || [];
+                  
+                  // Define all possible steps
+                  const allSteps = [
+                    { id: 1, title: "Open", icon: Clock, color: "bg-blue-500", code: "OPEN" },
+                    { id: 2, title: "Handled by CXC", icon: User, color: "bg-yellow-500", code: "HANDLEDCXC" },
+                    { id: 3, title: "Escalated", icon: AlertTriangle, color: "bg-orange-500", code: "ESCALATED" },
+                    { id: 6, title: "Done by UIC", icon: CheckSquare, color: "bg-purple-500", code: "DONEUIC" },
+                    { id: 4, title: "Closed", icon: CheckCircle, color: "bg-green-500", code: "CLOSED" },
+                  ];
+                  
+                  return allSteps.map((step, index) => {
+                    const IconComponent = step.icon;
+                    const isLast = index === allSteps.length - 1;
+                    const isCompleted = step.id <= currentStatusId;
+                    
+                    // Find matching history item for this step
+                    const historyItem = employeeStatusHistory.find(h => h.status_code === step.code);
+                    
+                    return (
+                      <div key={step.id} className="relative flex items-start">
+                        {/* Timeline Line */}
+                        {!isLast && (
+                          <div className={`absolute left-6 top-12 w-0.5 h-16 ${isCompleted ? 'bg-gray-400' : 'bg-gray-200'}`}></div>
+                        )}
 
-                  return (
-                    <div key={step.id} className="relative flex items-start">
-                      {/* Timeline Line */}
-                      {!isLast && (
-                        <div className="absolute left-6 top-12 w-0.5 h-16 bg-gray-300"></div>
-                      )}
+                        {/* Icon Circle */}
+                        <div
+                          className={`flex-shrink-0 w-12 h-12 rounded-full ${
+                            isCompleted ? step.color : "bg-gray-300"
+                          } flex items-center justify-center text-white shadow-lg`}
+                        >
+                          <IconComponent size={20} />
+                        </div>
 
-                      {/* Icon Circle */}
-                      <div
-                        className={`flex-shrink-0 w-12 h-12 rounded-full ${
-                          step.status === "pending" ? "bg-gray-300" : step.color
-                        } flex items-center justify-center text-white shadow-lg`}
-                      >
-                        <IconComponent size={20} />
+                        {/* Content */}
+                        <div className="ml-4 flex-1">
+                          <p className={`text-base font-medium leading-6 mb-1 ${
+                            isCompleted ? "text-gray-900" : "text-gray-400"
+                          }`}>
+                            {step.title}
+                          </p>
+                          <p className={`text-sm ${
+                            isCompleted ? "text-gray-500" : "text-gray-400"
+                          }`}>
+                            {historyItem 
+                              ? `${fmtDate(historyItem.changed_at)} by ${historyItem.changed_by}`
+                              : isCompleted ? "Completed" : "Pending"
+                            }
+                          </p>
+                        </div>
                       </div>
-
-                      {/* Content */}
-                      <div className="ml-4 flex-1">
-                        <p className="text-base font-medium text-gray-900 leading-6 mb-1">
-                          {step.title}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {step.timestamp}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             </div>
 
@@ -698,43 +732,81 @@ const ComplaintTable = ({ isActive = false }) => {
                     Division Communication
                   </h3>
                   <span className="text-sm text-gray-500">
-                    {selectedComplaint?.divisionNotes?.length || 0} messages
+                    {(() => {
+                      const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
+                      const statusHistoryNotes = ticketDetail?.notes?.division || [];
+                      const rawDivisionNotes = ticketDetail?.__raw?.division_notes || [];
+                      return statusHistoryNotes.length + rawDivisionNotes.length;
+                    })()} messages
                   </span>
                 </div>
 
                 <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {selectedComplaint?.divisionNotes?.map((note, index) => {
-                    const noteStyle = getNoteStyle(note.type, note.division);
-                    const IconComponent = noteStyle.icon;
+                  {(() => {
+                    const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
+                    const statusHistoryNotes = ticketDetail?.notes?.division || [];
+                    const rawDivisionNotes = ticketDetail?.__raw?.division_notes || [];
+                    
+                    // Combine both sources and sort by timestamp
+                    const allNotes = [...statusHistoryNotes, ...rawDivisionNotes]
+                      .sort((a, b) => {
+                        const dateA = new Date(a.timestamp);
+                        const dateB = new Date(b.timestamp);
+                        return dateA - dateB;
+                      });
+                    
+                    if (allNotes.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-gray-500">
+                          <MessageSquare size={48} className="mx-auto mb-2 text-gray-300" />
+                          <p>No division notes available</p>
+                        </div>
+                      );
+                    }
+                    
+                    return allNotes.map((note, index) => {
+                      const noteStyle = getNoteStyle(note.type || 'note', note.division);
+                      const IconComponent = noteStyle.icon;
+                      
+                      // Handle different timestamp formats
+                      const displayTimestamp = note.timestamp?.includes('/') 
+                        ? note.timestamp 
+                        : fmtDate(note.timestamp);
 
-                    return (
-                      <div
-                        key={note.id || index}
-                        className={`border-l-4 ${noteStyle.color} pl-4 ${noteStyle.bgColor} rounded-r-lg p-3`}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <IconComponent size={14} className="text-gray-600" />
-                          <span className="text-xs text-gray-600 font-medium">
-                            {note.timestamp}
-                          </span>
-                          <span className="text-xs text-gray-500">•</span>
-                          <div className="flex items-center gap-1">
-                            <Building2 size={12} className="text-gray-500" />
+                      return (
+                        <div
+                          key={note.id || `${note.division}-${index}`}
+                          className={`border-l-4 ${noteStyle.color} pl-4 ${noteStyle.bgColor} rounded-r-lg p-3`}
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <IconComponent size={14} className="text-gray-600" />
                             <span className="text-xs text-gray-600 font-medium">
-                              {note.division}
+                              {displayTimestamp}
+                            </span>
+                            <span className="text-xs text-gray-500">•</span>
+                            <div className="flex items-center gap-1">
+                              <Building2 size={12} className="text-gray-500" />
+                              <span className="text-xs text-gray-600 font-medium">
+                                {note.division}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-500">•</span>
+                            <span className="text-xs text-gray-500">
+                              {note.author}
                             </span>
                           </div>
-                          <span className="text-xs text-gray-500">•</span>
-                          <span className="text-xs text-gray-500">
-                            {note.author}
-                          </span>
+                          <p className="text-sm text-gray-900 leading-relaxed">
+                            {note.msg || note.message || 'No message'}
+                          </p>
+                          {note.statusCode && (
+                            <div className="mt-2 text-xs text-gray-500">
+                              Status: {note.statusName} ({note.statusCode})
+                            </div>
+                          )}
                         </div>
-                        <p className="text-sm text-gray-900 leading-relaxed">
-                          {note.msg || note.message || 'No message'}
-                        </p>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             </div>
@@ -1031,11 +1103,21 @@ const ComplaintTable = ({ isActive = false }) => {
           <div className="text-sm text-gray-600">
             {loading
               ? "Loading…"
-              : `Showing ${(pagination?.offset ?? (currentPage - 1) * PAGE_SIZE) + 1}-${Math.min(
-                  (pagination?.offset ?? (currentPage - 1) * PAGE_SIZE) + (list?.length || 0),
+              : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
+                  currentPage * PAGE_SIZE,
                   pagination?.total ?? 0
-                )} of ${pagination?.total ?? 0} entries (${processedComplaints.length} escalated)`}
+                )} of ${pagination?.total ?? 0} entries`}
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => refreshEscalatedTickets({ limit: PAGE_SIZE, offset: 0 })}
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
         </div>
       </div>
 
@@ -1178,7 +1260,7 @@ const ComplaintTable = ({ isActive = false }) => {
                   className="hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-200"
                 >
                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {index + 1}
+                  {(currentPage - 1) * PAGE_SIZE + index + 1}
                 </td>
                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                   {complaint.tglInput}
@@ -1228,8 +1310,8 @@ const ComplaintTable = ({ isActive = false }) => {
         <div className="text-sm text-gray-600">
           {loading
             ? "Loading…"
-            : `Showing ${(pagination?.offset ?? (currentPage - 1) * PAGE_SIZE) + 1}-${Math.min(
-                (pagination?.offset ?? (currentPage - 1) * PAGE_SIZE) + (list?.length || 0),
+            : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
+                currentPage * PAGE_SIZE,
                 pagination?.total ?? 0
               )} of ${pagination?.total ?? 0} entries`}
         </div>
@@ -1248,21 +1330,58 @@ const ComplaintTable = ({ isActive = false }) => {
           >
             Previous
           </button>
+
+          {(() => {
+            const totalPages = Math.max(1, pagination?.pages ?? Math.ceil((pagination?.total ?? 0) / PAGE_SIZE));
+            const curr = Math.min(Math.max(currentPage, 1), totalPages);
+            const windowSize = 5;
+            let start = Math.max(1, curr - Math.floor(windowSize / 2));
+            let end = Math.min(totalPages, start + windowSize - 1);
+            if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
+
+            const pageNumbers = [];
+            if (start > 1) {
+              pageNumbers.push(1);
+              if (start > 2) pageNumbers.push("…");
+            }
+            for (let p = start; p <= end; p++) pageNumbers.push(p);
+            if (end < totalPages) {
+              if (end < totalPages - 1) pageNumbers.push("…");
+              pageNumbers.push(totalPages);
+            }
+
+            return pageNumbers.map((p, idx) =>
+              p === "…" ? (
+                <span key={`dots-${idx}`} className="px-2 text-gray-500">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setCurrentPage(p)}
+                  disabled={loading}
+                  className={`px-3 py-1 rounded text-sm ${
+                    p === currentPage
+                      ? "bg-blue-600 text-white"
+                      : "border border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            );
+          })()}
+
           <button
-            className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
-          >
-            {currentPage}
-          </button>
-          <button
-            onClick={() => setCurrentPage((p) => p + 1)}
-            disabled={loading || (list?.length || 0) < PAGE_SIZE}
+            onClick={() => setCurrentPage((p) => Math.min(Math.max(1, pagination?.pages ?? Math.ceil((pagination?.total ?? 0) / PAGE_SIZE)), p + 1))}
+            disabled={currentPage >= Math.max(1, pagination?.pages ?? Math.ceil((pagination?.total ?? 0) / PAGE_SIZE)) || loading}
             className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
           >
             Next
           </button>
           <button
-            onClick={() => setCurrentPage(Math.ceil((pagination?.total ?? 0) / PAGE_SIZE))}
-            disabled={loading || (list?.length || 0) < PAGE_SIZE}
+            onClick={() => setCurrentPage(Math.max(1, pagination?.pages ?? Math.ceil((pagination?.total ?? 0) / PAGE_SIZE)))}
+            disabled={currentPage >= Math.max(1, pagination?.pages ?? Math.ceil((pagination?.total ?? 0) / PAGE_SIZE)) || loading}
             className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
           >
             Last
