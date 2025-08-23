@@ -87,13 +87,13 @@ const InputForm = () => {
   }, [currentRole, setActionFormData]);
 
   const handleInputChange = (field, value) => {
-    // console.log('ActionForm handleInputChange:', field, '=', value);
+    console.log('🔄 ActionForm handleInputChange:', field, '=', value);
     setFormData(prev => {
       const newData = { ...prev, [field]: value };
       // Use setTimeout to avoid setState during render
       setTimeout(() => {
-        // console.log('ActionForm setActionFormData called with:', newData);
-        // console.log('ActionForm - action value being set:', newData.action);
+        console.log('💾 ActionForm setActionFormData called with:', newData);
+        console.log('🎯 ActionForm - action value being set:', newData.action);
         setActionFormData(newData);
       }, 0);
       return newData;
@@ -133,10 +133,10 @@ const InputForm = () => {
                   onChange={(e) => handleInputChange("action", e.target.value)}
                 >
                   <option value="" disabled>
-                    -- Pilih Action --
+                    Pilih Action 
                   </option>
-                  <option value="Escalated">Escalated</option>
-                  <option value="Closed">Closed</option>
+                  <option value="ESCALATED">ESCALATED</option>
+                  <option value="CLOSED">CLOSED</option>
                 </select>
               </div>
             </div>
@@ -171,8 +171,8 @@ const InputForm = () => {
               />
             </div>
 
-            {/* Closed Time - hanya muncul kalau action === "Closed" */}
-            {formData.action === "Closed" && (
+            {/* Closed Time - hanya muncul kalau action === "CLOSED" */}
+            {formData.action === "CLOSED" && (
               <div className="flex items-center space-x-2 min-w-[140px] flex-grow min-w-0">
                 <label className="text-sm font-medium text-black whitespace-nowrap">
                   Closed Time
@@ -189,8 +189,8 @@ const InputForm = () => {
             )}
           </div>
 
-          {/* Solution - muncul kalau action === "Closed" */}
-          {formData.action === "Closed" && (
+          {/* Solution - muncul kalau action === "CLOSED" */}
+          {formData.action === "CLOSED" && (
             <div className="flex items-center space-x-2 min-w-[140px] flex-grow min-w-0 mt-3">
               <label className="text-sm font-medium text-black whitespace-nowrap">
                 Solution
