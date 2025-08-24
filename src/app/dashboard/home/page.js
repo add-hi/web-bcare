@@ -264,19 +264,7 @@ const Dashboard = () => {
             {/* Filter */}
             <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Filter size={20} className="text-gray-500" />
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="border rounded-lg px-3 py-2"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="open">Open</option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="closed">Closed</option>
-                  </select>
-                </div>
+                
 
                 {user && (
                   <div className="flex items-center space-x-2">
