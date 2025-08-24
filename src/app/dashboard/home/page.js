@@ -30,6 +30,8 @@ const Dashboard = () => {
   const [selectedTab, setSelectedTab] = useState('overview');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showMyTicketsOnly, setShowMyTicketsOnly] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   // LIST untuk tab Complaints (tetap dari useFeedback)
   const { items: feedbackItems, status: feedbackStatus, error: feedbackError, fetchAll } = useFeedback();
@@ -120,6 +122,44 @@ const Dashboard = () => {
     if (filterStatus === 'all') return displayComplaints;
     return displayComplaints.filter(c => c.status === filterStatus);
   }, [displayComplaints, filterStatus]);
+
+  // Pagination untuk complaints
+  const paginatedComplaints = useMemo(() => {
+    const startIdx = (currentPage - 1) * itemsPerPage;
+    const endIdx = startIdx + itemsPerPage;
+    return filteredComplaints.slice(startIdx, endIdx);
+  }, [filteredComplaints, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
+  const startIndex = filteredComplaints.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
+  const endIndex = Math.min(startIndex + paginatedComplaints.length - 1, filteredComplaints.length);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, showMyTicketsOnly]);
+
+  // Generate page numbers for pagination
+  const pageNumbers = useMemo(() => {
+    const pages = totalPages;
+    const curr = Math.min(Math.max(currentPage, 1), pages);
+    const windowSize = 5;
+    let start = Math.max(1, curr - Math.floor(windowSize / 2));
+    let end = Math.min(pages, start + windowSize - 1);
+    if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
+
+    const arr = [];
+    if (start > 1) {
+      arr.push(1);
+      if (start > 2) arr.push('…');
+    }
+    for (let p = start; p <= end; p++) arr.push(p);
+    if (end < pages) {
+      if (end < pages - 1) arr.push('…');
+      arr.push(pages);
+    }
+    return arr;
+  }, [currentPage, totalPages]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -261,11 +301,9 @@ const Dashboard = () => {
         {/* ===== Complaints (List dari useFeedback) ===== */}
         {selectedTab === 'complaints' && (
           <div className="space-y-6">
-            {/* Filter */}
+            {/* Filter & Pagination Info */}
             <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
               <div className="flex items-center justify-between">
-                
-
                 {user && (
                   <div className="flex items-center space-x-2">
                     <label className="text-sm text-gray-600">My Tickets Only:</label>
@@ -276,6 +314,9 @@ const Dashboard = () => {
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </div>
+                )}
+                {filteredComplaints.length > 0 && (
+                  <span className="text-sm text-gray-600">Page {currentPage} of {totalPages || 1} (Total Pages: {totalPages})</span>
                 )}
               </div>
             </div>
@@ -293,14 +334,14 @@ const Dashboard = () => {
                   <h3 className="text-lg font-medium text-red-600 mb-2">Error loading data</h3>
                   <p className="text-gray-500">{feedbackError}</p>
                 </div>
-              ) : filteredComplaints.length === 0 ? (
+              ) : paginatedComplaints.length === 0 ? (
                 <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 text-center">
                   <MessageCircle size={48} className="text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-600 mb-2">No complaints found</h3>
                   <p className="text-gray-500">No complaints available from API.</p>
                 </div>
               ) : (
-                filteredComplaints.map((complaint) => (
+                paginatedComplaints.map((complaint) => (
                   <div key={complaint.id} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
@@ -335,6 +376,66 @@ const Dashboard = () => {
                 ))
               )}
             </div>
+
+            {/* Pagination Controls */}
+            {filteredComplaints.length > 0 && (
+              <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
+                <div className="flex justify-between items-center">
+                  <div className="text-sm text-gray-600">
+                    Showing {startIndex}-{endIndex} of {filteredComplaints.length} complaints
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      First
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage <= 1}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+
+                    {pageNumbers.map((p, idx) =>
+                      p === '…' ? (
+                        <span key={`dots-${idx}`} className="px-2 text-gray-500">…</span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => setCurrentPage(p)}
+                          className={`px-3 py-1 rounded text-sm ${
+                            p === currentPage
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      )
+                    )}
+
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage >= totalPages}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage >= totalPages}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Last
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
