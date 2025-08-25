@@ -338,13 +338,13 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
             <ArrowLeft size={20} />
             <span>Back to List</span>
           </button>
-          <button
+          {/* <button
             onClick={openAttachments}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <Paperclip size={18} />
             Attachments
-          </button>
+          </button> */}
         </div>
         <AddComplaint />
       </div>

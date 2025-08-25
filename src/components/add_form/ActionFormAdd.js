@@ -16,6 +16,8 @@ const InputForm = () => {
     solution: "",
     reason: "",
   });
+  
+  const [isLoading, setIsLoading] = useState(false);
 
 
 
@@ -101,13 +103,13 @@ const InputForm = () => {
   };
 
   const handleSave = async () => {
+    setIsLoading(true);
     try {
-     
       await saveTicket();
-     
     } catch (error) {
       console.error('Save failed:', error);
-      
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -225,9 +227,13 @@ const InputForm = () => {
           <div className="flex justify-end mt-4">
             <button
               onClick={handleSave}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors duration-200"
+              disabled={isLoading}
+              className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded text-sm font-medium transition-colors duration-200 flex items-center gap-2"
             >
-              Save
+              {isLoading && (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              )}
+              {isLoading ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
