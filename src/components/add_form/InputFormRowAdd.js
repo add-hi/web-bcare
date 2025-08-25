@@ -170,6 +170,13 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
 
   const resetForm = () => doReset();
 
+  // Notify parent immediately when inputType changes
+  useEffect(() => {
+    if (inputType) {
+      onCustomerData?.(null, null, inputType);
+    }
+  }, [inputType]);
+
   useEffect(() => {
     if (inputType && sourceType) {
       // reset data saat kombinasi inputType + sourceType berubah
@@ -177,7 +184,6 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
       setIsReadOnly(false);
       setNumberValue("");
       setExpDate("");
-      onCustomerData?.(null, null, inputType);
     }
   }, [inputType, sourceType]);
 

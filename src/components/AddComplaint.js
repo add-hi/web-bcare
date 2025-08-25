@@ -47,13 +47,15 @@ function AddComplaint() {
         searchContext={searchContext} 
         inputType={inputType}
         onChange={(data) => {
-          // Prevent infinite loop by checking if data actually changed
-          const currentData = JSON.stringify(customerData || {});
-          const newData = JSON.stringify({ ...customerData, ...data });
-          
-          if (currentData !== newData) {
-            setCustomerData({ ...customerData, ...data }, searchContext, inputType);
-          }
+          // Use setTimeout to prevent setState during render
+          setTimeout(() => {
+            const currentData = JSON.stringify(customerData || {});
+            const newData = JSON.stringify({ ...customerData, ...data });
+            
+            if (currentData !== newData) {
+              setCustomerData({ ...customerData, ...data }, searchContext, inputType);
+            }
+          }, 0);
         }}
       />
       <DataForm mode="add" onChange={setDataFormData} />

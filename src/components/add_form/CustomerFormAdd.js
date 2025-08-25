@@ -88,6 +88,11 @@ const autoFilled = useMemo(() => {
 
   // Update form when customer data from API changes
   useEffect(() => {
+    // Skip API calls for non_nasabah input type
+    if (inputType === "non_nasabah") {
+      return;
+    }
+    
     if (customerData) {
       const fetchRelatedData = async () => {
         let accountNumbers = [];
@@ -256,13 +261,13 @@ const autoFilled = useMemo(() => {
       setForm(resetData);
       onChange?.(resetData);
     }
-  }, [customerData]);
+  }, [customerData, inputType]);
 
   // const update = (k, v) => setForm((prev) => { const n = { ...prev, [k]: v }; onChange?.(n); return n; });
 
   const update = (k, v) =>
     setForm((prev) => {
-      if (locked) return prev; // 🔒 jangan ubah apa pun saat locked
+      if (!inputType || inputType !== "non_nasabah") return prev;
       const n = { ...prev, [k]: v };
       onChange?.(n);
       return n;
@@ -285,36 +290,14 @@ const autoFilled = useMemo(() => {
       <div className="bg-green-300 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
         <h2 className="text-lg font-semibold">Customer Info</h2>
       </div>
-      <fieldset
-        disabled={locked}
-        aria-disabled={locked}
-        className={locked ? "opacity-75" : ""}
-      >
+      <div className={inputType !== "non_nasabah" && locked ? "opacity-75" : ""}>
         <div className="bg-white border-gray-200 p-6 rounded-lg">
           <div className="grid grid-cols-3 gap-x-6 gap-y-5">
             {formData.map((field, idx) => {
               const key = fieldKeyMap[field.label];
               const value = form[key] ?? "";
-              const isDisabled =
-                locked ||
-                (inputType === "nasabah" &&
-                  customerData &&
-                  [
-                    "cif",
-                    "customerName",
-                    "email",
-                    "handphone",
-                    "address",
-                    "personId",
-                    "homePhone",
-                    "officePhone",
-                    "faxPhone",
-                    "postalCode",
-                    "placeOfBirth",
-                    "billingAddress",
-                    "accountNumber",
-                    "cardNumber",
-                  ].includes(key));
+              const isDisabled = !inputType || inputType !== "non_nasabah";
+              const fieldBgClass = isDisabled ? " bg-gray-100" : "";
               return (
                 <div key={idx} className="flex flex-col">
                   <label className="text-sm text-black font-medium mb-2 whitespace-nowrap">
@@ -325,71 +308,36 @@ const autoFilled = useMemo(() => {
                   </label>
 
                   {field.type === "select" ? (
-                    customerData ? (
-                      <input
-                        className={inputClassName + " bg-gray-100"}
-                        value={value}
-                        readOnly
-                        disabled={isDisabled} 
-                      />
-                    ) : (
-                      <select
-                        className={inputClassName}
-                        value={value}
-                        onChange={(e) => update(key, e.target.value)}
-                         disabled={isDisabled} 
-                      >
-                        {genderOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    )
+                    <select
+                      className={inputClassName + fieldBgClass}
+                      value={value}
+                      onChange={(e) => update(key, e.target.value)}
+                      disabled={isDisabled}
+                    >
+                      {genderOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
                   ) : field.type === "textarea" ? (
                     <textarea
                       className={
                         inputClassName +
                         " resize-none overflow-y-auto h-[40px]" +
-                        (customerData ? " bg-gray-100" : "")
+                        fieldBgClass
                       }
                       rows={1}
                       value={value}
                       onChange={(e) => update(key, e.target.value)}
-                      readOnly={
-                        customerData &&
-                        ["address", "billingAddress"].includes(key)
-                      }
-                       disabled={isDisabled} 
+                      disabled={isDisabled}
                     />
                   ) : (
                     <input
-                      className={
-                        inputClassName + (customerData ? " bg-gray-100" : "")
-                      }
+                      className={inputClassName + fieldBgClass}
                       value={value}
                       onChange={(e) => update(key, e.target.value)}
-                      readOnly={
-                        inputType === "nasabah" &&
-                        customerData &&
-                        [
-                          "cif",
-                          "customerName",
-                          "email",
-                          "handphone",
-                          "address",
-                          "personId",
-                          "homePhone",
-                          "officePhone",
-                          "faxPhone",
-                          "postalCode",
-                          "placeOfBirth",
-                          "billingAddress",
-                          "accountNumber",
-                          "cardNumber",
-                        ].includes(key)
-                      }
-                       disabled={isDisabled} 
+                      disabled={isDisabled}
                     />
                   )}
                 </div>
@@ -397,7 +345,7 @@ const autoFilled = useMemo(() => {
             })}
           </div>
         </div>
-      </fieldset>
+      </div>
     </div>
   );
 };
