@@ -29,6 +29,7 @@ import useTicketStore from "@/store/ticketStore";
 import { useRef } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import useUser from "@/hooks/useUser";
 
 const DivisionComplaintHandler = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -51,7 +52,7 @@ const DivisionComplaintHandler = () => {
   const { list, loading, error, fetchTickets, updateTicket } = useTicket();
   const { selectedId, detail, fetchTicketDetail } = useTicketDetail();
   const [doingAction, setDoingAction] = useState(false);
-  const { user } = useAuthStore();
+  const { user } = useUser();
   const ticketStore = useTicketStore();
 
   useEffect(() => {
@@ -71,7 +72,7 @@ const DivisionComplaintHandler = () => {
     if (didFetchRef.current) return;
     didFetchRef.current = true;
 
-    fetchTickets({ limit: 500, offset: 0, force: true });
+    fetchTickets({ limit: 500, offset: 0, force: true,  employee_id: user?.id });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.npp]); // depend pada identitas user saja (mis. npp)
 

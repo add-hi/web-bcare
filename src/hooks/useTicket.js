@@ -36,7 +36,7 @@ export default function useTicket() {
   );
 
   const fetchTickets = useCallback(
-    async ({ limit = 100, offset = 0, force = false, status } = {}) => {
+    async ({ limit = 100, offset = 0, force = false, status = ''} = {}) => {
       // Check if data already exists and matches current pagination
       const currentPagination = pagination;
       const hasData = list.length > 0;
