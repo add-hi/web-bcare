@@ -823,13 +823,13 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
       </div>
 
       {/* Pagination */}
-      <div className="mt-6 flex justify-between items-center">
-        <div className="text-sm text-gray-600">
+      <div className="mt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="text-sm text-gray-600 order-2 sm:order-1">
           {loading
             ? "Loading…"
             : `Showing ${startIndex}-${endIndex} of ${total} entries`}
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1 order-1 sm:order-2">
           <Button
             variant="outline"
             size="sm"

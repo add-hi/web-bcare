@@ -1113,9 +1113,9 @@ const ComplaintTable = ({ isActive = false }) => {
   return (
     <div className="max-w-full mx-auto p-6 bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         {/* Filter Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
           {Object.keys(filters).length > 0 && (
             <Button
               variant="danger"
@@ -1126,7 +1126,7 @@ const ComplaintTable = ({ isActive = false }) => {
               Clear All Filters
             </Button>
           )}
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 whitespace-nowrap">
             {loading
               ? "Loading…"
               : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
@@ -1337,8 +1337,8 @@ const ComplaintTable = ({ isActive = false }) => {
       </div>
 
       {/* Pagination */}
-      <div className="mt-6 flex justify-between items-center">
-        <div className="text-sm text-gray-600">
+      <div className="mt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="text-sm text-gray-600 order-2 sm:order-1">
           {loading
             ? "Loading…"
             : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
@@ -1346,7 +1346,7 @@ const ComplaintTable = ({ isActive = false }) => {
                 processedComplaints.length
               )} of ${processedComplaints.length} entries`}
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1 order-1 sm:order-2">
           <Button
             variant="outline"
             size="sm"
