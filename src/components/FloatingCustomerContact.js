@@ -70,7 +70,7 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
   // Call State
   const [callStatus, setCallStatus] = useState("idle");
   const [showCallUI, setShowCallUI] = useState(false);
-  const [remoteFrame, setRemoteFrame] = useState(null);
+  const [remoteAudio, setRemoteAudio] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
 
   // Chat State
@@ -81,14 +81,12 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
   const storageKey = `msgs:${ACTIVE_ROOM}`;
 
   // Refs
-  const localVideoRef = useRef(null);
-  const canvasRef = useRef(null);
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
   const streamRef = useRef(null);
-  const frameTimer = useRef(null);
+  const peerConnectionRef = useRef(null);
+  const remoteAudioRef = useRef(null);
   const callStartAt = useRef(null);
-  const FPS = 1.5;
 
   // ====== Helpers ======
   const nowHHMM = () =>
@@ -111,40 +109,36 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
     [storageKey]
   );
 
-  // ====== Video Streaming Functions ======
+  // ====== Audio Streaming Functions ======
   const startLocalStream = useCallback(async () => {
     if (streamRef.current) return streamRef.current;
     try {
-      console.log("Requesting camera access...");
+      console.log("Requesting microphone access...");
 
       // Check if getUserMedia is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("Camera not supported in this browser");
+        throw new Error("Microphone not supported in this browser");
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 320, height: 240 },
-        audio: false,
+        video: false,
+        audio: true,
       });
-      console.log("Camera access granted");
+      console.log("Microphone access granted");
       streamRef.current = stream;
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-        await localVideoRef.current.play();
-        console.log("Video element ready");
-      }
+      // Audio stream doesn't need video element setup
       return stream;
     } catch (error) {
-      console.error("Error accessing camera:", error);
-      alert(`Camera error: ${error.message}`);
+      console.error("Error accessing microphone:", error);
+      alert(`Microphone error: ${error.message}`);
       throw error;
     }
   }, []);
 
   const stopLocalStream = useCallback(() => {
-    if (frameTimer.current) {
-      clearInterval(frameTimer.current);
-      frameTimer.current = null;
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
     }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
@@ -152,45 +146,65 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
     }
   }, []);
 
-  const startStreamingFrames = useCallback(() => {
-    if (frameTimer.current) return;
-    console.log("Starting frame streaming...");
-    const sendFrame = () => {
-      const video = localVideoRef.current;
-      const canvas = canvasRef.current;
-      const sock = socketRef.current;
-      if (!video || !canvas || !sock) {
-        console.log("Missing elements:", {
-          video: !!video,
-          canvas: !!canvas,
-          sock: !!sock,
-        });
-        return;
+  const createPeerConnection = useCallback(async () => {
+    if (peerConnectionRef.current) return peerConnectionRef.current;
+    
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+    
+    // Handle remote audio stream
+    pc.ontrack = (event) => {
+      console.log('Received remote audio stream');
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = event.streams[0];
       }
-      if (video.videoWidth === 0 || video.videoHeight === 0) {
-        console.log("Video not ready yet");
-        return;
-      }
-      const w = video.videoWidth;
-      const h = video.videoHeight;
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(video, 0, 0, w, h);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
-      const base64 = dataUrl.split(",")[1];
-      sock.emit("call:frame", { room: ACTIVE_ROOM, data: base64 });
-      console.log("Frame sent, size:", w, "x", h);
     };
-    frameTimer.current = setInterval(sendFrame, 1000 / FPS);
+    
+    // Handle ICE candidates
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        socketRef.current?.emit('webrtc:ice-candidate', {
+          room: ACTIVE_ROOM,
+          candidate: event.candidate
+        });
+      }
+    };
+    
+    // Add local audio stream
+    const stream = streamRef.current;
+    if (stream) {
+      stream.getTracks().forEach(track => {
+        pc.addTrack(track, stream);
+      });
+    }
+    
+    peerConnectionRef.current = pc;
+    return pc;
   }, [ACTIVE_ROOM]);
 
-  const stopStreamingFrames = useCallback(() => {
-    if (frameTimer.current) {
-      clearInterval(frameTimer.current);
-      frameTimer.current = null;
-    }
-  }, []);
+  const createOffer = useCallback(async () => {
+    const pc = await createPeerConnection();
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    
+    socketRef.current?.emit('webrtc:offer', {
+      room: ACTIVE_ROOM,
+      offer: offer
+    });
+  }, [createPeerConnection, ACTIVE_ROOM]);
+  
+  const createAnswer = useCallback(async (offer) => {
+    const pc = await createPeerConnection();
+    await pc.setRemoteDescription(offer);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    
+    socketRef.current?.emit('webrtc:answer', {
+      room: ACTIVE_ROOM,
+      answer: answer
+    });
+  }, [createPeerConnection, ACTIVE_ROOM]);
 
   // ====== Socket lifecycle ======
   useEffect(() => {
@@ -259,14 +273,13 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
       setShowCallUI(true);
       callStartAt.current = Date.now();
       setTimeout(() => {
-        startStreamingFrames();
+        createOffer();
       }, 1000);
     });
     sock.on("call:declined", () => {
       setCallStatus("idle");
       setShowCallUI(false);
-      setRemoteFrame(null);
-      stopStreamingFrames();
+      setRemoteAudio(null);
       stopLocalStream();
     });
     sock.on("call:ended", () => {
@@ -285,11 +298,25 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
       callStartAt.current = null;
       setCallStatus("idle");
       setShowCallUI(false);
-      setRemoteFrame(null);
-      stopStreamingFrames();
+      setRemoteAudio(null);
       stopLocalStream();
     });
-    sock.on("call:frame", ({ data }) => setRemoteFrame(data));
+    // WebRTC signaling
+    sock.on('webrtc:offer', async ({ offer }) => {
+      await createAnswer(offer);
+    });
+    
+    sock.on('webrtc:answer', async ({ answer }) => {
+      if (peerConnectionRef.current) {
+        await peerConnectionRef.current.setRemoteDescription(answer);
+      }
+    });
+    
+    sock.on('webrtc:ice-candidate', async ({ candidate }) => {
+      if (peerConnectionRef.current) {
+        await peerConnectionRef.current.addIceCandidate(candidate);
+      }
+    });
 
     if (sock.connected) onConnect();
 
@@ -299,7 +326,6 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
       } catch {}
       sock.off();
       sock.disconnect();
-      stopStreamingFrames();
       stopLocalStream();
     };
   }, [SOCKET_URL, ACTIVE_ROOM, uid]);
@@ -372,13 +398,10 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
       setCallStatus("ringing");
       setShowCallUI(true);
       setActiveTab("call");
-      setTimeout(() => {
-        startStreamingFrames();
-      }, 1000);
     } catch (error) {
-      console.error("Failed to start camera for call:", error);
+      console.error("Failed to start microphone for call:", error);
     }
-  }, [peerCount, ACTIVE_ROOM, startLocalStream, startStreamingFrames]);
+  }, [peerCount, ACTIVE_ROOM, startLocalStream]);
 
   const acceptCall = useCallback(async () => {
     const sock = socketRef.current;
@@ -389,13 +412,10 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
       setCallStatus("in-call");
       setShowCallUI(true);
       callStartAt.current = Date.now();
-      setTimeout(() => {
-        startStreamingFrames();
-      }, 1000);
     } catch (error) {
-      console.error("Failed to start video stream:", error);
+      console.error("Failed to start audio stream:", error);
     }
-  }, [ACTIVE_ROOM, startLocalStream, startStreamingFrames]);
+  }, [ACTIVE_ROOM, startLocalStream]);
 
   const declineCall = useCallback(() => {
     const sock = socketRef.current;
@@ -403,20 +423,18 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
     sock.emit("call:decline", { room: ACTIVE_ROOM });
     setCallStatus("idle");
     setShowCallUI(false);
-    stopStreamingFrames();
     stopLocalStream();
-  }, [ACTIVE_ROOM, stopLocalStream, stopStreamingFrames]);
+  }, [ACTIVE_ROOM, stopLocalStream]);
 
   const hangupCall = useCallback(() => {
     const sock = socketRef.current;
     if (!sock) return;
     sock.emit("call:hangup", { room: ACTIVE_ROOM });
-    stopStreamingFrames();
     stopLocalStream();
     setCallStatus("idle");
     setShowCallUI(false);
-    setRemoteFrame(null);
-  }, [ACTIVE_ROOM, stopLocalStream, stopStreamingFrames]);
+    setRemoteAudio(null);
+  }, [ACTIVE_ROOM, stopLocalStream]);
 
   const startLiveChat = () => {
     setIsLiveChat(true);
@@ -442,9 +460,8 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
     setActivePeers([]);
     setPeerCount(1);
     setCallStatus("idle");
-    setRemoteFrame(null);
+    setRemoteAudio(null);
     setShowCallUI(false);
-    stopStreamingFrames();
     stopLocalStream();
 
     const sock = socketRef.current;
@@ -466,9 +483,8 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
 
   return (
     <>
-      {/* Hidden media elements */}
-      <video ref={localVideoRef} autoPlay muted style={{ display: "none" }} />
-      <canvas ref={canvasRef} style={{ display: "none" }} />
+      {/* Hidden audio element for remote audio */}
+      <audio ref={remoteAudioRef} autoPlay style={{ display: "none" }} />
 
       {/* Floating Button */}
       <div className="fixed bottom-6 right-6 z-50">
@@ -644,53 +660,43 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
 
             {activeTab === "call" && (
               <div className="h-full flex flex-col">
-                {/* Video Area */}
+                {/* Audio Call Area */}
                 <div className="flex-1 p-3 overflow-hidden">
-                  {remoteFrame ? (
-                    <div className="w-full h-full">
-                      <img
-                        src={`data:image/jpeg;base64,${remoteFrame}`}
-                        alt="Remote video"
-                        className="w-full h-full object-cover rounded-lg"
-                      />
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mb-3 shadow-inner">
+                      <User size={24} className="text-gray-600" />
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full">
-                      <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mb-3 shadow-inner">
-                        <User size={24} className="text-gray-600" />
-                      </div>
 
-                      {callStatus !== "idle" ? (
-                        <div className="flex items-center justify-center space-x-2">
-                          <div
-                            className={`w-2 h-2 rounded-full animate-pulse ${
-                              callStatus === "in-call"
-                                ? "bg-green-500"
-                                : "bg-yellow-500"
-                            }`}
-                          />
-                          <p className="text-sm font-medium text-gray-700">
-                            {callStatus === "in-call"
-                              ? "On Call"
-                              : callStatus === "ringing"
-                              ? "Ringing..."
-                              : "Connecting..."}
+                    {callStatus !== "idle" ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <div
+                          className={`w-2 h-2 rounded-full animate-pulse ${
+                            callStatus === "in-call"
+                              ? "bg-green-500"
+                              : "bg-yellow-500"
+                          }`}
+                        />
+                        <p className="text-sm font-medium text-gray-700">
+                          {callStatus === "in-call"
+                            ? "Voice Call Active"
+                            : callStatus === "ringing"
+                            ? "Ringing..."
+                            : "Connecting..."}
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-gray-500 mb-2">
+                          Ready for voice call
+                        </p>
+                        {peerCount < 2 && (
+                          <p className="text-xs text-gray-400 text-center">
+                            Waiting for peer to connect...
                           </p>
-                        </div>
-                      ) : (
-                        <>
-                          <p className="text-sm text-gray-500 mb-2">
-                            Ready to call
-                          </p>
-                          {peerCount < 2 && (
-                            <p className="text-xs text-gray-400 text-center">
-                              Waiting for peer to connect...
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Call Controls - Fixed at bottom */}

@@ -8,13 +8,15 @@ import ActionForm from "@/components/form/ActionForm";
 import NotesForm from "@/components/form/NotesForm";
 import useTicketDetail from "@/hooks/useTicketDetail";
 import useTicket from "@/hooks/useTicket";
+import FloatingCustomerContact from "./FloatingCustomerContact";
 
 // --- helper mappers ---
 function mapActionToSwagger(action) {
   const a = String(action || "").toLowerCase();
   if (a === "closed") return "CLOSED";
   if (a === "decline" || a === "declined") return "DECLINED";
-  if (a === "eskalasi" || a === "escalated" || a === "escalate") return "ESCALATED";
+  if (a === "eskalasi" || a === "escalated" || a === "escalate")
+    return "ESCALATED";
   return "";
 }
 const toInt = (v) => {
@@ -43,14 +45,17 @@ const normalizeDivisionNotes = (notes) => {
 };
 
 function DetailComplaint({ ticketId, onSuccess }) {
-  const { detail, loading, error, fetchTicketDetail } = useTicketDetail(ticketId);
+  const { detail, loading, error, fetchTicketDetail } =
+    useTicketDetail(ticketId);
   const { updateTicket } = useTicket();
 
   // tampung nilai dari child
   const [customerForm, setCustomerForm] = useState(null);
   const [dataForm, setDataForm] = useState(null);
   const [actionForm, setActionForm] = useState(null);
-  const [divisionNotes, setDivisionNotes] = useState(detail?.notes?.division || []);
+  const [divisionNotes, setDivisionNotes] = useState(
+    detail?.notes?.division || []
+  );
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -85,26 +90,35 @@ function DetailComplaint({ ticketId, onSuccess }) {
         intake_source_id: detail?.ticket?.intakeSource?.id,
         complaint_id: detail?.ticket?.complaint?.id,
         terminal_id: detail?.ticket?.terminal?.id,
-        priority_id: detail?.ticket?.priority?.id ?? detail?.ticket?.priority?.priority_id,
+        priority_id:
+          detail?.ticket?.priority?.id ?? detail?.ticket?.priority?.priority_id,
       };
 
       const df = dataForm || {};
       const notes = normalizeDivisionNotes(divisionNotes);
-      const trxIso =
-        df.transactionDate
-          ? new Date(df.transactionDate).toISOString()
-          : (detail?.timestamps?.transactionDate || undefined);
+      const trxIso = df.transactionDate
+        ? new Date(df.transactionDate).toISOString()
+        : detail?.timestamps?.transactionDate || undefined;
 
       const payload = {
         action: actionCode || "",
         priority_id: pickId(df.priority_id ?? df.priority, fb.priority_id),
         record: df.record ?? detail?.ticket?.record ?? "",
-        issue_channel_id: pickId(df.issue_channel_id ?? df.channel_id ?? df.channel, fb.issue_channel_id),
+        issue_channel_id: pickId(
+          df.issue_channel_id ?? df.channel_id ?? df.channel,
+          fb.issue_channel_id
+        ),
         intake_source_id: 2, // TODO: ganti saat sudah ada master intake source
-        complaint_id: pickId(df.complaint_id ?? df.category_id ?? df.category, fb.complaint_id),
+        complaint_id: pickId(
+          df.complaint_id ?? df.category_id ?? df.category,
+          fb.complaint_id
+        ),
         amount: toInt(df.amount ?? df.nominal),
         transaction_date: trxIso,
-        terminal_id: pickId(df.terminal_id ?? df.terminalCode ?? df.idTerminalATM, fb.terminal_id),
+        terminal_id: pickId(
+          df.terminal_id ?? df.terminalCode ?? df.idTerminalATM,
+          fb.terminal_id
+        ),
         description: df.description ?? detail?.ticket?.description ?? "",
         division_notes: notes,
       };
@@ -112,12 +126,13 @@ function DetailComplaint({ ticketId, onSuccess }) {
       await updateTicket(effectiveId, payload);
 
       setSubmitOk(true);
-      await fetchTicketDetail(effectiveId, { force: true }).catch(() => { });
+      await fetchTicketDetail(effectiveId, { force: true }).catch(() => {});
 
       // === panggil parent untuk balik ke list & refresh ===
       onSuccess?.();
     } catch (e) {
-      const msg = e?.response?.data?.message || e?.message || "Gagal update tiket";
+      const msg =
+        e?.response?.data?.message || e?.message || "Gagal update tiket";
       setSubmitError(msg);
     } finally {
       setSubmitting(false);
@@ -134,12 +149,15 @@ function DetailComplaint({ ticketId, onSuccess }) {
   ]);
 
   if (loading && !detail) return <div className="p-6">Loading detail…</div>;
-  if (error && !detail) return <div className="p-6 text-red-600">Error: {error}</div>;
+  if (error && !detail)
+    return <div className="p-6 text-red-600">Error: {error}</div>;
   if (!detail) return <div className="p-6">No detail.</div>;
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold">{detail?.ids?.ticketNumber || "Ticket Detail"}</h3>
+      <h3 className="text-lg font-semibold">
+        {detail?.ids?.ticketNumber || "Ticket Detail"}
+      </h3>
 
       <CustomerForm detail={detail} onChange={setCustomerForm} />
       <DataForm detail={detail} onChange={setDataForm} />
@@ -153,6 +171,7 @@ function DetailComplaint({ ticketId, onSuccess }) {
         submitOk={submitOk}
         submitError={submitError}
       />
+      <FloatingCustomerContact room="general" detail={detail} />
     </div>
   );
 }
