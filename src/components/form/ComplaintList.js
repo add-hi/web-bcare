@@ -21,7 +21,7 @@ import useTicketStore from "@/store/ticketStore";
 
 const PAGE_SIZE = 10;
 
-const ComplaintList = ({ isActive = false }) => {
+const ComplaintList = ({ isActive = false, isAgent = false }) => {
   const [viewMode, setViewMode] = useState("table"); // 'table' | 'detail' | 'add' | 'attachments'
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [filters, setFilters] = useState({});
@@ -47,17 +47,34 @@ const ComplaintList = ({ isActive = false }) => {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
+    console.log('isAgent 1');
+    console.log(isAgent);
+
     if (isActive && !isInitialized) {
-      fetchTickets({ limit: PAGE_SIZE, offset: 0, force: false });
+      fetchTickets({
+        limit: PAGE_SIZE,
+        offset: 0,
+        force: false,
+        status: isAgent ? "open" : '',
+      });
+      setIsInitialized(true);
       setIsInitialized(true);
     }
   }, [isActive, isInitialized, fetchTickets]);
 
   // Fetch data when page changes (after initialization)
   useEffect(() => {
+    console.log('isAgent 2');
+    console.log(isAgent);
+
     if (isActive && isInitialized) {
       const offset = (currentPage - 1) * limit;
-      fetchTickets({ limit, offset, force: false });
+      fetchTickets({
+        limit,
+        offset,
+        force: false,
+        status: isAgent ? "open" : '',
+      });
     }
   }, [isActive, currentPage, limit, isInitialized, fetchTickets]);
 

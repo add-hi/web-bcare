@@ -17,6 +17,7 @@ import {
   Copy,
 } from "lucide-react";
 import useUser from "@/hooks/useUser";
+import toast from "react-hot-toast";
 
 // --- helper to read division_code from user objects ---
 function normalizeDivision(u) {
@@ -63,7 +64,8 @@ export default function LoginPage() {
       if (div === "cxc") router.push("/dashboard/home");
       else router.push("/dashboard/mockdgo");
     } catch (err) {
-      alert(err?.message || "Login failed");
+      toast.error(err?.message || "Login failed")
+      // alert(err?.message || "Login failed");
     }
   };
 
@@ -182,7 +184,15 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="group w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none disabled:shadow-none flex items-center justify-center space-x-2"
+                className="group w-full bg-gradient-to-r from-orange-500 to-orange-600 
+             hover:from-orange-600 hover:to-orange-700 
+             disabled:from-gray-400 disabled:to-gray-500
+             text-white font-semibold py-4 px-6 rounded-xl 
+             transition-all duration-300 shadow-lg shadow-orange-500/25 
+             hover:shadow-orange-500/40 hover:shadow-xl 
+             transform hover:-translate-y-0.5 active:translate-y-0 
+             disabled:transform-none disabled:shadow-none 
+             flex items-center justify-center space-x-2"
               >
                 {isLoading ? (
                   <>
@@ -199,6 +209,7 @@ export default function LoginPage() {
                   </>
                 )}
               </button>
+
             </div>
           </form>
 

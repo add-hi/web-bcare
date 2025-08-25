@@ -15,11 +15,11 @@ export default function Complaint() {
     const renderContent = () => {
         switch (activeTab) {
             case 'agent':
-                return <ComplaintList key="agent-tab" isActive={activeTab === 'agent'} />
+                return <ComplaintList key="agent-tab" isActive={activeTab === 'agent'} isAgent/>
             case 'eskalasi':
                 return <ComplaintTable key="eskalasi-tab" isActive={activeTab === 'eskalasi'} />
             default:
-                return <ComplaintList key="default-tab" isActive={activeTab === 'agent'} />
+                return <ComplaintList key="default-tab" isActive={activeTab === 'agent'} isAgent/>
         }
     }
 

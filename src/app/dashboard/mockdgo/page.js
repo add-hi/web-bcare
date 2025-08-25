@@ -26,6 +26,9 @@ import useTicket from "@/hooks/useTicket";
 import useTicketDetail from "@/hooks/useTicketDetail";
 import { useAuthStore } from "@/store/userStore";
 import useTicketStore from "@/store/ticketStore";
+import { useRef } from "react";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 const DivisionComplaintHandler = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -41,19 +44,36 @@ const DivisionComplaintHandler = () => {
   const [actionNote, setActionNote] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [newNote, setNewNote] = useState("");
+  const didFetchRef = useRef(false);
+  const router = useRouter();
 
   // Use the same ticket hook as ComplaintList
-  const { list, loading, error, fetchTickets } = useTicket();
+  const { list, loading, error, fetchTickets, updateTicket } = useTicket();
   const { selectedId, detail, fetchTicketDetail } = useTicketDetail();
+  const [doingAction, setDoingAction] = useState(false);
   const { user } = useAuthStore();
   const ticketStore = useTicketStore();
 
-  // Force refresh when user changes
   useEffect(() => {
-    if (user) {
-      fetchTickets({ limit: 100, offset: 0 });
+
+    // kalau role = CXC → arahkan ke /dashboard/home
+    const role = String(
+      user?.division_code || user?.division?.division_code || ""
+    ).toUpperCase();
+
+    if (role === "CXC") {
+      router.replace("/dashboard/home");
     }
-  }, [user, fetchTickets]);
+  }, [user, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (didFetchRef.current) return;
+    didFetchRef.current = true;
+
+    fetchTickets({ limit: 500, offset: 0, force: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.npp]); // depend pada identitas user saja (mis. npp)
 
   // Helper function to format date
   const fmtDate = (iso) => {
@@ -202,11 +222,58 @@ const DivisionComplaintHandler = () => {
     setSelectedComplaint(null);
   };
 
-  const handleActionClick = (complaint, event) => {
-    event.stopPropagation();
-    setActionModal({ show: true, type: "mark_done", complaint });
-    setActionNote("");
+  // const handleActionClick = async (complaint, event) => {
+  //   event.stopPropagation();
+  //   if (doingAction) return;
+
+  //   try {
+  //     setDoingAction(true);
+  //     // PATCH /v1/tickets/:id  { action: "DONE_BY_UIC" }
+  //     await updateTicket(complaint.id, { action: "DONE_BY_UIC" });
+
+  //     // opsional: refresh list biar status terbaru muncul
+  //     await fetchTickets({ force: true });
+
+  //     // opsional: toast/notif sukses
+  //     toast.success("Ticket ditandai selesai oleh UIC");
+  //   } catch (err) {
+  //     // opsional: toast/notif gagal
+  //     toast.error(err?.message ?? "Gagal menandai tiket");
+  //     console.error(err);
+  //   } finally {
+  //     setDoingAction(false);
+  //   }
+  // };
+
+  // ganti fungsi lama
+  const handleActionClick = async (complaint, event, opts = { reset: true, refresh: true }) => {
+    event?.stopPropagation();
+    if (doingAction) return;
+
+    console.log(complaint.id);
+    console.log(event);
+    console.log(opts);
+    
+    try {
+      setDoingAction(true);
+      
+      await updateTicket(complaint.id, { action: "DONE_BY_UIC" });
+
+      // 👉 refresh list sesuai opsi
+      if (opts.reset) ticketStore.reset();
+      if (opts.refresh) {
+        await fetchTickets({ limit: 500, offset: 0, force: true });
+      }
+
+      toast.success("Ticket ditandai selesai oleh UIC");
+    } catch (err) {
+      toast.error(err?.message ?? "Gagal menandai tiket");
+      console.error(err);
+    } finally {
+      setDoingAction(false);
+    }
   };
+
 
   const handleActionSubmit = async () => {
     setIsProcessing(true);
@@ -300,7 +367,7 @@ const DivisionComplaintHandler = () => {
 
     return (
       <button
-        onClick={(e) => handleActionClick(complaint, e)}
+        onClick={(e) => handleActionClick(complaint, e, { reset: true, refresh: true })}
         className={`${buttonClass} bg-green-600 text-white hover:bg-green-700`}
       >
         <CheckSquare
@@ -321,7 +388,7 @@ const DivisionComplaintHandler = () => {
       status_change: { icon: Clock },
       activity: { icon: MessageSquare },
     };
-    
+
     const divisionConfig = {
       "Open": { color: "border-blue-400", bgColor: "bg-blue-50" },
       "Handled by CxC": { color: "border-yellow-400", bgColor: "bg-yellow-50" },
@@ -338,10 +405,10 @@ const DivisionComplaintHandler = () => {
       "Customer": { color: "border-gray-400", bgColor: "bg-gray-50" },
       "Employee": { color: "border-indigo-400", bgColor: "bg-indigo-50" },
     };
-    
+
     const typeStyle = typeConfig[type] || typeConfig.note;
     const divisionStyle = divisionConfig[division] || { color: "border-gray-400", bgColor: "bg-gray-50" };
-    
+
     return { ...typeStyle, ...divisionStyle };
   };
 
@@ -533,11 +600,10 @@ const DivisionComplaintHandler = () => {
                   <div className="space-y-1">
                     <span className="text-gray-600">Time Remaining</span>
                     <p
-                      className={`font-medium ${
-                        selectedComplaint?.timeRemaining.includes("Overdue")
-                          ? "text-red-600"
-                          : "text-gray-900"
-                      }`}
+                      className={`font-medium ${selectedComplaint?.timeRemaining.includes("Overdue")
+                        ? "text-red-600"
+                        : "text-gray-900"
+                        }`}
                     >
                       {selectedComplaint?.timeRemaining}
                     </p>
@@ -673,7 +739,7 @@ const DivisionComplaintHandler = () => {
                     const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
                     const statusHistoryNotes = ticketDetail?.notes?.division || [];
                     const rawDivisionNotes = ticketDetail?.__raw?.division_notes || [];
-                    
+
                     // Combine both sources and sort by timestamp
                     const allNotes = [...statusHistoryNotes, ...rawDivisionNotes]
                       .sort((a, b) => {
@@ -681,7 +747,7 @@ const DivisionComplaintHandler = () => {
                         const dateB = new Date(b.timestamp);
                         return dateA - dateB;
                       });
-                    
+
                     if (allNotes.length === 0) {
                       return (
                         <div className="text-center py-8 text-gray-500">
@@ -690,14 +756,14 @@ const DivisionComplaintHandler = () => {
                         </div>
                       );
                     }
-                    
+
                     return allNotes.map((note, index) => {
                       const noteStyle = getNoteStyle(note.type || 'note', note.division);
                       const IconComponent = noteStyle.icon;
-                      
+
                       // Handle different timestamp formats
-                      const displayTimestamp = note.timestamp?.includes('/') 
-                        ? note.timestamp 
+                      const displayTimestamp = note.timestamp?.includes('/')
+                        ? note.timestamp
                         : fmtDate(note.timestamp);
 
                       return (
@@ -808,7 +874,7 @@ const DivisionComplaintHandler = () => {
           <button
             onClick={() => {
               ticketStore.reset();
-              fetchTickets({ limit: 100, offset: 0 });
+              fetchTickets({ limit: 500, offset: 0, force: true });
             }}
             className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
             disabled={loading}
@@ -862,10 +928,10 @@ const DivisionComplaintHandler = () => {
                 {loading
                   ? "..."
                   : originalComplaints.filter(
-                      (c) =>
-                        c.status.includes("Progress") ||
-                        c.status.includes("Processing")
-                    ).length}
+                    (c) =>
+                      c.status.includes("Progress") ||
+                      c.status.includes("Processing")
+                  ).length}
               </p>
             </div>
             <Clock className="text-yellow-600" size={24} />
@@ -879,10 +945,10 @@ const DivisionComplaintHandler = () => {
                 {loading
                   ? "..."
                   : originalComplaints.filter(
-                      (c) =>
-                        c.status.includes("Closed") ||
-                        c.status.includes("Completed")
-                    ).length}
+                    (c) =>
+                      c.status.includes("Closed") ||
+                      c.status.includes("Completed")
+                  ).length}
               </p>
             </div>
             <CheckCircle className="text-green-600" size={24} />
@@ -954,11 +1020,10 @@ const DivisionComplaintHandler = () => {
                                 : column.key
                             )
                           }
-                          className={`hover:text-blue-600 ${
-                            filters[column.key]
-                              ? "text-blue-600"
-                              : "text-gray-400"
-                          }`}
+                          className={`hover:text-blue-600 ${filters[column.key]
+                            ? "text-blue-600"
+                            : "text-gray-400"
+                            }`}
                         >
                           <Filter size={14} />
                         </button>

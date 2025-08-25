@@ -36,7 +36,7 @@ export default function useTicket() {
   );
 
   const fetchTickets = useCallback(
-    async ({ limit = 100, offset = 0, force = false } = {}) => {
+    async ({ limit = 100, offset = 0, force = false, status } = {}) => {
       // Check if data already exists and matches current pagination
       const currentPagination = pagination;
       const hasData = list.length > 0;
@@ -56,7 +56,7 @@ export default function useTicket() {
 
         const res = await httpClient.get("/v1/tickets", {
           baseURL: BASE,
-          params: { limit, offset },
+          params: { limit, offset, status },
           headers: {
             Accept: "application/json",
             Authorization,
