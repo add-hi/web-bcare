@@ -30,6 +30,7 @@ import { useRef } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import useUser from "@/hooks/useUser";
+import Button from "@/components/ui/Button";
 
 const DivisionComplaintHandler = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -339,21 +340,15 @@ const DivisionComplaintHandler = () => {
   };
 
   const getActionButton = (complaint, isInDetail = false) => {
-    const buttonClass = isInDetail
-      ? "px-6 py-3 text-sm font-semibold rounded-lg transition-colors"
-      : "px-2 py-1 text-xs rounded transition-colors";
-
     return (
-      <button
+      <Button
+        variant="success"
+        size={isInDetail ? "lg" : "sm"}
+        icon={CheckSquare}
         onClick={(e) => handleActionClick(complaint, e, { reset: true, refresh: true })}
-        className={`${buttonClass} bg-green-600 text-white hover:bg-green-700`}
       >
-        <CheckSquare
-          className={isInDetail ? "inline mr-2" : "hidden"}
-          size={16}
-        />
         Mark as Done
-      </button>
+      </Button>
     );
   };
 
@@ -425,32 +420,26 @@ const DivisionComplaintHandler = () => {
           </div>
 
           <div className="flex gap-3">
-            <button
+            <Button
+              variant="outline"
               onClick={() =>
                 setActionModal({ show: false, type: null, complaint: null })
               }
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               disabled={isProcessing}
+              className="flex-1"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="success"
+              icon={isProcessing ? RefreshCw : Send}
               onClick={handleActionSubmit}
               disabled={isProcessing}
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              loading={isProcessing}
+              className="flex-1"
             >
-              {isProcessing ? (
-                <>
-                  <RefreshCw size={16} className="animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Send size={16} />
-                  Confirm
-                </>
-              )}
-            </button>
+              {isProcessing ? "Processing..." : "Confirm"}
+            </Button>
           </div>
         </div>
       </div>
@@ -511,18 +500,22 @@ const DivisionComplaintHandler = () => {
             ))}
           </div>
           <div className="mt-3 pt-2 border-t border-gray-200 flex gap-2">
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={applyFilter}
-              className="flex-1 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+              className="flex-1"
             >
               Apply
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowFilterDropdown(null)}
-              className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50"
+              className="flex-1"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -534,13 +527,14 @@ const DivisionComplaintHandler = () => {
       <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <button
+          <Button
+            variant="grey"
+            icon={ArrowLeft}
             onClick={handleBackToTable}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            className="px-5 py-2.5"
           >
-            <ArrowLeft size={16} />
             Back to List
-          </button>
+          </Button>
           <h2 className="text-2xl font-bold text-gray-900">
             Handle Complaint - {selectedComplaint?.noTiket}
           </h2>
@@ -684,13 +678,15 @@ const DivisionComplaintHandler = () => {
                   Available Actions
                 </h3>
                 <div className="w-full">
-                  <button
+                  <Button
+                    variant="success"
+                    icon={CheckSquare}
                     onClick={(e) => handleActionClick(selectedComplaint, e)}
-                    className="w-full px-6 py-3 text-sm font-semibold rounded-lg transition-colors bg-green-600 text-white hover:bg-green-700 flex items-center justify-center gap-2"
+                    className="w-full"
+                    size="lg"
                   >
-                    <CheckSquare size={16} />
                     Mark as Done
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -795,14 +791,15 @@ const DivisionComplaintHandler = () => {
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
                   rows={4}
                 />
-                <button
+                <Button
+                  variant="primary"
+                  icon={Send}
                   onClick={handleAddNote}
                   disabled={!newNote.trim()}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full"
                 >
-                  <Send size={16} />
                   Add Note
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -849,25 +846,28 @@ const DivisionComplaintHandler = () => {
 
         {/* Filter Controls */}
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
+            icon={RefreshCw}
             onClick={() => {
               ticketStore.reset();
               fetchTickets({ limit: 500, offset: 0, force: true });
             }}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
             disabled={loading}
+            loading={loading}
           >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             Refresh
-          </button>
+          </Button>
           {Object.keys(filters).length > 0 && (
-            <button
+            <Button
+              variant="danger"
+              size="sm"
+              icon={X}
               onClick={clearAllFilters}
-              className="flex items-center gap-2 px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
             >
-              <X size={14} />
               Clear All Filters
-            </button>
+            </Button>
           )}
           <div className="text-sm text-gray-600">
             {loading
@@ -1095,15 +1095,15 @@ const DivisionComplaintHandler = () => {
             : `Showing ${processedComplaints.length} of ${originalComplaints.length} entries`}
         </div>
         <div className="flex gap-2">
-          <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
+          <Button variant="outline" size="sm">
             Previous
-          </button>
-          <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm">
+          </Button>
+          <Button variant="orange" size="sm">
             1
-          </button>
-          <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
+          </Button>
+          <Button variant="outline" size="sm">
             Next
-          </button>
+          </Button>
         </div>
       </div>
 

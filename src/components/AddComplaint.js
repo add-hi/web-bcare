@@ -7,6 +7,8 @@ import ActionForm from "@/components/add_form/ActionFormAdd";
 import NotesForm from "@/components/add_form/NotesFormAdd";
 import InputFormRow from "@/components/add_form/InputFormRowAdd";
 import useAddComplaint from "@/hooks/useAddComplaint";
+import Button from "@/components/ui/Button";
+import { RefreshCw } from "lucide-react";
 
 function AddComplaint() {
   const inputFormRef = useRef();
@@ -30,16 +32,14 @@ function AddComplaint() {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Add Complaint</h1>
-        <button
+        <Button
+          variant="secondary"
+          icon={RefreshCw}
           onClick={handleFullReset}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
           title="Reset All Forms"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
           Reset All
-        </button>
+        </Button>
       </div>
       <InputFormRow ref={inputFormRef} onCustomerData={handleCustomerData} />
       <CustomerForm 

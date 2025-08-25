@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import useAddComplaint from "@/hooks/useAddComplaint";
+import Button from "@/components/ui/Button";
 
 const InputForm = () => {
   const {
@@ -225,16 +226,14 @@ const InputForm = () => {
           
           {/* Save Button */}
           <div className="flex justify-end mt-4">
-            <button
+            <Button
+              variant="success"
               onClick={handleSave}
+              loading={isLoading}
               disabled={isLoading}
-              className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded text-sm font-medium transition-colors duration-200 flex items-center gap-2"
             >
-              {isLoading && (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              )}
               {isLoading ? 'Saving...' : 'Save'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import httpClient from "@/lib/httpClient";
 import { useAuthStore } from "@/store/userStore";
+import Button from "@/components/ui/Button";
 
 const Attachment = ({ ticketId, ticketNumber, ticket }) => {
   const [documents, setDocuments] = useState([]);
@@ -389,12 +390,13 @@ const Attachment = ({ ticketId, ticketNumber, ticket }) => {
           <p className="text-lg font-medium mb-2">Preview tidak tersedia</p>
           <p className="text-sm mb-1">{doc.name}</p>
           <p className="text-sm mb-4">{doc.size}</p>
-          <button
+          <Button
+            variant="primary"
+            icon={Download}
             onClick={() => handleDownload(doc)}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
           >
             Download to view
-          </button>
+          </Button>
         </div>
       );
     }
@@ -508,18 +510,15 @@ const Attachment = ({ ticketId, ticketNumber, ticket }) => {
             </div>
 
             {/* Upload Button */}
-            <button
+            <Button
+              variant="primary"
+              icon={uploading ? Loader2 : Upload}
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              loading={uploading}
             >
-              {uploading ? (
-                <Loader2 className="animate-spin" size={16} />
-              ) : (
-                <Upload size={16} />
-              )}
-              <span>{uploading ? "Uploading..." : "Upload"}</span>
-            </button>
+              {uploading ? "Uploading..." : "Upload"}
+            </Button>
             <input
               ref={fileInputRef}
               type="file"
@@ -602,27 +601,30 @@ const Attachment = ({ ticketId, ticketNumber, ticket }) => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center space-x-2">
-                        <button
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={Eye}
                           onClick={() => openPreview(doc)}
-                          className="p-1.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors"
                           title="Preview"
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button
+                          className="p-1.5"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={Download}
                           onClick={() => handleDownload(doc)}
-                          className="p-1.5 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
                           title="Download"
-                        >
-                          <Download size={14} />
-                        </button>
-                        <button
+                          className="p-1.5"
+                        />
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          icon={Trash2}
                           onClick={() => handleDelete(doc)}
-                          className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
                           title="Delete"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                          className="p-1.5"
+                        />
                       </div>
                     </td>
                   </tr>
@@ -656,47 +658,52 @@ const Attachment = ({ ticketId, ticketNumber, ticket }) => {
                   {selectedDocument.type === "image" &&
                     selectedDocument.url && (
                       <>
-                        <button
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={ZoomOut}
                           onClick={handleZoomOut}
-                          className="p-2 bg-white border rounded-lg hover:bg-gray-50 transition-colors"
                           title="Zoom Out"
-                        >
-                          <ZoomOut size={16} />
-                        </button>
+                          className="p-2"
+                        />
                         <span className="text-sm px-3 py-2 bg-white border rounded-lg min-w-[60px] text-center">
                           {zoom}%
                         </span>
-                        <button
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={ZoomIn}
                           onClick={handleZoomIn}
-                          className="p-2 bg-white border rounded-lg hover:bg-gray-50 transition-colors"
                           title="Zoom In"
-                        >
-                          <ZoomIn size={16} />
-                        </button>
-                        <button
+                          className="p-2"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={RotateCw}
                           onClick={handleRotate}
-                          className="p-2 bg-white border rounded-lg hover:bg-gray-50 transition-colors"
                           title="Rotate"
-                        >
-                          <RotateCw size={16} />
-                        </button>
+                          className="p-2"
+                        />
                         <div className="w-px h-8 bg-gray-200 mx-2"></div>
                       </>
                     )}
-                  <button
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={Download}
                     onClick={() => handleDownload(selectedDocument)}
-                    className="p-2 bg-white border rounded-lg hover:bg-gray-50 transition-colors"
                     title="Download"
-                  >
-                    <Download size={16} />
-                  </button>
-                  <button
+                    className="p-2"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={X}
                     onClick={closePreview}
-                    className="p-2 bg-white border rounded-lg hover:bg-gray-50 transition-colors"
                     title="Close"
-                  >
-                    <X size={16} />
-                  </button>
+                    className="p-2"
+                  />
                 </div>
               </div>
 
@@ -712,12 +719,13 @@ const Attachment = ({ ticketId, ticketNumber, ticket }) => {
                     <strong>Description:</strong> {selectedDocument.description}
                   </p>
                   <div className="flex space-x-2">
-                    <button
+                    <Button
+                      variant="primary"
+                      icon={Download}
                       onClick={() => handleDownload(selectedDocument)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                     >
                       Download File
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -738,13 +746,14 @@ const Attachment = ({ ticketId, ticketNumber, ticket }) => {
                 : "Upload your first document to get started"}
             </p>
             {!searchTerm && filterType === "all" && (
-              <button
+              <Button
+                variant="primary"
+                icon={Upload}
                 onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center space-x-2 mx-auto"
+                className="mx-auto"
               >
-                <Upload size={16} />
-                <span>Upload Document</span>
-              </button>
+                Upload Document
+              </Button>
             )}
           </div>
         )}
