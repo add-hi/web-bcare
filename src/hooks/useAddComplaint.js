@@ -780,7 +780,7 @@ const fetchCurrentUserOnce = useCallback(async () => {
 
       return result;
     } catch (error) {
-      toast.error(`❌ Gagal membuat ticket.\n\n${error?.message || 'Unknown error'}`);
+      toast.error(`Gagal membuat ticket.\n\n${error?.message || 'Unknown error'}`);
       throw error;
     }
   }, [
