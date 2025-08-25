@@ -751,7 +751,8 @@ const fetchCurrentUserOnce = useCallback(async () => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        alert(
+        const { toast } = await import('react-hot-toast');
+        toast.error(
           `❌ Gagal membuat ticket (${response.status} ${response.statusText}).\n\n` +
           `${errorText?.slice(0, 500) || 'Tidak ada detail error dari server.'}`
         );
@@ -762,18 +763,20 @@ const fetchCurrentUserOnce = useCallback(async () => {
 
       const result = await response.json();
       
-      // Alert sukses
+      // Toast sukses
       try {
+        const { toast } = await import('react-hot-toast');
         const d = result?.data ?? result ?? {};
         const ticketNumber = d.ticket_number ?? d.ticketNo ?? d.ticket ?? d.number ?? '-';
         const ticketId = d.ticket_id ?? d.id ?? d.ticketId ?? '-';
-        alert(
+        toast.success(
           `✅ Ticket berhasil dibuat!\n\n` +
           `Ticket Number: ${ticketNumber}\n` +
           `Ticket ID: ${ticketId}`
         );
       } catch (e) {
-        alert('✅ Ticket berhasil dibuat!');
+        const { toast } = await import('react-hot-toast');
+        toast.success('✅ Ticket berhasil dibuat!');
       }
 
 
@@ -781,7 +784,8 @@ const fetchCurrentUserOnce = useCallback(async () => {
 
       return result;
     } catch (error) {
-      alert(`❌ Gagal membuat ticket.\n\n${error?.message || 'Unknown error'}`);
+      const { toast } = await import('@/components/Toast');
+      toast.error(`❌ Gagal membuat ticket.\n\n${error?.message || 'Unknown error'}`);
       throw error;
     }
   }, [
