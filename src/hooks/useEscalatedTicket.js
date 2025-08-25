@@ -37,14 +37,6 @@ export default function useEscalatedTicket() {
 
   const fetchEscalatedTickets = useCallback(
     async ({ limit = 10, offset = 0, force = false } = {}) => {
-      // For client-side pagination, we only need to fetch once
-      const hasData = list.length > 0;
-      
-      if (!force && hasData) {
-        console.log('Using cached escalated ticket data');
-        return; // Use cached data
-      }
-
       setListLoading(true);
       setListError(null);
       try {
@@ -52,10 +44,14 @@ export default function useEscalatedTicket() {
         if (!Authorization)
           throw new Error("Token tidak ditemukan. Silakan login ulang.");
 
-        // Fetch ALL tickets first (large limit to get everything)
+        // Use server-side filtering to get non-open tickets
         const res = await httpClient.get("/v1/tickets", {
           baseURL: BASE,
-          params: { limit: 1000, offset: 0 }, // Get all tickets
+          params: {
+            limit,
+            offset,
+            status: "escalated",
+          },
           headers: {
             Accept: "application/json",
             Authorization,
@@ -67,19 +63,17 @@ export default function useEscalatedTicket() {
         if (!payload?.success)
           throw new Error(payload?.message || "Gagal mengambil tiket");
 
-        // Filter for escalated tickets only (employee_status_id: 3)
-        const allTickets = payload.data || [];
-        const escalatedTickets = allTickets.filter((t) => 
-          t?.employee_status?.employee_status_id === 3
-        );
+        const tickets = payload.data || [];
+        const paginationData = payload.pagination || {};
 
-        // Store all escalated tickets (client-side pagination will handle display)
-        setTickets(escalatedTickets);
+        setTickets(tickets);
         setPagination({
-          limit: limit,
-          offset: 0,
-          total: escalatedTickets.length, // Total escalated tickets
-          pages: Math.ceil(escalatedTickets.length / limit),
+          limit: paginationData.limit || limit,
+          offset: paginationData.offset || offset,
+          total: paginationData.total || tickets.length,
+          pages:
+            paginationData.pages ||
+            Math.ceil((paginationData.total || tickets.length) / limit),
         });
       } catch (e) {
         setListError(
@@ -91,7 +85,7 @@ export default function useEscalatedTicket() {
         setListLoading(false);
       }
     },
-    [BASE, setListLoading, setListError, setTickets, setPagination, list]
+    [BASE, setListLoading, setListError, setTickets, setPagination]
   );
 
   const refreshEscalatedTickets = useCallback(

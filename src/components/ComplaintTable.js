@@ -49,9 +49,10 @@ const ComplaintTable = ({ isActive = false }) => {
 
   useEffect(() => {
     if (isActive) {
-      fetchEscalatedTickets({ limit: PAGE_SIZE, offset: 0, force: false });
+      const offset = (currentPage - 1) * PAGE_SIZE;
+      fetchEscalatedTickets({ limit: PAGE_SIZE, offset, force: false });
     }
-  }, [isActive, fetchEscalatedTickets]);
+  }, [isActive, currentPage]); // Removed fetchEscalatedTickets from deps
 
   // Helper function to format date
   const fmtDate = (iso) => {
@@ -64,16 +65,11 @@ const ComplaintTable = ({ isActive = false }) => {
     return `${dd}/${mm}/${yyyy}`;
   };
 
-  // Map API data to table format and apply client-side pagination
+  // Map API data to table format (server-side pagination)
   const originalComplaints = useMemo(() => {
     if (!Array.isArray(list)) return [];
     
-    // Apply client-side pagination
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    const endIndex = startIndex + PAGE_SIZE;
-    const paginatedList = list.slice(startIndex, endIndex);
-    
-    return paginatedList.map((t) => {
+    return list.map((t) => {
       const id = t?.ticket_id ?? null;
       return {
         id,
@@ -105,7 +101,7 @@ const ComplaintTable = ({ isActive = false }) => {
         fullTicketData: t,
       };
     });
-  }, [list, currentPage]);
+  }, [list]);
 
 
 
@@ -1111,7 +1107,10 @@ const ComplaintTable = ({ isActive = false }) => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => refreshEscalatedTickets({ limit: PAGE_SIZE, offset: 0 })}
+            onClick={() => {
+              setCurrentPage(1);
+              refreshEscalatedTickets({ limit: PAGE_SIZE, offset: 0 });
+            }}
             disabled={loading}
             className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm disabled:opacity-50"
           >
@@ -1260,7 +1259,7 @@ const ComplaintTable = ({ isActive = false }) => {
                   className="hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-200"
                 >
                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {(currentPage - 1) * PAGE_SIZE + index + 1}
+                  {(pagination?.offset || 0) + index + 1}
                 </td>
                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                   {complaint.tglInput}
@@ -1310,8 +1309,8 @@ const ComplaintTable = ({ isActive = false }) => {
         <div className="text-sm text-gray-600">
           {loading
             ? "Loading…"
-            : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
-                currentPage * PAGE_SIZE,
+            : `Showing ${(pagination?.offset || 0) + 1}-${Math.min(
+                (pagination?.offset || 0) + PAGE_SIZE,
                 pagination?.total ?? 0
               )} of ${pagination?.total ?? 0} entries`}
         </div>
@@ -1332,7 +1331,7 @@ const ComplaintTable = ({ isActive = false }) => {
           </button>
 
           {(() => {
-            const totalPages = Math.max(1, pagination?.pages ?? Math.ceil((pagination?.total ?? 0) / PAGE_SIZE));
+            const totalPages = Math.max(1, pagination?.pages ?? 1);
             const curr = Math.min(Math.max(currentPage, 1), totalPages);
             const windowSize = 5;
             let start = Math.max(1, curr - Math.floor(windowSize / 2));
@@ -1373,15 +1372,15 @@ const ComplaintTable = ({ isActive = false }) => {
           })()}
 
           <button
-            onClick={() => setCurrentPage((p) => Math.min(Math.max(1, pagination?.pages ?? Math.ceil((pagination?.total ?? 0) / PAGE_SIZE)), p + 1))}
-            disabled={currentPage >= Math.max(1, pagination?.pages ?? Math.ceil((pagination?.total ?? 0) / PAGE_SIZE)) || loading}
+            onClick={() => setCurrentPage((p) => Math.min(pagination?.pages ?? 1, p + 1))}
+            disabled={currentPage >= (pagination?.pages ?? 1) || loading}
             className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
           >
             Next
           </button>
           <button
-            onClick={() => setCurrentPage(Math.max(1, pagination?.pages ?? Math.ceil((pagination?.total ?? 0) / PAGE_SIZE)))}
-            disabled={currentPage >= Math.max(1, pagination?.pages ?? Math.ceil((pagination?.total ?? 0) / PAGE_SIZE)) || loading}
+            onClick={() => setCurrentPage(pagination?.pages ?? 1)}
+            disabled={currentPage >= (pagination?.pages ?? 1) || loading}
             className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
           >
             Last
