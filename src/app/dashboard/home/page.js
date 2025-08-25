@@ -41,38 +41,52 @@ const Dashboard = () => {
   const { list: ticketList, loading: ticketLoading, error: ticketError, fetchTickets } = useTicket();
 
   useEffect(() => {
-    // feedback list
-    fetchAll();
-    // ambil banyak data tiket untuk analitik (ubah angka sesuai kebutuhan)
-    fetchTickets({ limit: 200, offset: 0 });
+    fetchTickets({ limit: 300, offset: 0 }).then(() => fetchAll());
   }, [fetchAll, fetchTickets]);
+
+  const fbByTicketNum = useMemo(() => {
+    const m = new Map();
+    (feedbackItems || []).forEach(fb => {
+      if (fb?.ticket_number) m.set(fb.ticket_number, fb);
+    });
+    return m;
+  }, [feedbackItems]);
 
   // ========== DATA ANALYTICS (dari tickets) ==========
   const analyticsTickets = useMemo(() => {
     if (!Array.isArray(ticketList)) return [];
-    return ticketList.map((t) => ({
-      id: t?.ticket_id ?? t?.id,
-      ticket_number: t?.ticket_number ?? t?.ticket_id ?? '-',
-      description: t?.description || t?.complaint?.complaint_name || '-',
-      category: t?.complaint?.complaint_name || t?.complaint?.complaint_code || 'Unknown',
-      status: normalizeStatus(t?.customer_status?.customer_status_name || t?.status),
-      rating: t?.rating ?? null,
-      assignedTo: t?.employee?.id ?? t?.employee_id ?? null,
-      createdAtISO: t?.created_time || null,
-      createdAtYMD: toYMD(t?.created_time),
-    }));
-  }, [ticketList]);
+
+    return ticketList.map((t) => {
+      const ticket_number = t?.ticket_number ?? t?.ticket_id ?? "-";
+      const fb = fbByTicketNum.get(ticket_number); // ⬅️ match ke feedback
+
+      return {
+        id: t?.ticket_id ?? t?.id,
+        ticket_number,
+        description: t?.description || t?.complaint?.complaint_name || "-",
+        category: t?.complaint?.complaint_name || t?.complaint?.complaint_code || "Unknown",
+        status: normalizeStatus(t?.customer_status?.customer_status_name || t?.status),
+        rating: typeof fb?.rating === "number" ? fb.rating : null, // ⬅️ rating dari feedback
+        assignedTo: t?.employee?.id ?? t?.employee_id ?? null,
+        createdAtISO: t?.created_time || null,
+        createdAtYMD: toYMD(t?.created_time),
+      };
+    });
+  }, [ticketList, fbByTicketNum]);
 
   // KPI
   const totalTickets = analyticsTickets.length;
-  const openCount = analyticsTickets.filter(c => c.status === 'open').length;
+  const openCount = useMemo(
+    () => analyticsTickets.filter(c => c.status === 'open').length,
+    [analyticsTickets]
+  );
 
   const avgRating = useMemo(() => {
-    const rated = analyticsTickets.filter(c => typeof c.rating === 'number');
+    const rated = (feedbackItems || []).filter(f => typeof f.rating === 'number');
     if (!rated.length) return 0;
-    const sum = rated.reduce((s, c) => s + c.rating, 0);
+    const sum = rated.reduce((s, f) => s + f.rating, 0);
     return sum / rated.length;
-  }, [analyticsTickets]);
+  }, [feedbackItems]);
 
   // Status distribution (pie)
   const statusData = useMemo(() => ([
@@ -213,8 +227,8 @@ const Dashboard = () => {
         {selectedTab === 'overview' && (
           <div className="space-y-6">
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+              <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 h-full">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-500 text-sm">Total Tickets</p>
@@ -224,7 +238,7 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+              <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 h-full">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-500 text-sm">Open Issues</p>
@@ -234,11 +248,13 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+              <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 h-full">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-500 text-sm">Avg Rating</p>
-                    <p className="text-3xl font-bold text-yellow-600">{avgRating.toFixed(1)}</p>
+                    <p className="text-3xl font-bold text-yellow-600">
+                      {Number(avgRating ?? 0).toFixed(1)}
+                    </p>
                   </div>
                   <Star className="text-yellow-500" size={32} />
                 </div>
@@ -407,11 +423,10 @@ const Dashboard = () => {
                         <button
                           key={p}
                           onClick={() => setCurrentPage(p)}
-                          className={`px-3 py-1 rounded text-sm ${
-                            p === currentPage
-                              ? 'bg-blue-600 text-white'
-                              : 'border border-gray-300 hover:bg-gray-50'
-                          }`}
+                          className={`px-3 py-1 rounded text-sm ${p === currentPage
+                            ? 'bg-blue-600 text-white'
+                            : 'border border-gray-300 hover:bg-gray-50'
+                            }`}
                         >
                           {p}
                         </button>

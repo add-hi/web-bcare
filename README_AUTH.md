@@ -14,8 +14,6 @@ Create `.env.local` at the project root:
 ```
 <<<<<<< HEAD
 NEXT_PUBLIC_API_BASE_URL=https://8fc9f60f4dbd.ngrok-free.app
-=======
-NEXT_PUBLIC_API_BASE_URL=https://bcare.my.id
 ```
 
 ## 2) Drop-in files

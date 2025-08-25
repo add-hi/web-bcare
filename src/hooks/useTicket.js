@@ -28,15 +28,12 @@ export default function useTicket() {
   } = useTicketStore();
 
   const BASE = useMemo(
-    () =>
-      (
-        process.env.NEXT_PUBLIC_API_URL
-      ).replace(/\/$/, ""),
+    () => (process.env.NEXT_PUBLIC_API_URL).replace(/\/$/, ""),
     []
   );
 
   const fetchTickets = useCallback(
-    async ({ limit = 100, offset = 0, force = false, status = ''} = {}) => {
+    async ({ limit = 100, offset = 0, force = false, status = '' } = {}) => {
       // Check if data already exists and matches current pagination
       const currentPagination = pagination;
       const hasData = list.length > 0;

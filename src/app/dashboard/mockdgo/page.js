@@ -223,29 +223,6 @@ const DivisionComplaintHandler = () => {
     setSelectedComplaint(null);
   };
 
-  // const handleActionClick = async (complaint, event) => {
-  //   event.stopPropagation();
-  //   if (doingAction) return;
-
-  //   try {
-  //     setDoingAction(true);
-  //     // PATCH /v1/tickets/:id  { action: "DONE_BY_UIC" }
-  //     await updateTicket(complaint.id, { action: "DONE_BY_UIC" });
-
-  //     // opsional: refresh list biar status terbaru muncul
-  //     await fetchTickets({ force: true });
-
-  //     // opsional: toast/notif sukses
-  //     toast.success("Ticket ditandai selesai oleh UIC");
-  //   } catch (err) {
-  //     // opsional: toast/notif gagal
-  //     toast.error(err?.message ?? "Gagal menandai tiket");
-  //     console.error(err);
-  //   } finally {
-  //     setDoingAction(false);
-  //   }
-  // };
-
   // ganti fungsi lama
   const handleActionClick = async (complaint, event, opts = { reset: true, refresh: true }) => {
     event?.stopPropagation();
