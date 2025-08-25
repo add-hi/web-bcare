@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect } from "react";
 import useAddComplaintStore from "@/store/addComplaintStore";
-
+import toast from "react-hot-toast";
 
 // === Single-flight guards (dipakai bareng semua komponen) ===
 let dropdownOnce = null; // untuk /channel, /category, dst
@@ -751,9 +751,8 @@ const fetchCurrentUserOnce = useCallback(async () => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        const { toast } = await import('react-hot-toast');
         toast.error(
-          `❌ Gagal membuat ticket (${response.status} ${response.statusText}).\n\n` +
+          `Gagal membuat ticket (${response.status} ${response.statusText}).\n\n` +
           `${errorText?.slice(0, 500) || 'Tidak ada detail error dari server.'}`
         );
         throw new Error(
@@ -765,18 +764,15 @@ const fetchCurrentUserOnce = useCallback(async () => {
       
       // Toast sukses
       try {
-        const { toast } = await import('react-hot-toast');
         const d = result?.data ?? result ?? {};
         const ticketNumber = d.ticket_number ?? d.ticketNo ?? d.ticket ?? d.number ?? '-';
         const ticketId = d.ticket_id ?? d.id ?? d.ticketId ?? '-';
         toast.success(
-          `✅ Ticket berhasil dibuat!\n\n` +
           `Ticket Number: ${ticketNumber}\n` +
           `Ticket ID: ${ticketId}`
         );
       } catch (e) {
-        const { toast } = await import('react-hot-toast');
-        toast.success('✅ Ticket berhasil dibuat!');
+        toast.success('Ticket berhasil dibuat!');
       }
 
 
@@ -784,7 +780,6 @@ const fetchCurrentUserOnce = useCallback(async () => {
 
       return result;
     } catch (error) {
-      const { toast } = await import('@/components/Toast');
       toast.error(`❌ Gagal membuat ticket.\n\n${error?.message || 'Unknown error'}`);
       throw error;
     }
