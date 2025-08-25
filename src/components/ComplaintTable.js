@@ -27,7 +27,8 @@ import {
 } from "lucide-react";
 
 import Attachment from "@/components/Attachment";
-import useEscalatedTicket from "@/hooks/useEscalatedTicket";
+import FloatingCustomerContact from "@/components/FloatingCustomerContact";
+import useTicket from "@/hooks/useTicket";
 import useTicketDetail from "@/hooks/useTicketDetail";
 import useTicketStore from "@/store/ticketStore";
 import Button from "@/components/ui/Button";
@@ -43,7 +44,7 @@ const ComplaintTable = ({ isActive = false }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
   // API integration
-  const { list, loading, error, pagination, fetchEscalatedTickets, refreshEscalatedTickets } = useEscalatedTicket();
+  const { list, loading, error, pagination, fetchTickets } = useTicket();
   const { selectedId, detail, fetchTicketDetail } = useTicketDetail();
   const ticketStore = useTicketStore();
 
@@ -51,10 +52,10 @@ const ComplaintTable = ({ isActive = false }) => {
 
   useEffect(() => {
     if (isActive) {
-      const offset = (currentPage - 1) * PAGE_SIZE;
-      fetchEscalatedTickets({ limit: PAGE_SIZE, offset, force: false });
+      // Fetch all tickets at once for client-side pagination
+      fetchTickets({ limit: 1000, offset: 0, force: false });
     }
-  }, [isActive, currentPage]); // Removed fetchEscalatedTickets from deps
+  }, [isActive]); // Only fetch once when component becomes active
 
   // Helper function to format date
   const fmtDate = (iso) => {
@@ -67,11 +68,17 @@ const ComplaintTable = ({ isActive = false }) => {
     return `${dd}/${mm}/${yyyy}`;
   };
 
-  // Map API data to table format (server-side pagination)
+  // Map API data to table format and filter out "open" status tickets
   const originalComplaints = useMemo(() => {
     if (!Array.isArray(list)) return [];
     
-    return list.map((t) => {
+    // Filter out tickets with "open" status (case-insensitive)
+    const filteredList = list.filter((t) => {
+      const status = t?.employee_status?.employee_status_name?.toLowerCase() || '';
+      return status !== 'open';
+    });
+    
+    return filteredList.map((t) => {
       const id = t?.ticket_id ?? null;
       return {
         id,
@@ -112,7 +119,7 @@ const ComplaintTable = ({ isActive = false }) => {
     return [...new Set(originalComplaints.map((item) => item[key]))].sort();
   };
 
-  // Apply filters and sorting
+  // Apply filters and sorting, then paginate client-side
   const processedComplaints = useMemo(() => {
     let filtered = originalComplaints;
 
@@ -178,6 +185,15 @@ const ComplaintTable = ({ isActive = false }) => {
 
     return filtered;
   }, [filters, sortConfig, originalComplaints]);
+
+  // Client-side pagination
+  const paginatedComplaints = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const endIndex = startIndex + PAGE_SIZE;
+    return processedComplaints.slice(startIndex, endIndex);
+  }, [processedComplaints, currentPage, PAGE_SIZE]);
+
+  const totalPages = Math.ceil(processedComplaints.length / PAGE_SIZE);
 
   const handleSort = (key) => {
     setSortConfig((prev) => ({
@@ -1004,6 +1020,25 @@ const ComplaintTable = ({ isActive = false }) => {
             </div>
           </div>
         </div>
+
+        {/* FloatingCustomerContact - only for non-closed/declined tickets */}
+        {(() => {
+          const status = selectedComplaint?.status?.toLowerCase() || '';
+          const shouldShowContact = status !== 'closed' && status !== 'declined';
+          
+          if (!shouldShowContact) return null;
+          
+          return (
+            <FloatingCustomerContact 
+              room={`ticket-${selectedComplaint?.id}`}
+              detail={{
+                ids: {
+                  customerId: selectedComplaint?.fullTicketData?.customer?.id || selectedComplaint?.customerName
+                }
+              }}
+            />
+          );
+        })()}
       </div>
     );
   }
@@ -1096,8 +1131,8 @@ const ComplaintTable = ({ isActive = false }) => {
               ? "Loading…"
               : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
                   currentPage * PAGE_SIZE,
-                  pagination?.total ?? 0
-                )} of ${pagination?.total ?? 0} entries`}
+                  processedComplaints.length
+                )} of ${processedComplaints.length} entries`}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1107,7 +1142,7 @@ const ComplaintTable = ({ isActive = false }) => {
             icon={RefreshCw}
             onClick={() => {
               setCurrentPage(1);
-              refreshEscalatedTickets({ limit: PAGE_SIZE, offset: 0 });
+              fetchTickets({ limit: 1000, offset: 0, force: true });
             }}
             disabled={loading}
             loading={loading}
@@ -1245,18 +1280,18 @@ const ComplaintTable = ({ isActive = false }) => {
                   className="border border-gray-300 px-4 py-6 text-sm text-center"
                   colSpan={10}
                 >
-                  Loading escalated tickets...
+                  Loading tickets...
                 </td>
               </tr>
-            ) : processedComplaints.length ? (
-              processedComplaints.map((complaint, index) => (
+            ) : paginatedComplaints.length ? (
+              paginatedComplaints.map((complaint, index) => (
                 <tr
                   key={complaint.id}
                   onClick={() => handleRowClick(complaint)}
                   className="hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-200"
                 >
                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {(pagination?.offset || 0) + index + 1}
+                  {(currentPage - 1) * PAGE_SIZE + index + 1}
                 </td>
                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                   {complaint.tglInput}
@@ -1293,7 +1328,7 @@ const ComplaintTable = ({ isActive = false }) => {
                   className="border border-gray-300 px-4 py-6 text-sm text-center"
                   colSpan={10}
                 >
-                  No escalated tickets found
+                  No tickets found (excluding open status)
                 </td>
               </tr>
             )}
@@ -1306,10 +1341,10 @@ const ComplaintTable = ({ isActive = false }) => {
         <div className="text-sm text-gray-600">
           {loading
             ? "Loading…"
-            : `Showing ${(pagination?.offset || 0) + 1}-${Math.min(
-                (pagination?.offset || 0) + PAGE_SIZE,
-                pagination?.total ?? 0
-              )} of ${pagination?.total ?? 0} entries`}
+            : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
+                currentPage * PAGE_SIZE,
+                processedComplaints.length
+              )} of ${processedComplaints.length} entries`}
         </div>
         <div className="flex gap-1">
           <Button
@@ -1330,11 +1365,11 @@ const ComplaintTable = ({ isActive = false }) => {
           </Button>
 
           {(() => {
-            const totalPages = Math.max(1, pagination?.pages ?? 1);
-            const curr = Math.min(Math.max(currentPage, 1), totalPages);
+            const maxPages = Math.max(1, totalPages);
+            const curr = Math.min(Math.max(currentPage, 1), maxPages);
             const windowSize = 5;
             let start = Math.max(1, curr - Math.floor(windowSize / 2));
-            let end = Math.min(totalPages, start + windowSize - 1);
+            let end = Math.min(maxPages, start + windowSize - 1);
             if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
 
             const pageNumbers = [];
@@ -1343,9 +1378,9 @@ const ComplaintTable = ({ isActive = false }) => {
               if (start > 2) pageNumbers.push("…");
             }
             for (let p = start; p <= end; p++) pageNumbers.push(p);
-            if (end < totalPages) {
-              if (end < totalPages - 1) pageNumbers.push("…");
-              pageNumbers.push(totalPages);
+            if (end < maxPages) {
+              if (end < maxPages - 1) pageNumbers.push("…");
+              pageNumbers.push(maxPages);
             }
 
             return pageNumbers.map((p, idx) =>
@@ -1370,16 +1405,16 @@ const ComplaintTable = ({ isActive = false }) => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage((p) => Math.min(pagination?.pages ?? 1, p + 1))}
-            disabled={currentPage >= (pagination?.pages ?? 1) || loading}
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage >= totalPages || loading}
           >
             Next
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage(pagination?.pages ?? 1)}
-            disabled={currentPage >= (pagination?.pages ?? 1) || loading}
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage >= totalPages || loading}
           >
             Last
           </Button>

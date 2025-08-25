@@ -171,7 +171,7 @@ function DetailComplaint({ ticketId, onSuccess }) {
         submitOk={submitOk}
         submitError={submitError}
       />
-      <FloatingCustomerContact room="general" detail={detail} />
+      <FloatingCustomerContact room={`ticket-${effectiveId}`} detail={detail} />
     </div>
   );
 }
