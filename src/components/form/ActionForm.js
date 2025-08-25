@@ -100,8 +100,6 @@ export default function ActionForm({
 
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
         <div className={`grid grid-cols-1 gap-3 ${isClosed ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
-        {/* <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3"> */}
-        
           {/* Action */}
           <div className="flex min-w-0 items-center gap-3">
             <label className="whitespace-nowrap text-sm font-medium text-black">
