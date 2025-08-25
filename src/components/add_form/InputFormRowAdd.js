@@ -6,6 +6,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
+import Button from "@/components/ui/Button";
 
 function getAccessToken() {
   try {
@@ -295,15 +296,15 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
           <div className="flex flex-col">
             <div className="h-6 mb-2"></div>
             {inputType !== "non_nasabah" && (
-              <button
+              <Button
+                variant="warning"
                 onClick={fetchCustomerData}
-                disabled={
-                  loading || !numberValue.trim() || inputType === "non_nasabah"
-                }
-                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 whitespace-nowrap disabled:opacity-50"
+                loading={loading}
+                disabled={loading || !numberValue.trim() || inputType === "non_nasabah"}
+                className="whitespace-nowrap"
               >
                 {loading ? "Loading..." : "Cari"}
-              </button>
+              </Button>
             )}
           </div>
         </div>

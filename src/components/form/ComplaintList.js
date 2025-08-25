@@ -18,6 +18,8 @@ import Attachment from "@/components/Attachment";
 import useTicket from "@/hooks/useTicket";
 import useTicketDetail from "@/hooks/useTicketDetail";
 import useTicketStore from "@/store/ticketStore";
+import StatusBadge from "@/components/ui/StatusBadge";
+import Button from "@/components/ui/Button";
 
 const PAGE_SIZE = 10;
 
@@ -227,29 +229,7 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
   const backFromAttachments = () =>
     setViewMode(selectedId ? "detail" : "table");
 
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      Accepted: { color: "bg-blue-100 text-blue-800", icon: Clock },
-      Verification: { color: "bg-yellow-100 text-yellow-800", icon: Clock },
-      Processing: { color: "bg-amber-100 text-amber-800", icon: Clock },
-      "Handled by CxC": { color: "bg-purple-100 text-purple-800", icon: Clock },
-      Escalated: { color: "bg-orange-100 text-orange-800", icon: Clock },
-      Closed: { color: "bg-green-100 text-green-800", icon: Clock },
-      Declined: { color: "bg-red-100 text-red-800", icon: Clock },
-    };
-    const cfg = statusConfig[status] || {
-      color: "bg-gray-100 text-gray-800",
-      icon: Clock,
-    };
-    const Icon = cfg.icon;
-    return (
-      <span
-        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${cfg.color}`}
-      >
-        <Icon size={12} /> {status}
-      </span>
-    );
-  };
+
 
   // ===== UI helpers =====
   const startIndex = (pagination?.offset ?? (currentPage - 1) * limit) + 1;
@@ -284,13 +264,14 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
     return (
       <div className="max-w-full mx-auto p-6 bg-white">
         <div className="mb-4">
-          <button
+          <Button
+            variant="grey"
+            icon={ArrowLeft}
             onClick={backFromAttachments}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            className="px-5 py-2.5"
           >
-            <ArrowLeft size={20} />
-            <span>Back to {selectedId ? "Detail" : "List"}</span>
-          </button>
+            Back to {selectedId ? "Detail" : "List"}
+          </Button>
         </div>
         <Attachment
           ticketId={selectedId}
@@ -306,20 +287,22 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
     return (
       <div className="max-w-full mx-auto p-6 bg-white">
         <div className="mb-4 flex items-center justify-between">
-          <button
+          <Button
+            variant="grey"
+            icon={ArrowLeft}
             onClick={() => setViewMode("table")}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            className="px-5 py-2.5"
           >
-            <ArrowLeft size={20} />
-            <span>Back to List</span>
-          </button>
-          <button
+            Back to List
+          </Button>
+          <Button
+            variant="grey"
+            icon={Paperclip}
             onClick={openAttachments}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            className="px-5 py-2.5"
           >
-            <Paperclip size={18} />
             Attachments
-          </button>
+          </Button>
         </div>
         <DetailComplaint ticketId={selectedId} onSuccess={onDetailSubmitSuccess} />
       </div>
@@ -331,13 +314,14 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
     return (
       <div className="max-w-full mx-auto p-6 bg-white">
         <div className="mb-4 flex items-center justify-between">
-          <button
+          <Button
+            variant="grey"
+            icon={ArrowLeft}
             onClick={() => setViewMode("table")}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            className="px-5 py-2.5"
           >
-            <ArrowLeft size={20} />
-            <span>Back to List</span>
-          </button>
+            Back to List
+          </Button>
           {/* <button
             onClick={openAttachments}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
@@ -490,13 +474,15 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
             </label>
             <div className="grid grid-cols-2 gap-2">
               {quickDateOptions.map((o, i) => (
-                <button
+                <Button
                   key={i}
+                  variant="outline"
+                  size="sm"
                   onClick={() => handleQuickDate(o)}
-                  className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 text-left"
+                  className="text-left"
                 >
                   {o.label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -570,27 +556,30 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
           )}
 
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={applyDateFilter}
-              disabled={
-                filterType === "range" ? !startDate || !endDate : !specificDate
-              }
-              className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+              disabled={filterType === "range" ? !startDate || !endDate : !specificDate}
+              className="flex-1"
             >
               Apply Filter
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={clearDateFilter}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50"
+              className="flex-1"
             >
               Clear
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowFilterDropdown(null)}
-              className="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -641,18 +630,22 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
             ))}
           </div>
           <div className="mt-3 pt-2 border-t border-gray-200 flex gap-2">
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={apply}
-              className="flex-1 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+              className="flex-1"
             >
               Apply
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowFilterDropdown(null)}
-              className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50"
+              className="flex-1"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -663,25 +656,25 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
     <div className="max-w-full mx-auto p-6 bg-white">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <div className="ml-auto flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg">
-            <Plus size={20} />
-            <button
-              onClick={handleAddClick}
-              className="font-medium cursor-pointer hover:text-orange-600"
-            >
-              Add
-            </button>
-          </div>
+          <Button
+            variant="primary"
+            icon={Plus}
+            onClick={handleAddClick}
+          >
+            Add
+          </Button>
         </div>
 
         <div className="flex items-center gap-2">
           {Object.keys(filters).length > 0 && (
-            <button
+            <Button
+              variant="danger"
+              size="sm"
+              icon={X}
               onClick={clearAllFilters}
-              className="flex items-center gap-2 px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
             >
-              <X size={14} /> Clear All Filters
-            </button>
+              Clear All Filters
+            </Button>
           )}
           <div className="text-sm text-gray-600">
             {loading
@@ -808,7 +801,7 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
                     {c.unitNow}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm">
-                    {getStatusBadge(c.status)}
+                    <StatusBadge status={c.status} />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                     {c.sla}
@@ -837,20 +830,22 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
             : `Showing ${startIndex}-${endIndex} of ${total} entries`}
         </div>
         <div className="flex gap-1">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setCurrentPage(1)}
             disabled={currentPage === 1 || loading}
-            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
           >
             First
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage <= 1 || loading}
-            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
           >
             Previous
-          </button>
+          </Button>
 
           {pageNumbers.map((p, idx) =>
             p === "…" ? (
@@ -858,34 +853,34 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
                 …
               </span>
             ) : (
-              <button
+              <Button
                 key={p}
+                variant={p === currentPage ? "orange" : "outline"}
+                size="sm"
                 onClick={() => setCurrentPage(p)}
                 disabled={loading}
-                className={`px-3 py-1 rounded text-sm ${p === currentPage
-                  ? "bg-blue-600 text-white"
-                  : "border border-gray-300 hover:bg-gray-50"
-                  }`}
               >
                 {p}
-              </button>
+              </Button>
             )
           )}
 
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage >= totalPages || loading}
-            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
           >
             Next
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setCurrentPage(totalPages)}
             disabled={currentPage >= totalPages || loading}
-            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
           >
             Last
-          </button>
+          </Button>
         </div>
       </div>
     </div>

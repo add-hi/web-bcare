@@ -30,6 +30,8 @@ import Attachment from "@/components/Attachment";
 import useEscalatedTicket from "@/hooks/useEscalatedTicket";
 import useTicketDetail from "@/hooks/useTicketDetail";
 import useTicketStore from "@/store/ticketStore";
+import Button from "@/components/ui/Button";
+import StatusBadge from "@/components/ui/StatusBadge";
 
 const ComplaintTable = ({ isActive = false }) => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -264,28 +266,7 @@ const ComplaintTable = ({ isActive = false }) => {
     return { ...typeStyle, ...divisionStyle };
   };
 
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      Inprogress: { color: "bg-yellow-100 text-yellow-800", icon: Clock },
-      Completed: { color: "bg-green-100 text-green-800", icon: CheckCircle },
-      Overdue: { color: "bg-red-100 text-red-800", icon: AlertTriangle },
-    };
 
-    const config = statusConfig[status] || {
-      color: "bg-gray-100 text-gray-800",
-      icon: Clock,
-    };
-    const IconComponent = config.icon;
-
-    return (
-      <span
-        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}
-      >
-        <IconComponent size={12} />
-        {status}
-      </span>
-    );
-  };
 
   // Date Filter Component
   const DateFilterDropdown = ({ currentDateFilter }) => {
@@ -403,13 +384,15 @@ const ComplaintTable = ({ isActive = false }) => {
             </label>
             <div className="grid grid-cols-2 gap-2">
               {quickDateOptions.map((option, index) => (
-                <button
+                <Button
                   key={index}
+                  variant="outline"
+                  size="sm"
                   onClick={() => handleQuickDate(option)}
-                  className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 text-left"
+                  className="text-left"
                 >
                   {option.label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -486,27 +469,30 @@ const ComplaintTable = ({ isActive = false }) => {
 
           {/* Action Buttons */}
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={applyDateFilter}
-              disabled={
-                filterType === "range" ? !startDate || !endDate : !specificDate
-              }
-              className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={filterType === "range" ? !startDate || !endDate : !specificDate}
+              className="flex-1"
             >
               Apply Filter
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={clearDateFilter}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50"
+              className="flex-1"
             >
               Clear
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowFilterDropdown(null)}
-              className="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -567,18 +553,22 @@ const ComplaintTable = ({ isActive = false }) => {
             ))}
           </div>
           <div className="mt-3 pt-2 border-t border-gray-200 flex gap-2">
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={applyFilter}
-              className="flex-1 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+              className="flex-1"
             >
               Apply
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowFilterDropdown(null)}
-              className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50"
+              className="flex-1"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -589,13 +579,14 @@ const ComplaintTable = ({ isActive = false }) => {
     return (
       <div className="max-w-full mx-auto p-6 bg-white">
         <div className="mb-4">
-          <button
+          <Button
+            variant="grey"
+            icon={ArrowLeft}
             onClick={backFromAttachments}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-5 py-2.5"
           >
-            <ArrowLeft size={20} />
-            <span>Back to {selectedComplaint ? "Detail" : "List"}</span>
-          </button>
+            Back to {selectedComplaint ? "Detail" : "List"}
+          </Button>
         </div>
 
         {/* Pass proper ticket data to Attachment component */}
@@ -630,24 +621,26 @@ const ComplaintTable = ({ isActive = false }) => {
       <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <button
+          <Button
+            variant="grey"
+            icon={ArrowLeft}
             onClick={handleBackToTable}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            className="px-5 py-2.5"
           >
-            <ArrowLeft size={16} />
             Back to Table
-          </button>
+          </Button>
 
           <h2 className="text-2xl font-bold text-gray-900">
             Complaint Detail - {selectedComplaint?.noTiket}
           </h2>
-                    <button
+                    <Button
+                      variant="grey"
+                      icon={Paperclip}
                       onClick={openAttachments}
-                      className="ml-auto flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="ml-auto px-5 py-2.5"
                     >
-                      <Paperclip size={18} />
                       Attachments
-                    </button>
+                    </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -820,14 +813,15 @@ const ComplaintTable = ({ isActive = false }) => {
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
                   rows={4}
                 />
-                <button
+                <Button
+                  variant="primary"
+                  icon={Send}
                   onClick={handleAddNote}
                   disabled={!newNote.trim()}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full"
                 >
-                  <Send size={16} />
                   Add Note
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -872,7 +866,7 @@ const ComplaintTable = ({ isActive = false }) => {
                       Status
                     </span>
                     <div className="mt-1">
-                      {getStatusBadge(selectedComplaint?.status)}
+                      <StatusBadge status={selectedComplaint?.status} />
                     </div>
                   </div>
                   <div>
@@ -1088,13 +1082,14 @@ const ComplaintTable = ({ isActive = false }) => {
         {/* Filter Controls */}
         <div className="flex items-center gap-2">
           {Object.keys(filters).length > 0 && (
-            <button
+            <Button
+              variant="danger"
+              size="sm"
+              icon={X}
               onClick={clearAllFilters}
-              className="flex items-center gap-2 px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
             >
-              <X size={14} />
               Clear All Filters
-            </button>
+            </Button>
           )}
           <div className="text-sm text-gray-600">
             {loading
@@ -1106,17 +1101,19 @@ const ComplaintTable = ({ isActive = false }) => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
+            icon={RefreshCw}
             onClick={() => {
               setCurrentPage(1);
               refreshEscalatedTickets({ limit: PAGE_SIZE, offset: 0 });
             }}
             disabled={loading}
-            className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm disabled:opacity-50"
+            loading={loading}
           >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             Refresh
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -1268,7 +1265,7 @@ const ComplaintTable = ({ isActive = false }) => {
                   {complaint.noTiket}
                 </td>
                 <td className="border border-gray-300 px-4 py-3 text-sm">
-                  {getStatusBadge(complaint.status)}
+                  <StatusBadge status={complaint.status} />
                 </td>
                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 truncate">
                   {complaint.customerName}
@@ -1315,20 +1312,22 @@ const ComplaintTable = ({ isActive = false }) => {
               )} of ${pagination?.total ?? 0} entries`}
         </div>
         <div className="flex gap-1">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setCurrentPage(1)}
             disabled={currentPage === 1 || loading}
-            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
           >
             First
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage <= 1 || loading}
-            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
           >
             Previous
-          </button>
+          </Button>
 
           {(() => {
             const totalPages = Math.max(1, pagination?.pages ?? 1);
@@ -1355,36 +1354,35 @@ const ComplaintTable = ({ isActive = false }) => {
                   …
                 </span>
               ) : (
-                <button
+                <Button
                   key={p}
+                  variant={p === currentPage ? "orange" : "outline"}
+                  size="sm"
                   onClick={() => setCurrentPage(p)}
                   disabled={loading}
-                  className={`px-3 py-1 rounded text-sm ${
-                    p === currentPage
-                      ? "bg-blue-600 text-white"
-                      : "border border-gray-300 hover:bg-gray-50"
-                  }`}
                 >
                   {p}
-                </button>
+                </Button>
               )
             );
           })()}
 
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setCurrentPage((p) => Math.min(pagination?.pages ?? 1, p + 1))}
             disabled={currentPage >= (pagination?.pages ?? 1) || loading}
-            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
           >
             Next
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setCurrentPage(pagination?.pages ?? 1)}
             disabled={currentPage >= (pagination?.pages ?? 1) || loading}
-            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
           >
             Last
-          </button>
+          </Button>
         </div>
       </div>
     </div>

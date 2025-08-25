@@ -1,21 +1,43 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer
-} from 'recharts';
-import { MessageCircle, TrendingUp, AlertTriangle, Star, Filter } from 'lucide-react';
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  MessageCircle,
+  TrendingUp,
+  AlertTriangle,
+  Star,
+  Filter,
+} from "lucide-react";
 import { useAuthStore } from "@/store/userStore";
 import useFeedback from "@/hooks/useFeedback";
 import useTicket from "@/hooks/useTicket";
+import Button from "@/components/ui/Button";
 
 // Normalisasi status berbagai istilah API ke 3 bucket
 function normalizeStatus(s) {
-  const x = String(s || '').toLowerCase();
-  if (/(closed|selesai|done|resolved)/.test(x)) return 'closed';
-  if (/(processing|progress|handled|escalated|verification|accepted|in\s*-?\s*progress)/.test(x)) return 'in-progress';
-  return 'open';
+  const x = String(s || "").toLowerCase();
+  if (/(closed|selesai|done|resolved)/.test(x)) return "closed";
+  if (
+    /(processing|progress|handled|escalated|verification|accepted|in\s*-?\s*progress)/.test(
+      x
+    )
+  )
+    return "in-progress";
+  return "open";
 }
 
 // Format ISO -> 'YYYY-MM-DD'
@@ -27,18 +49,28 @@ const toYMD = (iso) => {
 };
 
 const Dashboard = () => {
-  const [selectedTab, setSelectedTab] = useState('overview');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [selectedTab, setSelectedTab] = useState("overview");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [showMyTicketsOnly, setShowMyTicketsOnly] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
   // LIST untuk tab Complaints (tetap dari useFeedback)
-  const { items: feedbackItems, status: feedbackStatus, error: feedbackError, fetchAll } = useFeedback();
+  const {
+    items: feedbackItems,
+    status: feedbackStatus,
+    error: feedbackError,
+    fetchAll,
+  } = useFeedback();
   const { user } = useAuthStore();
 
   // ANALYTICS untuk tab Overview (dari useTicket)
-  const { list: ticketList, loading: ticketLoading, error: ticketError, fetchTickets } = useTicket();
+  const {
+    list: ticketList,
+    loading: ticketLoading,
+    error: ticketError,
+    fetchTickets,
+  } = useTicket();
 
   useEffect(() => {
     fetchTickets({ limit: 300, offset: 0 }).then(() => fetchAll());
@@ -46,7 +78,7 @@ const Dashboard = () => {
 
   const fbByTicketNum = useMemo(() => {
     const m = new Map();
-    (feedbackItems || []).forEach(fb => {
+    (feedbackItems || []).forEach((fb) => {
       if (fb?.ticket_number) m.set(fb.ticket_number, fb);
     });
     return m;
@@ -64,8 +96,13 @@ const Dashboard = () => {
         id: t?.ticket_id ?? t?.id,
         ticket_number,
         description: t?.description || t?.complaint?.complaint_name || "-",
-        category: t?.complaint?.complaint_name || t?.complaint?.complaint_code || "Unknown",
-        status: normalizeStatus(t?.customer_status?.customer_status_name || t?.status),
+        category:
+          t?.complaint?.complaint_name ||
+          t?.complaint?.complaint_code ||
+          "Unknown",
+        status: normalizeStatus(
+          t?.customer_status?.customer_status_name || t?.status
+        ),
         rating: typeof fb?.rating === "number" ? fb.rating : null, // ⬅️ rating dari feedback
         assignedTo: t?.employee?.id ?? t?.employee_id ?? null,
         createdAtISO: t?.created_time || null,
@@ -77,29 +114,47 @@ const Dashboard = () => {
   // KPI
   const totalTickets = analyticsTickets.length;
   const openCount = useMemo(
-    () => analyticsTickets.filter(c => c.status === 'open').length,
+    () => analyticsTickets.filter((c) => c.status === "open").length,
     [analyticsTickets]
   );
 
   const avgRating = useMemo(() => {
-    const rated = (feedbackItems || []).filter(f => typeof f.rating === 'number');
+    const rated = (feedbackItems || []).filter(
+      (f) => typeof f.rating === "number"
+    );
     if (!rated.length) return 0;
     const sum = rated.reduce((s, f) => s + f.rating, 0);
     return sum / rated.length;
   }, [feedbackItems]);
 
   // Status distribution (pie)
-  const statusData = useMemo(() => ([
-    { name: 'Open', value: analyticsTickets.filter(c => c.status === 'open').length, color: '#ef4444' },
-    { name: 'In Progress', value: analyticsTickets.filter(c => c.status === 'in-progress').length, color: '#f59e0b' },
-    { name: 'Closed', value: analyticsTickets.filter(c => c.status === 'closed').length, color: '#10b981' },
-  ]), [analyticsTickets]);
+  const statusData = useMemo(
+    () => [
+      {
+        name: "Open",
+        value: analyticsTickets.filter((c) => c.status === "open").length,
+        color: "#ef4444",
+      },
+      {
+        name: "In Progress",
+        value: analyticsTickets.filter((c) => c.status === "in-progress")
+          .length,
+        color: "#f59e0b",
+      },
+      {
+        name: "Closed",
+        value: analyticsTickets.filter((c) => c.status === "closed").length,
+        color: "#10b981",
+      },
+    ],
+    [analyticsTickets]
+  );
 
   // Category distribution (top 8)
   const categoryData = useMemo(() => {
     const map = new Map();
-    analyticsTickets.forEach(c => {
-      const k = c.category || 'Unknown';
+    analyticsTickets.forEach((c) => {
+      const k = c.category || "Unknown";
       map.set(k, (map.get(k) || 0) + 1);
     });
     const arr = [...map.entries()].map(([name, value]) => ({ name, value }));
@@ -110,7 +165,7 @@ const Dashboard = () => {
   // Trend per tanggal (urut naik)
   const trendData = useMemo(() => {
     const map = new Map();
-    analyticsTickets.forEach(c => {
+    analyticsTickets.forEach((c) => {
       if (!c.createdAtYMD) return;
       map.set(c.createdAtYMD, (map.get(c.createdAtYMD) || 0) + 1);
     });
@@ -126,15 +181,15 @@ const Dashboard = () => {
   const displayComplaints = useMemo(() => {
     if (!Array.isArray(feedbackItems)) return [];
     if (showMyTicketsOnly && user?.id) {
-      return feedbackItems.filter(t => t.assignedTo === user.id);
+      return feedbackItems.filter((t) => t.assignedTo === user.id);
     }
     return feedbackItems;
   }, [feedbackItems, showMyTicketsOnly, user?.id]);
 
   // filter by status di tab Complaints
   const filteredComplaints = useMemo(() => {
-    if (filterStatus === 'all') return displayComplaints;
-    return displayComplaints.filter(c => c.status === filterStatus);
+    if (filterStatus === "all") return displayComplaints;
+    return displayComplaints.filter((c) => c.status === filterStatus);
   }, [displayComplaints, filterStatus]);
 
   // Pagination untuk complaints
@@ -145,8 +200,12 @@ const Dashboard = () => {
   }, [filteredComplaints, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
-  const startIndex = filteredComplaints.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
-  const endIndex = Math.min(startIndex + paginatedComplaints.length - 1, filteredComplaints.length);
+  const startIndex =
+    filteredComplaints.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
+  const endIndex = Math.min(
+    startIndex + paginatedComplaints.length - 1,
+    filteredComplaints.length
+  );
 
   // Reset page when filter changes
   useEffect(() => {
@@ -165,41 +224,65 @@ const Dashboard = () => {
     const arr = [];
     if (start > 1) {
       arr.push(1);
-      if (start > 2) arr.push('…');
+      if (start > 2) arr.push("…");
     }
     for (let p = start; p <= end; p++) arr.push(p);
     if (end < pages) {
-      if (end < pages - 1) arr.push('…');
+      if (end < pages - 1) arr.push("…");
       arr.push(pages);
     }
     return arr;
   }, [currentPage, totalPages]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-white to-orange-50 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Dashboard Customer Service</h1>
-          <p className="text-gray-600">Analytics & Management System untuk Tim CS</p>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            Dashboard Customer Service
+          </h1>
+          <p className="text-gray-600">
+            Analytics & Management System untuk Tim CS
+          </p>
 
           {/* indikator status per tab */}
-          {selectedTab === 'overview' && (
+          {selectedTab === "overview" && (
             <>
-              {ticketLoading && <div className="mt-4 p-3 bg-blue-100 text-blue-800 rounded-lg">Loading tickets…</div>}
-              {ticketError && <div className="mt-4 p-3 bg-red-100 text-red-800 rounded-lg">Error: {ticketError}</div>}
+              {ticketLoading && (
+                <div className="mt-4 p-3 bg-orange-100 text-orange-600 rounded-lg">
+                  Loading tickets…
+                </div>
+              )}
+              {ticketError && (
+                <div className="mt-4 p-3 bg-red-100 text-red-800 rounded-lg">
+                  Error: {ticketError}
+                </div>
+              )}
               {!ticketLoading && !ticketError && totalTickets === 0 && (
-                <div className="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg">Tidak ada data tiket</div>
+                <div className="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg">
+                  Tidak ada data tiket
+                </div>
               )}
             </>
           )}
 
-          {selectedTab === 'complaints' && (
+          {selectedTab === "complaints" && (
             <>
-              {feedbackStatus === 'loading' && <div className="mt-4 p-3 bg-blue-100 text-blue-800 rounded-lg">Loading data…</div>}
-              {feedbackStatus === 'error' && <div className="mt-4 p-3 bg-red-100 text-red-800 rounded-lg">Error: {feedbackError}</div>}
-              {feedbackStatus === 'success' && feedbackItems.length === 0 && (
-                <div className="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg">Tidak ada data complaint</div>
+              {feedbackStatus === "loading" && (
+                <div className="mt-4 p-3 bg-orange-100 text-orange-600 rounded-lg">
+                  Loading data…
+                </div>
+              )}
+              {feedbackStatus === "error" && (
+                <div className="mt-4 p-3 bg-red-100 text-red-800 rounded-lg">
+                  Error: {feedbackError}
+                </div>
+              )}
+              {feedbackStatus === "success" && feedbackItems.length === 0 && (
+                <div className="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg">
+                  Tidak ada data complaint
+                </div>
               )}
             </>
           )}
@@ -208,23 +291,24 @@ const Dashboard = () => {
         {/* Navigation */}
         <div className="flex flex-wrap justify-center mb-8 space-x-2">
           {[
-            { key: 'overview', label: 'Overview', icon: TrendingUp },
-            { key: 'complaints', label: 'Complaints', icon: MessageCircle },
+            { key: "overview", label: "Overview", icon: TrendingUp },
+            { key: "complaints", label: "Complaints", icon: MessageCircle },
           ].map(({ key, label, icon: Icon }) => (
-            <button
+            <Button
               key={key}
+              variant={selectedTab === key ? "orange" : "outline"}
+              icon={Icon}
               onClick={() => setSelectedTab(key)}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all ${selectedTab === key ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-blue-50 shadow'
-                }`}
+              size="lg"
+              className="shadow-lg rounded-lg"
             >
-              <Icon size={20} />
-              <span>{label}</span>
-            </button>
+              {label}
+            </Button>
           ))}
         </div>
 
         {/* ===== Overview (Analytics dari useTicket) ===== */}
-        {selectedTab === 'overview' && (
+        {selectedTab === "overview" && (
           <div className="space-y-6">
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
@@ -232,9 +316,11 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-500 text-sm">Total Tickets</p>
-                    <p className="text-3xl font-bold text-gray-800">{totalTickets}</p>
+                    <p className="text-3xl font-bold text-gray-800">
+                      {totalTickets}
+                    </p>
                   </div>
-                  <MessageCircle className="text-blue-500" size={32} />
+                  <MessageCircle className="text-orange-500" size={32} />
                 </div>
               </div>
 
@@ -242,7 +328,9 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-500 text-sm">Open Issues</p>
-                    <p className="text-3xl font-bold text-red-600">{openCount}</p>
+                    <p className="text-3xl font-bold text-red-600">
+                      {openCount}
+                    </p>
                   </div>
                   <AlertTriangle className="text-red-500" size={32} />
                 </div>
@@ -264,7 +352,9 @@ const Dashboard = () => {
             {/* Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                <h3 className="text-xl font-semibold mb-4">Status Distribution</h3>
+                <h3 className="text-xl font-semibold mb-4">
+                  Status Distribution
+                </h3>
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
                     <Pie
@@ -286,14 +376,16 @@ const Dashboard = () => {
               </div>
 
               <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                <h3 className="text-xl font-semibold mb-4">Tickets by Category (Top 8)</h3>
+                <h3 className="text-xl font-semibold mb-4">
+                  Tickets by Category (Top 8)
+                </h3>
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={categoryData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis allowDecimals={false} />
                     <Tooltip />
-                    <Bar dataKey="value" fill="#3b82f6" />
+                    <Bar dataKey="value" fill="#f97316" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -307,7 +399,12 @@ const Dashboard = () => {
                   <XAxis dataKey="date" />
                   <YAxis allowDecimals={false} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="complaints" stroke="#3b82f6" strokeWidth={3} />
+                  <Line
+                    type="monotone"
+                    dataKey="complaints"
+                    stroke="#f97316"
+                    strokeWidth={3}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -315,62 +412,90 @@ const Dashboard = () => {
         )}
 
         {/* ===== Complaints (List dari useFeedback) ===== */}
-        {selectedTab === 'complaints' && (
+        {selectedTab === "complaints" && (
           <div className="space-y-6">
             {/* Filter & Pagination Info */}
             <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
               <div className="flex items-center justify-between">
                 {user && (
                   <div className="flex items-center space-x-2">
-                    <label className="text-sm text-gray-600">My Tickets Only:</label>
+                    <label className="text-sm text-gray-600">
+                      My Tickets Only:
+                    </label>
                     <input
                       type="checkbox"
                       checked={showMyTicketsOnly}
                       onChange={(e) => setShowMyTicketsOnly(e.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-300 text-orange-500 focus:ring-orange-600"
                     />
                   </div>
                 )}
                 {filteredComplaints.length > 0 && (
-                  <span className="text-sm text-gray-600">Page {currentPage} of {totalPages || 1} (Total Pages: {totalPages})</span>
+                  <span className="text-sm text-gray-600">
+                    Page {currentPage} of {totalPages || 1} (Total Pages:{" "}
+                    {totalPages})
+                  </span>
                 )}
               </div>
             </div>
 
             {/* Complaints List */}
             <div className="space-y-4">
-              {feedbackStatus === 'loading' ? (
+              {feedbackStatus === "loading" ? (
                 <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
                   <p className="text-gray-600">Loading complaints...</p>
                 </div>
-              ) : feedbackStatus === 'error' ? (
+              ) : feedbackStatus === "error" ? (
                 <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 text-center">
-                  <MessageCircle size={48} className="text-red-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-red-600 mb-2">Error loading data</h3>
+                  <MessageCircle
+                    size={48}
+                    className="text-red-400 mx-auto mb-4"
+                  />
+                  <h3 className="text-lg font-medium text-red-600 mb-2">
+                    Error loading data
+                  </h3>
                   <p className="text-gray-500">{feedbackError}</p>
                 </div>
               ) : paginatedComplaints.length === 0 ? (
                 <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 text-center">
-                  <MessageCircle size={48} className="text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-600 mb-2">No complaints found</h3>
-                  <p className="text-gray-500">No complaints available from API.</p>
+                  <MessageCircle
+                    size={48}
+                    className="text-gray-400 mx-auto mb-4"
+                  />
+                  <h3 className="text-lg font-medium text-gray-600 mb-2">
+                    No complaints found
+                  </h3>
+                  <p className="text-gray-500">
+                    No complaints available from API.
+                  </p>
                 </div>
               ) : (
                 paginatedComplaints.map((complaint) => (
-                  <div key={complaint.id} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+                  <div
+                    key={complaint.id}
+                    className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow"
+                  >
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-xl font-semibold text-gray-800">#{complaint.ticket_number}</h3>
+                          <h3 className="text-xl font-semibold text-gray-800">
+                            #{complaint.ticket_number}
+                          </h3>
                         </div>
-                        <p className="text-gray-600 mt-2 leading-relaxed">{complaint.description}</p>
+                        <p className="text-gray-600 mt-2 leading-relaxed">
+                          {complaint.description}
+                        </p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
-                      <div><strong>Customer:</strong> {complaint.customerName}</div>
-                      <div><strong>Date:</strong> {complaint.createdAt}</div>
+                      <div>
+                        <strong>Customer:</strong> {complaint.customerName}
+                      </div>
+                      <div>
+                        <strong>Date:</strong> {complaint.createdAt}
+                      </div>
                     </div>
 
                     {complaint.rating && (
@@ -381,10 +506,16 @@ const Dashboard = () => {
                             <Star
                               key={i}
                               size={16}
-                              className={i < complaint.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}
+                              className={
+                                i < complaint.rating
+                                  ? "text-yellow-400 fill-current"
+                                  : "text-gray-300"
+                              }
                             />
                           ))}
-                          <span className="text-sm text-gray-600 ml-2">({complaint.rating}/5)</span>
+                          <span className="text-sm text-gray-600 ml-2">
+                            ({complaint.rating}/5)
+                          </span>
                         </div>
                       </div>
                     )}
@@ -398,55 +529,70 @@ const Dashboard = () => {
               <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
                 <div className="flex justify-between items-center">
                   <div className="text-sm text-gray-600">
-                    Showing {startIndex}-{endIndex} of {filteredComplaints.length} complaints
+                    Showing {startIndex}-{endIndex} of{" "}
+                    {filteredComplaints.length} complaints
                   </div>
                   <div className="flex gap-1">
-                    <button
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setCurrentPage(1)}
                       disabled={currentPage === 1}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="rounded-lg"
                     >
                       First
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={currentPage <= 1}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="rounded-lg"
                     >
                       Previous
-                    </button>
+                    </Button>
 
                     {pageNumbers.map((p, idx) =>
-                      p === '…' ? (
-                        <span key={`dots-${idx}`} className="px-2 text-gray-500">…</span>
+                      p === "…" ? (
+                        <span
+                          key={`dots-${idx}`}
+                          className="px-2 text-gray-500"
+                        >
+                          …
+                        </span>
                       ) : (
-                        <button
+                        <Button
                           key={p}
+                          variant={p === currentPage ? "orange" : "outline"}
+                          size="sm"
                           onClick={() => setCurrentPage(p)}
-                          className={`px-3 py-1 rounded text-sm ${p === currentPage
-                            ? 'bg-blue-600 text-white'
-                            : 'border border-gray-300 hover:bg-gray-50'
-                            }`}
+                          className="rounded-lg"
                         >
                           {p}
-                        </button>
+                        </Button>
                       )
                     )}
 
-                    <button
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={currentPage >= totalPages}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="rounded-lg"
                     >
                       Next
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setCurrentPage(totalPages)}
                       disabled={currentPage >= totalPages}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="rounded-lg"
                     >
                       Last
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>

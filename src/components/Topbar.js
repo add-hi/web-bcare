@@ -3,6 +3,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import useUser from "@/hooks/useUser"; // ← use your user hook
+import Button from "@/components/ui/Button";
 
 export default function Topbar() {
   const router = useRouter();
@@ -65,13 +66,14 @@ export default function Topbar() {
                 </div>
               )}
 
-              <button
+              <Button
+                variant="primary"
                 onClick={handleLogout}
                 disabled={busy}
-                className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+                loading={busy}
               >
                 {busy ? "LOGGING OUT..." : "LOGOUT"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

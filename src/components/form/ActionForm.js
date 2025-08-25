@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from "react";
 import SearchableSelect from "../SearchableSelect";
 import toast from "react-hot-toast";
+import Button from "@/components/ui/Button";
 
 const unitOptions = [
   "BCC - Customer Care",
@@ -185,22 +186,14 @@ export default function ActionForm({
 
         {/* Submit area */}
         <div className="mt-4 flex flex-col items-end gap-2 border-t border-gray-200 pt-4">
-          <button
-            type="button"
+          <Button
+            variant="primary"
             onClick={handleSubmit}
             disabled={disableSubmit}
-            aria-busy={submitting ? "true" : "false"}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-white transition
-              ${disableSubmit ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+            loading={submitting}
           >
-            {submitting && (
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4A4 4 0 008 12H4z" />
-              </svg>
-            )}
             {submitting ? "Menyimpan..." : "Submit Update"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
