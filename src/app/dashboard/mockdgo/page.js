@@ -21,7 +21,9 @@ import {
   CheckSquare,
   RefreshCw,
   Building2,
+  Paperclip,
 } from "lucide-react";
+import Attachment from "@/components/Attachment";
 import useTicket from "@/hooks/useTicket";
 import useTicketDetail from "@/hooks/useTicketDetail";
 import { useAuthStore } from "@/store/userStore";
@@ -34,7 +36,7 @@ import Button from "@/components/ui/Button";
 
 const DivisionComplaintHandler = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
-  const [viewMode, setViewMode] = useState("table"); // 'table' or 'detail'
+  const [viewMode, setViewMode] = useState("table"); // 'table', 'detail', or 'attachments'
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [filters, setFilters] = useState({});
   const [showFilterDropdown, setShowFilterDropdown] = useState(null);
@@ -223,6 +225,9 @@ const DivisionComplaintHandler = () => {
     setViewMode("table");
     setSelectedComplaint(null);
   };
+
+  const openAttachments = () => setViewMode("attachments");
+  const backFromAttachments = () => setViewMode(selectedComplaint ? "detail" : "table");
 
   // ganti fungsi lama
   const handleActionClick = async (complaint, event, opts = { reset: true, refresh: true }) => {
@@ -522,6 +527,28 @@ const DivisionComplaintHandler = () => {
     );
   };
 
+  if (viewMode === "attachments") {
+    return (
+      <div className="max-w-full mx-auto p-6 bg-white">
+        <div className="mb-4">
+          <Button
+            variant="grey"
+            icon={ArrowLeft}
+            onClick={backFromAttachments}
+            className="px-5 py-2.5"
+          >
+            Back to {selectedComplaint ? "Detail" : "List"}
+          </Button>
+        </div>
+        <Attachment
+          ticketId={selectedComplaint?.id}
+          ticketNumber={selectedComplaint?.noTiket}
+          ticket={selectedComplaint?.fullTicketData}
+        />
+      </div>
+    );
+  }
+
   if (viewMode === "detail") {
     return (
       <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
@@ -538,7 +565,15 @@ const DivisionComplaintHandler = () => {
           <h2 className="text-2xl font-bold text-gray-900">
             Handle Complaint - {selectedComplaint?.noTiket}
           </h2>
-          <div className="ml-auto">
+          <Button
+            variant="grey"
+            icon={Paperclip}
+            onClick={openAttachments}
+            className="ml-auto px-5 py-2.5"
+          >
+            Attachments
+          </Button>
+          <div>
             {selectedComplaint?.priority &&
               getPriorityBadge(selectedComplaint?.priority)}
           </div>
