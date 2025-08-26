@@ -1040,6 +1040,7 @@ const ComplaintTable = ({ isActive = false }) => {
                         {selectedComplaint?.number}
                       </p>
                     </div>
+                    
                   </div>
 
                   <div className="space-y-1">
@@ -1209,6 +1210,20 @@ const ComplaintTable = ({ isActive = false }) => {
     {
       key: "number",
       label: "Account #",
+      sortable: true,
+      filterable: true,
+      width: "w-24",
+    },
+    {
+      key: "cardNumber",
+      label: "Card Number",
+      sortable: true,
+      filterable: true,
+      width: "w-24",
+    },
+    {
+      key: "createdByUnit",
+      label: "Source",
       sortable: true,
       filterable: true,
       width: "w-24",
@@ -1428,6 +1443,12 @@ const ComplaintTable = ({ isActive = false }) => {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                     {complaint.number}
+                  </td>
+                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.cardNumber}
+                  </td>
+                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.createdByUnit}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 truncate">
                     {complaint.unitNow}
