@@ -342,17 +342,17 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
 
   // TABLE
   const columns = [
-    { key: "tglInput", label: "Tgl Input", sortable: true, filterable: true },
-    { key: "noTiket", label: "No. Tiket", sortable: true, filterable: true }, // ← ticket_id
+    { key: "tglInput", label: "Date", sortable: true, filterable: true },
+    { key: "noTiket", label: "Ticket #", sortable: true, filterable: true }, // ← ticket_id
     { key: "channel", label: "Channel", sortable: true, filterable: true },
     { key: "category", label: "Category", sortable: true, filterable: true },
     {
       key: "customerName",
-      label: "Customer Name",
+      label: "Customer",
       sortable: true,
       filterable: true,
     },
-    { key: "number", label: "Number", sortable: true, filterable: true },
+    { key: "number", label: "Account#", sortable: true, filterable: true },
     {
       key: "cardNumber",
       label: "Card Number",
@@ -361,11 +361,11 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
     },
     {
       key: "createdByUnit",
-      label: "UIC",
+      label: "Source",
       sortable: true,
       filterable: true,
     },
-    { key: "unitNow", label: "Unit Now", sortable: true, filterable: true },
+    { key: "unitNow", label: "Current Unit", sortable: true, filterable: true },
     { key: "status", label: "Status", sortable: true, filterable: true },
     { key: "sla", label: "SLA", sortable: true, filterable: true },
   ];
