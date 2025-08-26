@@ -12,6 +12,7 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@radix-ui/react-tooltip": "^1.2.8",
     "axios": "^1.11.0",
     "lucide-react": "^0.539.0",
     "next": "15.4.6",

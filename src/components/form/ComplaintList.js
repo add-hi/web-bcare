@@ -22,6 +22,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import Button from "@/components/ui/Button";
 
 const PAGE_SIZE = 10;
+const LIMIT = PAGE_SIZE;
 
 const ComplaintList = ({ isActive = false, isAgent = false }) => {
   const [viewMode, setViewMode] = useState("table"); // 'table' | 'detail' | 'add' | 'attachments'
@@ -48,37 +49,40 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
   // Initialize with first page on mount
   const [isInitialized, setIsInitialized] = useState(false);
 
+  const fetchTicketsRef = React.useRef(fetchTickets);
   useEffect(() => {
-    console.log('isAgent 1');
-    console.log(isAgent);
+    fetchTicketsRef.current = fetchTickets;
+  }, [fetchTickets]);
+  const didInitRef = React.useRef(false);
 
-    if (isActive && !isInitialized) {
-      fetchTickets({
-        limit: PAGE_SIZE,
-        offset: 0,
-        force: false,
-        status: isAgent ? "open" : '',
-      });
-      setIsInitialized(true);
-      setIsInitialized(true);
-    }
-  }, [isActive, isInitialized, fetchTickets]);
+  useEffect(() => {
+    if (!isActive) return;
+    if (didInitRef.current) return;
+    didInitRef.current = true;
+
+    fetchTicketsRef.current({
+      limit: LIMIT,
+      offset: 0,
+      force: true,
+      status: isAgent ? "open" : undefined, // gunakan undefined daripada '' agar konsisten
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, isAgent]);
 
   // Fetch data when page changes (after initialization)
   useEffect(() => {
-    console.log('isAgent 2');
-    console.log(isAgent);
+    if (!isActive) return;
+    if (!didInitRef.current) return;
 
-    if (isActive && isInitialized) {
-      const offset = (currentPage - 1) * limit;
-      fetchTickets({
-        limit,
-        offset,
-        force: false,
-        status: isAgent ? "open" : '',
-      });
-    }
-  }, [isActive, currentPage, limit, isInitialized, fetchTickets]);
+    const offset = (currentPage - 1) * LIMIT;
+    fetchTicketsRef.current({
+      limit: LIMIT,
+      offset,
+      force: false,
+      status: isAgent ? "open" : undefined,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, isActive, isAgent]);
 
   // helper tanggal dd/MM/yyyy
   const fmtDate = (iso) => {
@@ -126,9 +130,8 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
     [...new Set(originalComplaints.map((i) => i[key] || "-"))].sort();
 
   const onDetailSubmitSuccess = async () => {
-    // re-fetch list sesuai halaman aktif
-    const offset = (currentPage - 1) * limit;
-    await fetchTickets({ limit, offset }); // asumsi fetchTickets menerima {limit, offset}
+    const offset = (currentPage - 1) * LIMIT;
+    await fetchTicketsRef.current({ limit: LIMIT, offset, force: true });
     setViewMode("table");
   };
 
@@ -232,8 +235,9 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
 
 
   // ===== UI helpers =====
-  const startIndex = (pagination?.offset ?? (currentPage - 1) * limit) + 1;
+  const startIndex = (pagination?.offset ?? (currentPage - 1) * LIMIT) + 1;
   const endIndex = Math.min(startIndex + (list?.length || 0) - 1, total);
+
 
   const pageNumbers = useMemo(() => {
     const pages = totalPages;
@@ -291,10 +295,11 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
             variant="grey"
             icon={ArrowLeft}
             onClick={() => setViewMode("table")}
-            className="px-5 py-2.5"
+            className="px-3 sm:px-5 py-2.5"
           >
-            Back to List
+            <span className="hidden sm:inline">Back to List</span>
           </Button>
+
           <Button
             variant="grey"
             icon={Paperclip}
@@ -318,9 +323,9 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
             variant="grey"
             icon={ArrowLeft}
             onClick={() => setViewMode("table")}
-            className="px-5 py-2.5"
+            className="px-3 sm:px-5 py-2.5"
           >
-            Back to List
+            <span className="hidden sm:inline">Back to List</span>
           </Button>
           {/* <button
             onClick={openAttachments}
@@ -771,7 +776,7 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
                 >
                   {/* No = nomor absolut (berdasarkan offset), No. Tiket = ticket_id */}
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                    {(pagination?.offset ?? (currentPage - 1) * limit) + i + 1}
+                    {(pagination?.offset ?? (currentPage - 1) * LIMIT) + i + 1}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                     {c.tglInput}

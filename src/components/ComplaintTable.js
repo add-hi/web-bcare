@@ -28,11 +28,13 @@ import {
 
 import Attachment from "@/components/Attachment";
 import FloatingCustomerContact from "@/components/FloatingCustomerContact";
-import useTicket from "@/hooks/useTicket";
 import useTicketDetail from "@/hooks/useTicketDetail";
 import useTicketStore from "@/store/ticketStore";
 import Button from "@/components/ui/Button";
 import StatusBadge from "@/components/ui/StatusBadge";
+
+import useTicket from "@/hooks/useTicket";
+import toast from "react-hot-toast";
 
 const ComplaintTable = ({ isActive = false }) => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -44,8 +46,9 @@ const ComplaintTable = ({ isActive = false }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
   // API integration
-  const { list, loading, error, pagination, fetchTickets } = useTicket();
+  const { list, loading, error, pagination, fetchTickets, updateTicket } = useTicket();
   const { selectedId, detail, fetchTicketDetail } = useTicketDetail();
+  const [doingAction, setDoingAction] = useState(false);
   const ticketStore = useTicketStore();
 
   const PAGE_SIZE = 10;
@@ -56,6 +59,108 @@ const ComplaintTable = ({ isActive = false }) => {
       fetchTickets({ limit: 1000, offset: 0, force: false });
     }
   }, [isActive]); // Only fetch once when component becomes active
+
+  const getActionButton = (complaint, isInDetail = false) => {
+    // base style yang konsisten untuk alignment
+    const base =
+      "pointer inline-flex items-center justify-center gap-2 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500";
+
+    const sizing = isInDetail
+      ? "w-full h-11 sm:h-12 px-4 sm:px-6 text-sm sm:text-base"
+      : "w-full h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm";
+
+    return (
+      <Button
+        variant="success"
+        icon={CheckSquare}
+        size={isInDetail ? "lg" : "sm"} // tetap pakai prop size untuk konsistensi komponen
+        className={`${base} ${sizing}`}
+        onClick={(e) =>
+          handleActionClick(complaint, e, { reset: true, refresh: true })
+        }
+      >
+        {/* Mobile: teks pendek; ≥sm: teks lengkap */}
+        <span className="sm:hidden">Done</span>
+        <span className="hidden sm:inline">Mark as Done</span>
+      </Button>
+    );
+  };
+
+  const handleActionClick = async (complaint, event, opts = { reset: true, refresh: true }) => {
+    event?.stopPropagation();
+    if (doingAction) return;
+
+    try {
+      setDoingAction(true);
+
+      const t = complaint?.fullTicketData || {};
+
+      // helper format tanggal dd/MM/yyyy (untuk division_notes.timestamp)
+      const pad = (n) => String(n).padStart(2, "0");
+      const now = new Date();
+      const ts = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+
+      // ambil nilai dari data ketika tersedia, fallback aman jika tidak
+      const payload = {
+        action: "CLOSED",
+        // priority tidak ada di sample data -> fallback ke 3 (REGULAR) supaya sesuai contoh
+        priority_id: Number(t?.priority?.priority_id ?? 3),
+        // "record" tidak ada field khusus -> gunakan ticket_number/noTiket sebagai identitas
+        record: t?.ticket_number || complaint?.noTiket || "",
+        issue_channel_id: t?.issue_channel?.channel_id,
+        intake_source_id: t?.intake_source?.source_id,
+        complaint_id: t?.complaint?.complaint_id,
+        // amount/transaction_date/terminal bisa saja tidak tersedia -> kirim hanya jika ada
+        amount: t?.amount != null ? Number(t.amount) : undefined,
+        transaction_date: t?.transaction_date || t?.created_time || undefined,
+        terminal_id: t?.terminal?.terminal_id ?? t?.terminal_id ?? undefined,
+        // deskripsi ambil dari detail kalau ada, lalu dari fullTicketData/row
+        description:
+          (ticketStore.detailById[complaint?.id]?.ticket?.description) ||
+          t?.description ||
+          complaint?.issueDescription ||
+          "",
+        // isi default solution agar sesuai contoh
+        solution: "Technical issue resolved, customer notified",
+        division_notes: [
+          {
+            division: t?.division?.division_code || t?.division?.division_name || "CXC",
+            timestamp: ts,
+            msg: "Closed by division after resolution",
+            author: "Agent CXC",
+          },
+        ],
+      };
+
+      // buang key yang value-nya undefined/null/placeholder "—"
+      const compact = (obj) =>
+        Object.fromEntries(
+          Object.entries(obj).filter(
+            ([, v]) => v !== undefined && v !== null && v !== "—"
+          )
+        );
+
+      const finalPayload = {
+        ...compact(payload),
+        // pastikan division_notes tetap ikut (tidak di-compact)
+        division_notes: payload.division_notes,
+      };
+
+      await updateTicket(complaint.id, finalPayload);
+
+      if (opts.reset) ticketStore.reset();
+      if (opts.refresh) {
+        await fetchTickets({ limit: 1000, offset: 0, force: true });
+      }
+
+      toast.success("Ticket Closed!");
+    } catch (err) {
+      toast.error(err?.message ?? "Gagal menandai tiket");
+    } finally {
+      setDoingAction(false);
+    }
+  };
+
 
   // Helper function to format date
   const fmtDate = (iso) => {
@@ -71,13 +176,13 @@ const ComplaintTable = ({ isActive = false }) => {
   // Map API data to table format and filter out "open" status tickets
   const originalComplaints = useMemo(() => {
     if (!Array.isArray(list)) return [];
-    
+
     // Filter out tickets with "open" status (case-insensitive)
     const filteredList = list.filter((t) => {
       const status = t?.employee_status?.employee_status_name?.toLowerCase() || '';
       return status !== 'open';
     });
-    
+
     return filteredList.map((t) => {
       const id = t?.ticket_id ?? null;
       return {
@@ -258,7 +363,7 @@ const ComplaintTable = ({ isActive = false }) => {
       status_change: { icon: Clock },
       activity: { icon: MessageSquare },
     };
-    
+
     const divisionConfig = {
       "Open": { color: "border-blue-400", bgColor: "bg-blue-50" },
       "Handled by CxC": { color: "border-yellow-400", bgColor: "bg-yellow-50" },
@@ -275,14 +380,12 @@ const ComplaintTable = ({ isActive = false }) => {
       "Customer": { color: "border-gray-400", bgColor: "bg-gray-50" },
       "Employee": { color: "border-indigo-400", bgColor: "bg-indigo-50" },
     };
-    
+
     const typeStyle = typeConfig[type] || typeConfig.note;
     const divisionStyle = divisionConfig[division] || { color: "border-gray-400", bgColor: "bg-gray-50" };
-    
+
     return { ...typeStyle, ...divisionStyle };
   };
-
-
 
   // Date Filter Component
   const DateFilterDropdown = ({ currentDateFilter }) => {
@@ -591,7 +694,7 @@ const ComplaintTable = ({ isActive = false }) => {
     );
   };
 
-    if (viewMode === "attachments") {
+  if (viewMode === "attachments") {
     return (
       <div className="max-w-full mx-auto p-6 bg-white">
         <div className="mb-4">
@@ -606,10 +709,10 @@ const ComplaintTable = ({ isActive = false }) => {
         </div>
 
         {/* Pass proper ticket data to Attachment component */}
-        <Attachment 
-          ticketId={selectedComplaint?.id} 
+        <Attachment
+          ticketId={selectedComplaint?.id}
           ticketNumber={selectedComplaint?.noTiket}
-          ticket={selectedComplaint?.fullTicketData} 
+          ticket={selectedComplaint?.fullTicketData}
         />
       </div>
     );
@@ -618,7 +721,7 @@ const ComplaintTable = ({ isActive = false }) => {
   if (viewMode === "detail") {
     // Generate timeline steps based on employee_status_id
     const currentStatusId = selectedComplaint?.fullTicketData?.employee_status?.employee_status_id || 1;
-    
+
     const allSteps = [
       { id: 1, title: "Open", icon: Clock, color: "bg-blue-500" },
       { id: 2, title: "Handled by CXC", icon: User, color: "bg-yellow-500" },
@@ -626,7 +729,7 @@ const ComplaintTable = ({ isActive = false }) => {
       { id: 6, title: "Done by UIC", icon: CheckSquare, color: "bg-purple-500" },
       { id: 4, title: "Closed", icon: CheckCircle, color: "bg-green-500" },
     ];
-    
+
     const timelineSteps = allSteps.map(step => ({
       ...step,
       status: step.id <= currentStatusId ? "completed" : "pending",
@@ -649,14 +752,14 @@ const ComplaintTable = ({ isActive = false }) => {
           <h2 className="text-2xl font-bold text-gray-900">
             Complaint Detail - {selectedComplaint?.noTiket}
           </h2>
-                    <Button
-                      variant="grey"
-                      icon={Paperclip}
-                      onClick={openAttachments}
-                      className="ml-auto px-5 py-2.5"
-                    >
-                      Attachments
-                    </Button>
+          <Button
+            variant="grey"
+            icon={Paperclip}
+            onClick={openAttachments}
+            className="ml-auto px-5 py-2.5"
+          >
+            Attachments
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -672,7 +775,7 @@ const ComplaintTable = ({ isActive = false }) => {
                   const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
                   const currentStatusId = selectedComplaint?.fullTicketData?.employee_status?.employee_status_id || 1;
                   const employeeStatusHistory = ticketDetail?.tracking?.employeeStatusHistory || [];
-                  
+
                   // Define all possible steps
                   const allSteps = [
                     { id: 1, title: "Open", icon: Clock, color: "bg-blue-500", code: "OPEN" },
@@ -681,15 +784,15 @@ const ComplaintTable = ({ isActive = false }) => {
                     { id: 6, title: "Done by UIC", icon: CheckSquare, color: "bg-purple-500", code: "DONEUIC" },
                     { id: 4, title: "Closed", icon: CheckCircle, color: "bg-green-500", code: "CLOSED" },
                   ];
-                  
+
                   return allSteps.map((step, index) => {
                     const IconComponent = step.icon;
                     const isLast = index === allSteps.length - 1;
                     const isCompleted = step.id <= currentStatusId;
-                    
+
                     // Find matching history item for this step
                     const historyItem = employeeStatusHistory.find(h => h.status_code === step.code);
-                    
+
                     return (
                       <div key={step.id} className="relative flex items-start">
                         {/* Timeline Line */}
@@ -699,24 +802,21 @@ const ComplaintTable = ({ isActive = false }) => {
 
                         {/* Icon Circle */}
                         <div
-                          className={`flex-shrink-0 w-12 h-12 rounded-full ${
-                            isCompleted ? step.color : "bg-gray-300"
-                          } flex items-center justify-center text-white shadow-lg`}
+                          className={`flex-shrink-0 w-12 h-12 rounded-full ${isCompleted ? step.color : "bg-gray-300"
+                            } flex items-center justify-center text-white shadow-lg`}
                         >
                           <IconComponent size={20} />
                         </div>
 
                         {/* Content */}
                         <div className="ml-4 flex-1">
-                          <p className={`text-base font-medium leading-6 mb-1 ${
-                            isCompleted ? "text-gray-900" : "text-gray-400"
-                          }`}>
+                          <p className={`text-base font-medium leading-6 mb-1 ${isCompleted ? "text-gray-900" : "text-gray-400"
+                            }`}>
                             {step.title}
                           </p>
-                          <p className={`text-sm ${
-                            isCompleted ? "text-gray-500" : "text-gray-400"
-                          }`}>
-                            {historyItem 
+                          <p className={`text-sm ${isCompleted ? "text-gray-500" : "text-gray-400"
+                            }`}>
+                            {historyItem
                               ? `${fmtDate(historyItem.changed_at)} by ${historyItem.changed_by}`
                               : isCompleted ? "Completed" : "Pending"
                             }
@@ -751,7 +851,7 @@ const ComplaintTable = ({ isActive = false }) => {
                     const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
                     const statusHistoryNotes = ticketDetail?.notes?.division || [];
                     const rawDivisionNotes = ticketDetail?.__raw?.division_notes || [];
-                    
+
                     // Combine both sources and sort by timestamp
                     const allNotes = [...statusHistoryNotes, ...rawDivisionNotes]
                       .sort((a, b) => {
@@ -759,7 +859,7 @@ const ComplaintTable = ({ isActive = false }) => {
                         const dateB = new Date(b.timestamp);
                         return dateA - dateB;
                       });
-                    
+
                     if (allNotes.length === 0) {
                       return (
                         <div className="text-center py-8 text-gray-500">
@@ -768,14 +868,14 @@ const ComplaintTable = ({ isActive = false }) => {
                         </div>
                       );
                     }
-                    
+
                     return allNotes.map((note, index) => {
                       const noteStyle = getNoteStyle(note.type || 'note', note.division);
                       const IconComponent = noteStyle.icon;
-                      
+
                       // Handle different timestamp formats
-                      const displayTimestamp = note.timestamp?.includes('/') 
-                        ? note.timestamp 
+                      const displayTimestamp = note.timestamp?.includes('/')
+                        ? note.timestamp
                         : fmtDate(note.timestamp);
 
                       return (
@@ -975,8 +1075,8 @@ const ComplaintTable = ({ isActive = false }) => {
                     </span>
                     <p
                       className={`text-base font-medium ${selectedComplaint?.timeRemaining.includes("Overdue")
-                          ? "text-red-600"
-                          : "text-gray-900"
+                        ? "text-red-600"
+                        : "text-gray-900"
                         }`}
                     >
                       {selectedComplaint?.timeRemaining}
@@ -997,7 +1097,7 @@ const ComplaintTable = ({ isActive = false }) => {
             {/* Unit Information Card */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Unit Information
+                Unit Information 123
               </h3>
               <div className="space-y-3">
                 <div>
@@ -1018,6 +1118,18 @@ const ComplaintTable = ({ isActive = false }) => {
                 </div>
               </div>
             </div>
+            {/* button mark as done */}
+            {(() => {
+              const code = String(
+                selectedComplaint?.fullTicketData?.employee_status?.employee_status_code || ""
+              ).toUpperCase();
+              const name = String(selectedComplaint?.status || "").toUpperCase();
+              return code === "DONEBYUIC" || code === "DONEUIC" || name.includes("DONE BY UIC");
+            })() && (
+                <div className="pt-2 max-w-sm sm:max-w-none">
+                  {getActionButton(selectedComplaint, true)}
+                </div>
+              )}
           </div>
         </div>
 
@@ -1025,11 +1137,11 @@ const ComplaintTable = ({ isActive = false }) => {
         {(() => {
           const status = selectedComplaint?.status?.toLowerCase() || '';
           const shouldShowContact = status !== 'closed' && status !== 'declined';
-          
+
           if (!shouldShowContact) return null;
-          
+
           return (
-            <FloatingCustomerContact 
+            <FloatingCustomerContact
               room={`ticket-${selectedComplaint?.id}`}
               detail={{
                 ids: {
@@ -1130,9 +1242,9 @@ const ComplaintTable = ({ isActive = false }) => {
             {loading
               ? "Loading…"
               : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
-                  currentPage * PAGE_SIZE,
-                  processedComplaints.length
-                )} of ${processedComplaints.length} entries`}
+                currentPage * PAGE_SIZE,
+                processedComplaints.length
+              )} of ${processedComplaints.length} entries`}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1248,8 +1360,8 @@ const ComplaintTable = ({ isActive = false }) => {
                             )
                           }
                           className={`hover:text-blue-600 ${filters[column.key]
-                              ? "text-blue-600"
-                              : "text-gray-400"
+                            ? "text-blue-600"
+                            : "text-gray-400"
                             }`}
                         >
                           <Filter size={14} />
@@ -1290,37 +1402,37 @@ const ComplaintTable = ({ isActive = false }) => {
                   onClick={() => handleRowClick(complaint)}
                   className="hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-200"
                 >
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {(currentPage - 1) * PAGE_SIZE + index + 1}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {complaint.tglInput}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 font-medium">
-                  {complaint.noTiket}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm">
-                  <StatusBadge status={complaint.status} />
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 truncate">
-                  {complaint.customerName}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {complaint.channel}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 truncate">
-                  {complaint.category}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 text-center">
-                  {complaint.sla}d
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {complaint.number}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 truncate">
-                  {complaint.unitNow}
-                </td>
-              </tr>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {(currentPage - 1) * PAGE_SIZE + index + 1}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.tglInput}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 font-medium">
+                    {complaint.noTiket}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm">
+                    <StatusBadge status={complaint.status} />
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 truncate">
+                    {complaint.customerName}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.channel}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 truncate">
+                    {complaint.category}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 text-center">
+                    {complaint.sla}d
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.number}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 truncate">
+                    {complaint.unitNow}
+                  </td>
+                </tr>
               ))
             ) : (
               <tr>
@@ -1342,9 +1454,9 @@ const ComplaintTable = ({ isActive = false }) => {
           {loading
             ? "Loading…"
             : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
-                currentPage * PAGE_SIZE,
-                processedComplaints.length
-              )} of ${processedComplaints.length} entries`}
+              currentPage * PAGE_SIZE,
+              processedComplaints.length
+            )} of ${processedComplaints.length} entries`}
         </div>
         <div className="flex flex-wrap gap-1 order-1 sm:order-2">
           <Button

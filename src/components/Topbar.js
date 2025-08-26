@@ -1,8 +1,7 @@
 "use client";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import useUser from "@/hooks/useUser"; // ← use your user hook
+import useUser from "@/hooks/useUser";
 import Button from "@/components/ui/Button";
 
 export default function Topbar() {
@@ -14,8 +13,8 @@ export default function Topbar() {
     if (busy) return;
     setBusy(true);
     try {
-      await logout(); // ← wait for API + cookie clear
-      router.replace("/login"); // ← don’t keep /dashboard in history
+      await logout();
+      router.replace("/login");
     } finally {
       setBusy(false);
     }
@@ -29,21 +28,12 @@ export default function Topbar() {
   const initial = displayName?.charAt(0) || "?";
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50">
+    <header className="fixed top-0 left-0 right-0 ml-16 lg:ml-64 z-10">
       <div className="flex">
-        <div className="w-64 bg-slate-700 text-white px-6 py-4 shadow-[0_2px_4px_rgba(0,0,0,0.1)]">
-          <Image
-            src="/BNI_logo_white.svg"
-            alt="BNI Logo"
-            width={140}
-            height={70}
-            priority
-          />
-        </div>
-
-        <div className="flex-1 bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-semibold text-cyan-700">
+        <div className="flex-1 bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+          {/* Desktop layout */}
+          <div className="hidden md:flex items-center justify-between">
+            <h1 className="text-2xl lg:text-3xl font-semibold text-cyan-700">
               B-Care Dashboard
             </h1>
             <div className="flex items-center space-x-4">
@@ -65,7 +55,6 @@ export default function Topbar() {
                   </div>
                 </div>
               )}
-
               <Button
                 variant="primary"
                 onClick={handleLogout}
@@ -75,6 +64,37 @@ export default function Topbar() {
                 {busy ? "LOGGING OUT..." : "LOGOUT"}
               </Button>
             </div>
+          </div>
+
+          {/* Mobile layout */}
+          <div className="flex md:hidden items-center justify-between">
+            {user && (
+              <div
+                className="flex items-center space-x-2 cursor-pointer"
+                onClick={goToProfile}
+              >
+                <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">
+                    {initial}
+                  </span>
+                </div>
+                <div className="text-sm">
+                  <div className="font-medium text-gray-900">
+                    {displayName}
+                  </div>
+                  <div className="text-gray-500 text-xs">{displayId}</div>
+                </div>
+              </div>
+            )}
+            <Button
+              variant="primary"
+              onClick={handleLogout}
+              disabled={busy}
+              loading={busy}
+              className="text-xs px-3 py-1"
+            >
+              {busy ? "..." : "LOGOUT"}
+            </Button>
           </div>
         </div>
       </div>

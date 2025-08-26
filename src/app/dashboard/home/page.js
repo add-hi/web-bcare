@@ -292,7 +292,7 @@ const Dashboard = () => {
         <div className="flex flex-wrap justify-center mb-8 space-x-2">
           {[
             { key: "overview", label: "Overview", icon: TrendingUp },
-            { key: "complaints", label: "Complaints", icon: MessageCircle },
+            { key: "complaints", label: "Feedback", icon: MessageCircle },
           ].map(({ key, label, icon: Icon }) => (
             <Button
               key={key}

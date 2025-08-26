@@ -73,7 +73,7 @@ const DivisionComplaintHandler = () => {
     if (didFetchRef.current) return;
     didFetchRef.current = true;
 
-    fetchTickets({ limit: 500, offset: 0, force: true,  employee_id: user?.id });
+    fetchTickets({ limit: 500, offset: 0, force: true, employee_id: user?.id });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.npp]); // depend pada identitas user saja (mis. npp)
 
@@ -232,10 +232,10 @@ const DivisionComplaintHandler = () => {
     console.log(complaint.id);
     console.log(event);
     console.log(opts);
-    
+
     try {
       setDoingAction(true);
-      
+
       await updateTicket(complaint.id, { action: "DONE_BY_UIC" });
 
       // 👉 refresh list sesuai opsi
@@ -531,9 +531,9 @@ const DivisionComplaintHandler = () => {
             variant="grey"
             icon={ArrowLeft}
             onClick={handleBackToTable}
-            className="px-5 py-2.5"
+            className="px-3 sm:px-5 py-2.5"
           >
-            Back to List
+            <span className="hidden sm:inline">Back to List</span>
           </Button>
           <h2 className="text-2xl font-bold text-gray-900">
             Handle Complaint - {selectedComplaint?.noTiket}

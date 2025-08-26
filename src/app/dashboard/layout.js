@@ -59,11 +59,10 @@ export default function DashboardLayout({ children }) {
 
     return (
         <div className="min-h-screen bg-gray-100">
-            <p>{remaining} seconds remaining</p>
             <Topbar />
             <div className="pt-20">
                 <Sidebar />
-                <main className="ml-64 p-6">
+                <main className="p-6 ml-16 lg:ml-64">
                     {children}
                 </main>
             </div>

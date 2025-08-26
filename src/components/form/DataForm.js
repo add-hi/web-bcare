@@ -1,24 +1,28 @@
 // src/components/form/InputForm.jsx
-import React, { useState, useEffect } from "react";
-import SearchableSelect from "../SearchableSelect";
+"use client";
 
+import React, { useState, useEffect } from "react";
+
+// ————————— Helpers —————————
 const toLocalInputDateTime = (iso) => {
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
   const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
 };
 
 export default function InputForm({ detail, onChange }) {
-  // === Priority options (label tampil, value = id yang dilempar) ===
+  // === Priority options ===
   const priorityOptions = [
     { priority_id: 1, priority_code: "CRITICAL", priority_name: "Critical", id: 1 },
     { priority_id: 2, priority_code: "HIGH", priority_name: "High", id: 2 },
     { priority_id: 3, priority_code: "REGULAR", priority_name: "Regular", id: 3 },
   ];
 
-  // === Channel options with IDs (sesuai JSON kamu) ===
+  // === Channel options ===
   const channelOptions = [
     { id: 1, code: "ATM", name: "Automated Teller Machine" },
     { id: 2, code: "TAPCASH", name: "BNI Tapcash" },
@@ -31,7 +35,7 @@ export default function InputForm({ detail, onChange }) {
     { id: 9, code: "QRIS_DEBIT", name: "QRIS Kartu Debit" },
   ];
 
-  // === Category options with IDs (lengkap 1..48 sesuai JSON kamu) ===
+  // === Category options 1..48 ===
   const categoryOptions = [
     { id: 1, code: "2ND_CHARGEBACK", name: "2nd Chargeback" },
     { id: 2, code: "2ND_CHARGEBACK_QRIS_DEBIT", name: "2nd Chargeback QRIS Debit" },
@@ -83,7 +87,7 @@ export default function InputForm({ detail, onChange }) {
     { id: 48, code: "TRANSFER_ATM_PRIMA_BILATERAL", name: "Transfer ATM Prima Bilateral (Refund,salah/batal transfer,rek terdebet > 1x)" },
   ];
 
-  // helper untuk tebak initial id dari detail
+  // ——— Infer initial IDs dari detail ———
   const inferInitialPriorityId = () => {
     const p = detail?.ticket?.priority;
     if (!p) return "";
@@ -92,8 +96,8 @@ export default function InputForm({ detail, onChange }) {
     const needleCode = String(p.code ?? p.priority_code ?? "").toLowerCase();
     const needleName = String(p.name ?? "").toLowerCase();
     const match =
-      priorityOptions.find(o => String(o.priority_code).toLowerCase() === needleCode) ||
-      priorityOptions.find(o => String(o.priority_name).toLowerCase() === needleName);
+      priorityOptions.find((o) => String(o.priority_code).toLowerCase() === needleCode) ||
+      priorityOptions.find((o) => String(o.priority_name).toLowerCase() === needleName);
     return match ? String(match.id) : "";
   };
 
@@ -105,8 +109,8 @@ export default function InputForm({ detail, onChange }) {
     const needleCode = String(c.code ?? c.complaint_code ?? "").toLowerCase();
     const needleName = String(c.name ?? c.complaint_name ?? "").toLowerCase();
     const match =
-      categoryOptions.find(o => o.code.toLowerCase() === needleCode) ||
-      categoryOptions.find(o => o.name.toLowerCase() === needleName);
+      categoryOptions.find((o) => o.code.toLowerCase() === needleCode) ||
+      categoryOptions.find((o) => o.name.toLowerCase() === needleName);
     return match ? String(match.id) : "";
   };
 
@@ -118,11 +122,12 @@ export default function InputForm({ detail, onChange }) {
     const needleCode = String(ch.code ?? ch.channel_code ?? "").toLowerCase();
     const needleName = String(ch.name ?? ch.channel_name ?? "").toLowerCase();
     const match =
-      channelOptions.find(o => o.code.toLowerCase() === needleCode) ||
-      channelOptions.find(o => o.name.toLowerCase() === needleName);
+      channelOptions.find((o) => o.code.toLowerCase() === needleCode) ||
+      channelOptions.find((o) => o.name.toLowerCase() === needleName);
     return match ? String(match.id) : "";
   };
 
+  // ——— State ———
   const [formData, setFormData] = useState({
     service: "Complaint",
     priorityId: inferInitialPriorityId(),
@@ -133,36 +138,41 @@ export default function InputForm({ detail, onChange }) {
     source: detail?.ticket?.intakeSource?.name || "",
     nominal: detail?.ticket?.amount || "",
     transactionDate: toLocalInputDateTime(detail?.timestamps?.transactionDate),
-    commitedDate: detail?.timestamps?.committedDueAt ? new Date(detail.timestamps.committedDueAt).toISOString().split("T")[0] : "",
-    createdTime: detail?.timestamps?.createdTime ? new Date(detail.timestamps.createdTime).toISOString().split("T")[0] : "",
+    commitedDate: detail?.timestamps?.committedDueAt
+      ? new Date(detail.timestamps.committedDueAt).toISOString().split("T")[0]
+      : "",
+    createdTime: detail?.timestamps?.createdTime
+      ? new Date(detail.timestamps.createdTime).toISOString().split("T")[0]
+      : "",
     idTerminalATM: detail?.ticket?.terminal?.code || "",
     sla: detail?.policy?.slaDays || "",
     description: detail?.ticket?.description || "",
   });
 
-  // propagate ke parent (kirim id numeric ke payload)
+  // ——— Propagate ke parent ———
   useEffect(() => {
-    onChange &&
-      onChange({
-        priority_id: formData.priorityId ? Number(formData.priorityId) : undefined,
-        complaint_id: formData.categoryId ? Number(formData.categoryId) : undefined,
-        issue_channel_id: formData.channelId ? Number(formData.channelId) : undefined,
-        record: formData.record,
-        // sementara source masih string
-        source: formData.source,
-        amount: formData.nominal,
-        transactionDate: formData.transactionDate ? new Date(formData.transactionDate).toISOString() : undefined,
-        committedDate: formData.commitedDate,
-        createdTime: formData.createdTime,
-        terminalCode: formData.idTerminalATM, // jika nanti butuh terminal_id, tinggal pakai pola id juga
-        sla: formData.sla,
-        description: formData.description,
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData]);
+    onChange?.({
+      priority_id: formData.priorityId ? Number(formData.priorityId) : undefined,
+      complaint_id: formData.categoryId ? Number(formData.categoryId) : undefined,
+      issue_channel_id: formData.channelId ? Number(formData.channelId) : undefined,
+      record: formData.record,
+      // sementara source masih string
+      source: formData.source,
+      amount: formData.nominal,
+      transactionDate: formData.transactionDate
+        ? new Date(formData.transactionDate).toISOString()
+        : undefined,
+      committedDate: formData.commitedDate,
+      createdTime: formData.createdTime,
+      terminalCode: formData.idTerminalATM,
+      sla: formData.sla,
+      description: formData.description,
+    });
+  }, [formData, onChange]);
 
+  // ——— Helpers ———
   const getFieldValue = (label) => {
-    const fieldMap = {
+    const map = {
       Service: formData.service,
       Record: formData.record,
       Source: formData.source,
@@ -174,11 +184,11 @@ export default function InputForm({ detail, onChange }) {
       SLA: formData.sla,
       Description: formData.description,
     };
-    return fieldMap[label] || "";
+    return map[label] ?? "";
   };
 
   const handleInputChange = (field, value) => {
-    const fieldMap = {
+    const map = {
       Record: "record",
       Nominal: "nominal",
       "Transaction Date": "transactionDate",
@@ -192,14 +202,15 @@ export default function InputForm({ detail, onChange }) {
     if (field === "Priority") return setFormData((p) => ({ ...p, priorityId: String(value) }));
     if (field === "Category") return setFormData((p) => ({ ...p, categoryId: String(value) }));
     if (field === "Channel") return setFormData((p) => ({ ...p, channelId: String(value) }));
-    const stateField = fieldMap[field];
+    const stateField = map[field];
     if (stateField) setFormData((p) => ({ ...p, [stateField]: value }));
   };
 
+  // ——— Field config dengan hint "wide" untuk field panjang ———
   const fieldConfig = [
     { label: "Service", type: "select", required: true },
     { label: "Priority", type: "select" },
-    { label: "Record", type: "textarea" },
+    { label: "Record", type: "textarea", wide: true },
     { label: "Channel", type: "select", required: true },
     { label: "Source", type: "select", required: true },
     { label: "Nominal" },
@@ -209,133 +220,161 @@ export default function InputForm({ detail, onChange }) {
     { label: "Created Time", type: "date" },
     { label: "ID Terminal ATM" },
     { label: "SLA", required: true },
-    { label: "Description", required: true },
+    { label: "Description", type: "textarea", required: true, wide: true },
   ];
 
+  // ——— UI classes ———
   const inputClassName =
-    "w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm";
+    "w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm disabled:bg-gray-50";
 
   return (
-    <div className="w-full bg-orange-100 p-6 mb-6 relative rounded-lg border border-gray-300">
-      <div className="bg-orange-500 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
-        <h2 className="text-lg font-semibold">Data</h2>
+    <div className="w-full bg-orange-100 p-4 sm:p-5 lg:p-6 mb-6 relative rounded-lg border border-gray-300">
+      <div className="-m-4 sm:-m-5 lg:-m-6 mb-6 bg-orange-500 text-white text-center py-2 px-4 rounded-t-lg">
+        <h2 className="text-base sm:text-lg font-semibold">Data</h2>
       </div>
 
-      <div className="bg-white border-gray-200 p-6 rounded-lg">
-        <div className="grid grid-cols-3 gap-x-6 gap-y-5">
-          {fieldConfig.map((field, index) => (
-            <div key={index} className="flex flex-col">
-              <label className="text-sm text-black font-medium mb-2 whitespace-nowrap" htmlFor={`field-${index}`}>
-                {field.label}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
-              </label>
+      <div className="bg-white border border-gray-200 p-4 sm:p-6 rounded-lg">
+        {/* Grid responsif: 1 (mobile) / 2 (tablet) / 3 (desktop) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 sm:gap-x-6 gap-y-4 sm:gap-y-5">
+          {fieldConfig.map((field, index) => {
+            // Field panjang: full di mobile, 2 kolom di tablet, kembali 1 kolom di desktop (agar existing desktop tidak berubah)
+            const spanClass = field.wide
+              ? "col-span-1 sm:col-span-2 lg:col-span-1"
+              : "col-span-1";
 
-              {field.type === "select" ? (
-                field.label === "Channel" ? (
-                  <select
+            return (
+              <div key={index} className={`flex flex-col ${spanClass} min-w-0`}>
+                <label
+                  className="text-xs sm:text-sm text-black font-medium mb-2 break-words"
+                  htmlFor={`field-${index}`}
+                >
+                  {field.label}
+                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                </label>
+
+                {field.type === "textarea" ? (
+                  <textarea
                     id={`field-${index}`}
+                    className={`${inputClassName} min-h-10 sm:min-h-[52px] break-words resize-none`}
+                    rows={2}
+                    value={getFieldValue(field.label)}
+                    onChange={(e) => handleInputChange(field.label, e.target.value)}
+                  />
+                ) : field.type === "date" ? (
+                  <input
+                    id={`field-${index}`}
+                    type="date"
                     className={inputClassName}
-                    value={formData.channelId}
-                    onChange={(e) => handleInputChange("Channel", e.target.value)}
-                  >
-                    <option value="" disabled>
-                      Pilih Channel
-                    </option>
-                    {channelOptions.map((opt) => (
-                      <option key={opt.id} value={String(opt.id)}>
-                        {opt.name} ({opt.code})
+                    value={getFieldValue(field.label)}
+                    onChange={(e) => handleInputChange(field.label, e.target.value)}
+                  />
+                ) : field.type === "datetime" ? (
+                  <input
+                    id={`field-${index}`}
+                    type="datetime-local"
+                    className={inputClassName}
+                    value={getFieldValue(field.label)}
+                    onChange={(e) => handleInputChange(field.label, e.target.value)}
+                  />
+                ) : field.type === "select" ? (
+                  field.label === "Channel" ? (
+                    <select
+                      id={`field-${index}`}
+                      className={inputClassName}
+                      value={formData.channelId}
+                      onChange={(e) => handleInputChange("Channel", e.target.value)}
+                    >
+                      <option value="" disabled>
+                        Pilih Channel
                       </option>
-                    ))}
-                  </select>
-                ) : field.label === "Category" ? (
-                  <select
-                    id={`field-${index}`}
-                    className={inputClassName}
-                    value={formData.categoryId}
-                    onChange={(e) => handleInputChange("Category", e.target.value)}
-                  >
-                    <option value="" disabled>
-                      Pilih Category
-                    </option>
-                    {categoryOptions.map((opt) => (
-                      <option key={opt.id} value={String(opt.id)}>
-                        {opt.name} ({opt.code})
+                      {channelOptions.map((opt) => (
+                        <option key={opt.id} value={String(opt.id)}>
+                          {opt.name} ({opt.code})
+                        </option>
+                      ))}
+                    </select>
+                  ) : field.label === "Category" ? (
+                    <select
+                      id={`field-${index}`}
+                      className={inputClassName}
+                      value={formData.categoryId}
+                      onChange={(e) => handleInputChange("Category", e.target.value)}
+                    >
+                      <option value="" disabled>
+                        Pilih Category
                       </option>
-                    ))}
-                  </select>
-                ) : field.label === "Priority" ? (
-                  <select
-                    id={`field-${index}`}
-                    className={inputClassName}
-                    value={formData.priorityId}
-                    onChange={(e) => handleInputChange("Priority", e.target.value)}
-                  >
-                    <option value="" disabled>
-                      Pilih Priority
-                    </option>
-                    {priorityOptions.map((opt) => (
-                      <option key={opt.id} value={String(opt.id)}>
-                        {opt.priority_name} ({opt.priority_code})
+                      {categoryOptions.map((opt) => (
+                        <option key={opt.id} value={String(opt.id)}>
+                          {opt.name} ({opt.code})
+                        </option>
+                      ))}
+                    </select>
+                  ) : field.label === "Priority" ? (
+                    <select
+                      id={`field-${index}`}
+                      className={inputClassName}
+                      value={formData.priorityId}
+                      onChange={(e) => handleInputChange("Priority", e.target.value)}
+                    >
+                      <option value="" disabled>
+                        Pilih Priority
                       </option>
-                    ))}
-                  </select>
-                ) : field.label === "Service" ? (
-                  <select id={`field-${index}`} className={inputClassName} value="Complaint" readOnly>
-                    <option>Complaint</option>
-                  </select>
-                ) : field.label === "Source" ? (
-                  // sementara source masih string; nanti kalau ada master Source → ganti ke id
-                  <select
-                    id={`field-${index}`}
-                    className={inputClassName}
-                    value={formData.source}
-                    onChange={(e) => handleInputChange("Source", e.target.value)}
-                  >
-                    <option value="" disabled>
-                      Pilih Source
-                    </option>
-                    <option value={formData.source || ""}>{formData.source || "—"}</option>
-                  </select>
+                      {priorityOptions.map((opt) => (
+                        <option key={opt.id} value={String(opt.id)}>
+                          {opt.priority_name} ({opt.priority_code})
+                        </option>
+                      ))}
+                    </select>
+                  ) : field.label === "Service" ? (
+                    // readonly untuk select tidak didukung → gunakan disabled + aria-readonly
+                    <select
+                      id={`field-${index}`}
+                      className={inputClassName}
+                      value="Complaint"
+                      disabled
+                      aria-readonly="true"
+                    >
+                      <option>Complaint</option>
+                    </select>
+                  ) : field.label === "Source" ? (
+                    // sementara source masih string
+                    <select
+                      id={`field-${index}`}
+                      className={inputClassName}
+                      value={formData.source}
+                      onChange={(e) => handleInputChange("Source", e.target.value)}
+                    >
+                      <option value="" disabled>
+                        Pilih Source
+                      </option>
+                      {/* tampilkan value existing agar tetap selectable */}
+                      <option value={formData.source || ""}>
+                        {formData.source || "—"}
+                      </option>
+                    </select>
+                  ) : (
+                    <select
+                      id={`field-${index}`}
+                      className={inputClassName}
+                      value={getFieldValue(field.label)}
+                      disabled
+                      aria-readonly="true"
+                    >
+                      <option>{getFieldValue(field.label)}</option>
+                    </select>
+                  )
                 ) : (
-                  <select id={`field-${index}`} className={inputClassName} value={getFieldValue(field.label)} readOnly>
-                    <option>{getFieldValue(field.label)}</option>
-                  </select>
-                )
-              ) : field.type === "textarea" ? (
-                <textarea
-                  id={`field-${index}`}
-                  className={inputClassName + " resize-none overflow-y-auto h-[40px]"}
-                  rows={1}
-                  value={getFieldValue(field.label)}
-                  onChange={(e) => handleInputChange(field.label, e.target.value)}
-                />
-              ) : field.type === "date" ? (
-                <input
-                  id={`field-${index}`}
-                  type="date"
-                  className={inputClassName}
-                  value={getFieldValue(field.label)}
-                  onChange={(e) => handleInputChange(field.label, e.target.value)}
-                />
-              ) : field.type === "datetime" ? (
-                <input
-                  id={`field-${index}`}
-                  type="datetime-local"
-                  className={inputClassName}
-                  value={getFieldValue(field.label)}
-                  onChange={(e) => handleInputChange(field.label, e.target.value)}
-                />
-              ) : (
-                <input
-                  id={`field-${index}`}
-                  type="text"
-                  className={inputClassName}
-                  value={getFieldValue(field.label)}
-                  onChange={(e) => handleInputChange(field.label, e.target.value)}
-                />
-              )}
-            </div>
-          ))}
+                  <input
+                    id={`field-${index}`}
+                    type="text"
+                    className={inputClassName}
+                    value={getFieldValue(field.label)}
+                    onChange={(e) => handleInputChange(field.label, e.target.value)}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
