@@ -847,7 +847,7 @@ const DivisionComplaintHandler = () => {
 
   const columns = [
     { key: "tglInput", label: "Date", sortable: true, filterable: true },
-    { key: "noTiket", label: "Ticket No.", sortable: true, filterable: true },
+    { key: "noTiket", label: "Ticket#", sortable: true, filterable: true },
     {
       key: "customerName",
       label: "Customer",

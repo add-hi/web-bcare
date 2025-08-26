@@ -62,26 +62,23 @@ const ComplaintTable = ({ isActive = false }) => {
 
   const getActionButton = (complaint, isInDetail = false) => {
     // base style yang konsisten untuk alignment
-    const base =
-      "pointer inline-flex items-center justify-center gap-2 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500";
-
     const sizing = isInDetail
-      ? "w-full h-11 sm:h-12 px-4 sm:px-6 text-sm sm:text-base"
-      : "w-full h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm";
+      ? "w-full sm:h-12 px-4 sm:px-6 text-sm sm:text-base"
+      : "w-full sm:h-10 px-3 sm:px-4 text-xs sm:text-sm";
 
     return (
       <Button
         variant="success"
         icon={CheckSquare}
         size={isInDetail ? "lg" : "sm"} // tetap pakai prop size untuk konsistensi komponen
-        className={`${base} ${sizing}`}
+        className={`${sizing}`}
         onClick={(e) =>
           handleActionClick(complaint, e, { reset: true, refresh: true })
         }
       >
         {/* Mobile: teks pendek; ≥sm: teks lengkap */}
-        <span className="sm:hidden">Done</span>
-        <span className="hidden sm:inline">Mark as Done</span>
+        <span className="sm:hidden">Close</span>
+        <span className="hidden sm:inline">Close</span>
       </Button>
     );
   };
@@ -1040,6 +1037,7 @@ const ComplaintTable = ({ isActive = false }) => {
                         {selectedComplaint?.number}
                       </p>
                     </div>
+                    
                   </div>
 
                   <div className="space-y-1">
@@ -1097,12 +1095,12 @@ const ComplaintTable = ({ isActive = false }) => {
             {/* Unit Information Card */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Unit Information 123
+                Unit Information
               </h3>
               <div className="space-y-3">
                 <div>
                   <span className="text-sm font-medium text-gray-600">
-                    UIC
+                    Source
                   </span>
                   <p className="text-base text-gray-900">
                     {selectedComplaint?.createdByUnit}
@@ -1209,6 +1207,20 @@ const ComplaintTable = ({ isActive = false }) => {
     {
       key: "number",
       label: "Account #",
+      sortable: true,
+      filterable: true,
+      width: "w-24",
+    },
+    {
+      key: "cardNumber",
+      label: "Card Number",
+      sortable: true,
+      filterable: true,
+      width: "w-24",
+    },
+    {
+      key: "createdByUnit",
+      label: "Source",
       sortable: true,
       filterable: true,
       width: "w-24",
@@ -1428,6 +1440,12 @@ const ComplaintTable = ({ isActive = false }) => {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                     {complaint.number}
+                  </td>
+                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.cardNumber}
+                  </td>
+                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.createdByUnit}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 truncate">
                     {complaint.unitNow}

@@ -31,7 +31,8 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
   const [showFilterDropdown, setShowFilterDropdown] = useState(null);
 
   // list + pagination dari hook (PASTIKAN hook mengembalikan `pagination`)
-  const { list, loading, error, pagination, fetchTickets, updateTicket } = useTicket();
+  const { list, loading, error, pagination, fetchTickets, updateTicket } =
+    useTicket();
 
   // detail
   const { selectedId, fetchTicketDetail } = useTicketDetail();
@@ -232,12 +233,9 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
   const backFromAttachments = () =>
     setViewMode(selectedId ? "detail" : "table");
 
-
-
   // ===== UI helpers =====
   const startIndex = (pagination?.offset ?? (currentPage - 1) * LIMIT) + 1;
   const endIndex = Math.min(startIndex + (list?.length || 0) - 1, total);
-
 
   const pageNumbers = useMemo(() => {
     const pages = totalPages;
@@ -309,7 +307,10 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
             Attachments
           </Button>
         </div>
-        <DetailComplaint ticketId={selectedId} onSuccess={onDetailSubmitSuccess} />
+        <DetailComplaint
+          ticketId={selectedId}
+          onSuccess={onDetailSubmitSuccess}
+        />
       </div>
     );
   }
@@ -342,17 +343,20 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
 
   // TABLE
   const columns = [
-    { key: "tglInput", label: "Tgl Input", sortable: true, filterable: true },
-    { key: "noTiket", label: "No. Tiket", sortable: true, filterable: true }, // ← ticket_id
-    { key: "channel", label: "Channel", sortable: true, filterable: true },
-    { key: "category", label: "Category", sortable: true, filterable: true },
+    { key: "tglInput", label: "Date", sortable: true, filterable: true },
+    { key: "noTiket", label: "Ticket #", sortable: true, filterable: true }, // ← ticket_id
+    { key: "status", label: "Status", sortable: true, filterable: true },
     {
       key: "customerName",
-      label: "Customer Name",
+      label: "Customer",
       sortable: true,
       filterable: true,
     },
-    { key: "number", label: "Number", sortable: true, filterable: true },
+    { key: "channel", label: "Channel", sortable: true, filterable: true },
+    { key: "category", label: "Category", sortable: true, filterable: true },
+    { key: "sla", label: "SLA", sortable: true, filterable: true },
+
+    { key: "number", label: "Account #", sortable: true, filterable: true },
     {
       key: "cardNumber",
       label: "Card Number",
@@ -361,13 +365,11 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
     },
     {
       key: "createdByUnit",
-      label: "UIC",
+      label: "Source",
       sortable: true,
       filterable: true,
     },
-    { key: "unitNow", label: "Unit Now", sortable: true, filterable: true },
-    { key: "status", label: "Status", sortable: true, filterable: true },
-    { key: "sla", label: "SLA", sortable: true, filterable: true },
+    { key: "unitNow", label: "Current Unit", sortable: true, filterable: true },
   ];
 
   const DateFilterDropdown = ({ currentDateFilter }) => {
@@ -565,7 +567,9 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
               variant="primary"
               size="sm"
               onClick={applyDateFilter}
-              disabled={filterType === "range" ? !startDate || !endDate : !specificDate}
+              disabled={
+                filterType === "range" ? !startDate || !endDate : !specificDate
+              }
               className="flex-1"
             >
               Apply Filter
@@ -661,11 +665,7 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
     <div className="max-w-full mx-auto p-6 bg-white">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Button
-            variant="primary"
-            icon={Plus}
-            onClick={handleAddClick}
-          >
+          <Button variant="primary" icon={Plus} onClick={handleAddClick}>
             Add
           </Button>
         </div>
@@ -733,8 +733,9 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
                               showFilterDropdown === col.key ? null : col.key
                             )
                           }
-                          className={`hover:text-blue-600 ${filters[col.key] ? "text-blue-600" : "text-gray-400"
-                            }`}
+                          className={`hover:text-blue-600 ${
+                            filters[col.key] ? "text-blue-600" : "text-gray-400"
+                          }`}
                         >
                           <Filter size={14} />
                         </button>
@@ -784,6 +785,12 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 font-medium">
                     {c.noTiket}
                   </td>
+                                    <td className="border border-gray-300 px-4 py-3 text-sm">
+                    <StatusBadge status={c.status} />
+                  </td>
+                                    <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {c.customerName}
+                  </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                     {c.channel}
                   </td>
@@ -791,7 +798,7 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
                     {c.category}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                    {c.customerName}
+                    {c.sla}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                     {c.number}
@@ -805,12 +812,8 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                     {c.unitNow}
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-sm">
-                    <StatusBadge status={c.status} />
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                    {c.sla}
-                  </td>
+
+
                 </tr>
               ))
             ) : (
