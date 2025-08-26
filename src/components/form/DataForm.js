@@ -229,7 +229,7 @@ export default function InputForm({ detail, onChange }) {
 
   return (
     <div className="w-full bg-orange-100 p-4 sm:p-5 lg:p-6 mb-6 relative rounded-lg border border-gray-300">
-      <div className="-m-4 sm:-m-5 lg:-m-6 mb-6 bg-orange-500 text-white text-center py-2 px-4 rounded-t-lg">
+      <div className="-m-4 sm:-m-5 sm:mb-6  bg-orange-500 text-white text-center py-2 px-4 rounded-t-lg">
         <h2 className="text-base sm:text-lg font-semibold">Data</h2>
       </div>
 

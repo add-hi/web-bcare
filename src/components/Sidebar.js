@@ -247,7 +247,7 @@ export default function Sidebar({ onNavigate }) {
       {/* ========== MOBILE: Icon Rail + Hamburger (lg:hidden) ========== */}
       <div className="lg:hidden w-16 bg-slate-700 text-white min-h-screen flex flex-col items-center">
         {/* Header (avatar + hamburger) */}
-        <div className="w-full flex items-center justify-between px-3 py-3 bg-slate-800 border-b border-slate-600">
+        <div className="w-full flex items-center justify-between px-3 py-3 bg-slate-800 border-b border-slate-600 sm:h-[62px] md:h-[74px]">
           <button
             onClick={() => setMobileOpen(true)}
             aria-label="Open menu"

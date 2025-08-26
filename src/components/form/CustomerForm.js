@@ -50,11 +50,11 @@ const CustomerForm = ({ detail }) => {
 
   return (
     <div className="w-full bg-green-100 p-4 sm:p-5 lg:p-6 mb-6 relative rounded-lg border border-gray-300">
-      <div className="-m-4 sm:-m-5 lg:-m-6 mb-6 bg-green-300 text-white text-center py-2 px-4 rounded-t-lg">
+      <div className="-m-4 sm:-m-5 sm:mb-6 bg-green-500 text-white text-center py-2 px-4 rounded-t-lg">
         <h2 className="text-base sm:text-lg font-semibold">Customer Info</h2>
       </div>
 
-      <div className="bg-white border border-gray-200 p-4 sm:p-6 lg:p-6 rounded-lg">
+      <div className="bg-white border border-gray-200 p-4 sm:p-6 lg:p-6 rounded-lg mt-4">
         {/* Grid responsif: 1 col (mobile), 2 col (tablet), 3 col (desktop) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 sm:gap-x-6 gap-y-4 sm:gap-y-5">
           {formData.map((field, idx) => {
