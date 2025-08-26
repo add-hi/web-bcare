@@ -1,51 +1,115 @@
+// src/components/form/ActionForm.js
 "use client";
+
 import React, { useEffect, useState } from "react";
+import SearchableSelect from "../SearchableSelect";
+import toast from "react-hot-toast";
+import Button from "@/components/ui/Button";
 
-const ActionForm = ({ detail, onChange }) => {
-  const toInitial = (d) => ({
-    action: "",            // Decline | Eskalasi | Closed (opsional)
-    formUnit: "",
-    unitTo: "",
-    closedTime: d?.timestamps?.closedTime || "",
-    solution: "",
-    reason: "",
-    // readonly info
-    customerStatus: d?.statuses?.customer?.name || "",
-    employeeStatus: d?.statuses?.employee?.name || "",
-    slaDays: d?.policy?.slaDays ?? "",
-    slaHours: d?.policy?.slaHours ?? "",
-    slaStatus: d?.sla?.status ?? "",
-    slaRemaining: d?.sla?.remainingHours ?? "",
-  });
+const unitOptions = [
+  "BCC - Customer Care",
+  "DGO USER 1 (UIC1)",
+  "BCC - Customer Care / DGO USER 1 (UIC1)",
+  "DGO USER 1 (UIC3)",
+  "DGO USER 1 (UIC6)",
+  "DGO USER 1 (UIC7)",
+  "BCC - Customer Care / DGO USER 1 (UIC8)",
+  "DGO USER 1 (UIC10)",
+  "DGO USER 1 (UIC11)",
+  "Divisi OPR",
+  "Divisi TBS",
+];
 
+function toDateInputValue(raw) {
+  if (!raw) return "";
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+}
+
+const toInitial = (d) => ({
+  action: "",
+  formUnit: "CXC",
+  unitTo: d?.policy?.uicName || "",
+  closedTime: toDateInputValue(d?.timestamps?.closedTime),
+  solution: d?.ticket?.solution || "",
+  reason: d?.ticket?.reason || "",
+  customerStatus: d?.statuses?.customer?.name || "",
+  employeeStatus: d?.statuses?.employee?.name || "",
+  slaDays: d?.policy?.slaDays ?? "",
+  slaHours: d?.policy?.slaHours ?? "",
+  slaStatus: d?.sla?.status ?? "",
+  slaRemaining: d?.sla?.remainingHours ?? "",
+});
+
+/**
+ * Props:
+ * - detail
+ * - onChange(payloadDariActionForm)
+ * - onSubmit()               // dipanggil TANPA argumen (parent yang handle)
+ * - submitting: boolean      // loading state tombol
+ * - submitOk: boolean        // true jika update sukses
+ * - submitError: string|null // pesan error jika gagal
+ */
+export default function ActionForm({
+  detail,
+  onChange,
+  onSubmit,
+  submitting,
+  submitOk,
+  submitError,
+}) {
   const [form, setForm] = useState(toInitial(detail));
-  useEffect(() => { const n = toInitial(detail); setForm(n); onChange?.(n); }, [detail]);
-  const update = (k, v) => setForm((p) => { const n = { ...p, [k]: v }; onChange?.(n); return n; });
 
-  const input = "w-full px-3 py-2 border border-gray-300 rounded outline-none text-black text-sm";
+  useEffect(() => {
+    const next = toInitial(detail);
+    setForm(next);
+    onChange?.(next);
+  }, [detail, onChange]);
+
+  // toast global
+  useEffect(() => {
+    if (submitOk) toast.success("Ticket berhasil diupdate!");
+    if (submitError) toast.error(`${submitError}`);
+  }, [submitOk, submitError]);
+
+  const update = (k, v) =>
+    setForm((p) => {
+      const n = { ...p, [k]: v };
+      onChange?.(n);
+      return n;
+    });
+
+  const handleSubmit = () => onSubmit?.();
+
+  const inputBase =
+    "w-full px-3 py-2 border border-gray-300 rounded text-sm text-black outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent";
+
+  // helper visibilitas field
+  const isDecline = form.action === "Decline";
+  const isClosed = form.action === "Closed";
+  const isEscalate = form.action === "Eskalasi";
+
+  // tombol disabled jika belum pilih action / sedang submit
+  const disableSubmit = submitting || !form.action;
 
   return (
-    <div className="w-full bg-green-100 rounded-lg shadow-lg p-6 mb-6 border border-gray-200">
-      <div className="bg-green-600 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
+    <div className="w-full rounded-lg border border-gray-200 bg-green-100 p-6 shadow-lg">
+      <div className="-m-6 mb-6 rounded-t-lg bg-green-600 px-4 py-2 text-center text-white">
         <h2 className="text-lg font-semibold">Action</h2>
       </div>
 
-      <div className="w-full bg-white rounded-lg shadow-lg p-4 border border-gray-200 space-y-3">
-        {/* Info readonly */}
-        <div className="grid grid-cols-4 gap-3">
-          <div><label className="text-sm font-medium">Customer Status</label><input className={input} value={form.customerStatus} readOnly /></div>
-          <div><label className="text-sm font-medium">Employee Status</label><input className={input} value={form.employeeStatus} readOnly /></div>
-          <div><label className="text-sm font-medium">Priority</label><input className={input} value={form.priority} readOnly /></div>
-          <div><label className="text-sm font-medium">SLA</label><input className={input} value={`${form.slaDays}d / ${form.slaHours}h`} readOnly /></div>
-          <div><label className="text-sm font-medium">SLA Status</label><input className={input} value={form.slaStatus} readOnly /></div>
-          <div><label className="text-sm font-medium">Remaining (h)</label><input className={input} value={form.slaRemaining} readOnly /></div>
-        </div>
-
-        {/* Action controls */}
-        <div className="grid grid-cols-4 gap-3">
-          <div>
-            <label className="text-sm font-medium">Action</label>
-            <select className={input} value={form.action} onChange={(e) => update("action", e.target.value)}>
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
+        <div className={`grid grid-cols-1 gap-3 ${isClosed ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+          {/* Action */}
+          <div className="flex min-w-0 items-center gap-3">
+            <label className="whitespace-nowrap text-sm font-medium text-black">
+              Action
+            </label>
+            <select
+              className="w-full rounded bg-white px-3 py-2 text-sm text-black outline-none border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              value={form.action}
+              onChange={(e) => update("action", e.target.value)}
+            >
               <option value="">-- Pilih Action --</option>
               <option value="Decline">Decline</option>
               <option value="Eskalasi">Eskalasi</option>
@@ -53,40 +117,85 @@ const ActionForm = ({ detail, onChange }) => {
             </select>
           </div>
 
-          <div>
-            <label className="text-sm font-medium">Form Unit</label>
-            <input className={input} value={form.formUnit} onChange={(e) => update("formUnit", e.target.value)} />
+          {/* Form Unit (default CXC, read-only) */}
+          <div className="flex min-w-0 items-center gap-2">
+            <label className="whitespace-nowrap text-sm font-medium text-black">
+              Form Unit
+            </label>
+            <input type="text" className={`${inputBase} bg-gray-50`} value={form.formUnit} readOnly />
           </div>
 
-          <div>
-            <label className="text-sm font-medium">Unit To</label>
-            <select className={input} value={form.unitTo} onChange={(e) => update("unitTo", e.target.value)}>
-              <option value="">-- Pilih Unit --</option>
-            </select>
+          {/* Unit to */}
+          <div className="flex min-w-0 items-center gap-2">
+            <label className="whitespace-nowrap text-sm font-medium text-black">
+              Unit to <span className="text-red-500">*</span>
+            </label>
+            <div className="w-full">
+              <SearchableSelect
+                options={unitOptions}
+                value={form.unitTo}
+                onChange={(v) => update("unitTo", v)}
+                placeholder="-- Pilih Unit --"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="text-sm font-medium">Closed Time</label>
-            <input type="date" className={input} value={form.closedTime || ""} onChange={(e) => update("closedTime", e.target.value)} />
-          </div>
-
-          {form.action === "Closed" && (
-            <div className="col-span-2">
-              <label className="text-sm font-medium">Solution</label>
-              <input className={input} value={form.solution} onChange={(e) => update("solution", e.target.value)} />
+          {/* Closed Time — hanya tampil saat Closed */}
+          {isClosed && (
+            <div className="flex min-w-0 items-center gap-2 w-full">
+              <label className="whitespace-nowrap text-sm font-medium text-black">
+                Closed Time
+              </label>
+              <input
+                type="date"
+                className={inputBase}
+                value={form.closedTime}
+                onChange={(e) => update("closedTime", e.target.value)}
+              />
             </div>
           )}
 
-          {form.action === "Decline" && (
-            <div className="col-span-2">
-              <label className="text-sm font-medium">Reason</label>
-              <input className={input} value={form.reason} onChange={(e) => update("reason", e.target.value)} />
+          {/* Reason — khusus Decline */}
+          {isDecline && (
+            <div className="md:col-span-4 flex items-center gap-2 min-w-0">
+              <label className="whitespace-nowrap text-sm font-medium text-black">Reason</label>
+              <input
+                type="text"
+                className={inputBase}
+                value={form.reason}
+                onChange={(e) => update("reason", e.target.value)}
+                placeholder="Isi Reason"
+              />
             </div>
           )}
+
+          {/* Solution — khusus Closed */}
+          {isClosed && (
+            <div className="md:col-span-4 flex items-center gap-2 min-w-0">
+              <label className="whitespace-nowrap text-sm font-medium text-black">Solution</label>
+              <input
+                type="text"
+                className={inputBase}
+                value={form.solution}
+                onChange={(e) => update("solution", e.target.value)}
+                placeholder="Isi Solution"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Submit area */}
+        <div className="mt-4 flex flex-col items-end gap-2 border-t border-gray-200 pt-4">
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={disableSubmit}
+            loading={submitting}
+          >
+            {submitting ? "Menyimpan..." : "Submit Update"}
+          </Button>
         </div>
       </div>
     </div>
   );
-};
-
-export default ActionForm;
+}

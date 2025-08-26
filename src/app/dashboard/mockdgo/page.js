@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -21,11 +21,22 @@ import {
   CheckSquare,
   RefreshCw,
   Building2,
+  Paperclip,
 } from "lucide-react";
+import Attachment from "@/components/Attachment";
+import useTicket from "@/hooks/useTicket";
+import useTicketDetail from "@/hooks/useTicketDetail";
+import { useAuthStore } from "@/store/userStore";
+import useTicketStore from "@/store/ticketStore";
+import { useRef } from "react";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import useUser from "@/hooks/useUser";
+import Button from "@/components/ui/Button";
 
 const DivisionComplaintHandler = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
-  const [viewMode, setViewMode] = useState("table"); // 'table' or 'detail'
+  const [viewMode, setViewMode] = useState("table"); // 'table', 'detail', or 'attachments'
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [filters, setFilters] = useState({});
   const [showFilterDropdown, setShowFilterDropdown] = useState(null);
@@ -37,212 +48,88 @@ const DivisionComplaintHandler = () => {
   const [actionNote, setActionNote] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [newNote, setNewNote] = useState("");
+  const didFetchRef = useRef(false);
+  const router = useRouter();
 
-  // Sample data for division view with updated structure including communication history
-  const originalComplaints = [
-    {
-      id: 1,
-      tglInput: "10/08/2025",
-      noTiket: "123456778",
-      channel: "ATM",
-      category: "Tarik Tunai di Mesin ATM",
-      customerName: "John Doe",
-      number: "9027485",
-      cardNumber: "123456787642",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Inprogress",
-      sla: "7",
-      timeRemaining: "2 days",
-      lastUpdate: "10/08/2025 14:30",
-      assignedTo: "Current User",
-      customerContact: "+62-812-3456-7890",
-      issueDescription: "ATM tidak mengeluarkan uang tetapi saldo terpotong",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "10/08/2025 09:15",
-          division: "Divisi CXC",
-          author: "System",
-          message:
-            "Complaint received via ATM channel. Initial assessment required.",
-          type: "system",
-        },
-        {
-          id: 2,
-          timestamp: "10/08/2025 10:30",
-          division: "Divisi CXC",
-          author: "Ahmad Rahman",
-          message:
-            "Needs verification from finance department. Customer reported transaction failed but amount was deducted. Checking ATM logs.",
-          type: "note",
-        },
-        {
-          id: 3,
-          timestamp: "10/08/2025 14:30",
-          division: "Finance Division",
-          author: "Siti Nurhaliza",
-          message:
-            "Transaction logs reviewed. Amount deduction confirmed at 08:45. ATM maintenance team notified for physical inspection.",
-          type: "note",
-        },
-      ],
-    },
-    {
-      id: 2,
-      tglInput: "09/08/2025",
-      noTiket: "123456779",
-      channel: "Mobile Banking",
-      category: "Transfer Gagal",
-      customerName: "Jane Smith",
-      number: "9027486",
-      cardNumber: "123456787643",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Completed",
-      sla: "5",
-      timeRemaining: "1 day",
-      lastUpdate: "11/08/2025 09:15",
-      assignedTo: "Current User",
-      customerContact: "+62-813-9876-5432",
-      issueDescription: "Transfer ke rekening lain gagal namun saldo terpotong",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "09/08/2025 08:20",
-          division: "Divisi CXC",
-          author: "System",
-          message: "Complaint received via Mobile Banking channel.",
-          type: "system",
-        },
-        {
-          id: 2,
-          timestamp: "09/08/2025 11:45",
-          division: "IT Division",
-          author: "Budi Santoso",
-          message:
-            "Follow-up with IT division required. Transaction logs show incomplete process. Investigating database inconsistency.",
-          type: "note",
-        },
-        {
-          id: 3,
-          timestamp: "11/08/2025 09:15",
-          division: "Divisi CXC",
-          author: "Current User",
-          message:
-            "Issue resolved. Amount has been refunded to customer account. Customer notified via SMS.",
-          type: "resolution",
-        },
-      ],
-    },
-    {
-      id: 3,
-      tglInput: "08/08/2025",
-      noTiket: "123456780",
-      channel: "Internet Banking",
-      category: "Login Bermasalah",
-      customerName: "Bob Johnson",
-      number: "9027487",
-      cardNumber: "123456787644",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Inprogress",
-      sla: "3",
-      timeRemaining: "Overdue by 2 days",
-      lastUpdate: "08/08/2025 16:45",
-      assignedTo: "Current User",
-      customerContact: "+62-814-1111-2222",
-      issueDescription:
-        "Tidak bisa login ke internet banking sejak 3 hari lalu",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "08/08/2025 14:20",
-          division: "Divisi CXC",
-          author: "System",
-          message: "Complaint received via Internet Banking channel.",
-          type: "system",
-        },
-        {
-          id: 2,
-          timestamp: "08/08/2025 16:45",
-          division: "Security Division",
-          author: "Indira Sari",
-          message:
-            "Escalated to security team. Password reset attempted but issue persists. Account may be temporarily locked due to security protocols.",
-          type: "escalation",
-        },
-      ],
-    },
-    {
-      id: 4,
-      tglInput: "11/08/2025",
-      noTiket: "123456781",
-      channel: "ATM",
-      category: "Kartu Tertelan",
-      customerName: "Alice Brown",
-      number: "9027488",
-      cardNumber: "123456787645",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Inprogress",
-      sla: "7",
-      timeRemaining: "5 days",
-      lastUpdate: "11/08/2025 11:20",
-      assignedTo: "Current User",
-      customerContact: "+62-815-5555-6666",
-      issueDescription: "Kartu ATM tertelan di mesin ATM Cabang Sudirman",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "11/08/2025 09:30",
-          division: "Divisi CXC",
-          author: "System",
-          message: "Complaint received via ATM channel.",
-          type: "system",
-        },
-        {
-          id: 2,
-          timestamp: "11/08/2025 11:20",
-          division: "ATM Operations",
-          author: "Rudi Hartono",
-          message:
-            "Card retrieval requested from ATM maintenance team. Customer notified of process. Expected retrieval within 24 hours.",
-          type: "note",
-        },
-      ],
-    },
-    {
-      id: 5,
-      tglInput: "12/08/2025",
-      noTiket: "123456782",
-      channel: "Call Center",
-      category: "Informasi Saldo",
-      customerName: "Charlie Wilson",
-      number: "9027489",
-      cardNumber: "123456787646",
-      createdByUnit: "98765 Divisi CXC",
-      unitNow: "BCC Unit Divisi CXC",
-      status: "Inprogress",
-      sla: "1",
-      timeRemaining: "Same day",
-      lastUpdate: "12/08/2025 08:30",
-      assignedTo: "Current User",
-      customerContact: "+62-816-7777-8888",
-      issueDescription: "Meminta informasi saldo dan mutasi rekening",
-      divisionNotes: [
-        {
-          id: 1,
-          timestamp: "12/08/2025 08:30",
-          division: "Call Center",
-          author: "Maya Putri",
-          message:
-            "Information provided via secure channel. Customer satisfied with response. Waiting for final confirmation.",
-          type: "note",
-        },
-      ],
-    },
-  ];
+  // Use the same ticket hook as ComplaintList
+  const { list, loading, error, fetchTickets, updateTicket } = useTicket();
+  const { selectedId, detail, fetchTicketDetail } = useTicketDetail();
+  const [doingAction, setDoingAction] = useState(false);
+  const { user } = useUser();
+  const ticketStore = useTicketStore();
+
+  useEffect(() => {
+
+    // kalau role = CXC → arahkan ke /dashboard/home
+    const role = String(
+      user?.division_code || user?.division?.division_code || ""
+    ).toUpperCase();
+
+    if (role === "CXC") {
+      router.replace("/dashboard/home");
+    }
+  }, [user, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (didFetchRef.current) return;
+    didFetchRef.current = true;
+
+    fetchTickets({ limit: 500, offset: 0, force: true, employee_id: user?.id });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.npp]); // depend pada identitas user saja (mis. npp)
+
+  // Helper function to format date
+  const fmtDate = (iso) => {
+    if (!iso) return "-";
+    const d = new Date(iso);
+    if (isNaN(d)) return "-";
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  // Map API data to table format (API already filters by user/division)
+  const originalComplaints = useMemo(() => {
+    if (!Array.isArray(list)) return [];
+
+    // API already returns tickets for current user's division
+    const assignedTickets = list;
+
+    return assignedTickets.map((t) => {
+      const id = t?.ticket_id ?? null;
+      return {
+        id,
+        tglInput: fmtDate(t?.created_time),
+        noTiket: t?.ticket_number ?? "-",
+        channel:
+          t?.issue_channel?.channel_code ||
+          t?.issue_channel?.channel_name ||
+          "-",
+        category:
+          t?.complaint?.complaint_name || t?.complaint?.complaint_code || "-",
+        customerName: t?.customer?.full_name || "-",
+        number: t?.related_account?.account_number
+          ? String(t.related_account.account_number)
+          : "-",
+        cardNumber: t?.related_card?.card_number
+          ? String(t.related_card.card_number)
+          : "-",
+        createdByUnit: t?.intake_source?.source_name || "-",
+        unitNow: t?.employee_status?.employee_status_name || "-",
+        status: t?.employee_status?.employee_status_name || "-",
+        sla: t?.policy?.sla_days != null ? String(t.policy.sla_days) : "-",
+        timeRemaining: t?.sla_info?.is_overdue ? "Overdue" : `${t?.sla_info?.remaining_hours || 0}h remaining`,
+        lastUpdate: fmtDate(t?.created_time),
+        assignedTo: "Current Division",
+        customerContact: t?.customer?.email || "-",
+        issueDescription: t?.complaint?.complaint_name || "-",
+        divisionNotes: [],
+        fullTicketData: t,
+      };
+    });
+  }, [list]);
 
   // Get unique values for filter options
   const getUniqueValues = (key) => {
@@ -251,6 +138,8 @@ const DivisionComplaintHandler = () => {
 
   // Apply filters and sorting
   const processedComplaints = useMemo(() => {
+    if (!user) return [];
+
     let filtered = originalComplaints;
 
     // Apply filters
@@ -293,7 +182,7 @@ const DivisionComplaintHandler = () => {
     }
 
     return filtered;
-  }, [filters, sortConfig]);
+  }, [filters, sortConfig, originalComplaints, user]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => ({
@@ -322,9 +211,14 @@ const DivisionComplaintHandler = () => {
     setSortConfig({ key: null, direction: "asc" });
   };
 
-  const handleRowClick = (complaint) => {
-    setSelectedComplaint(complaint);
-    setViewMode("detail");
+  const handleRowClick = async (complaint) => {
+    try {
+      await fetchTicketDetail(complaint.id, { force: false });
+      setSelectedComplaint(complaint);
+      setViewMode("detail");
+    } catch {
+      // Error handling - could show toast notification
+    }
   };
 
   const handleBackToTable = () => {
@@ -332,11 +226,38 @@ const DivisionComplaintHandler = () => {
     setSelectedComplaint(null);
   };
 
-  const handleActionClick = (complaint, event) => {
-    event.stopPropagation();
-    setActionModal({ show: true, type: "mark_done", complaint });
-    setActionNote("");
+  const openAttachments = () => setViewMode("attachments");
+  const backFromAttachments = () => setViewMode(selectedComplaint ? "detail" : "table");
+
+  // ganti fungsi lama
+  const handleActionClick = async (complaint, event, opts = { reset: true, refresh: true }) => {
+    event?.stopPropagation();
+    if (doingAction) return;
+
+    console.log(complaint.id);
+    console.log(event);
+    console.log(opts);
+
+    try {
+      setDoingAction(true);
+
+      await updateTicket(complaint.id, { action: "DONE_BY_UIC" });
+
+      // 👉 refresh list sesuai opsi
+      if (opts.reset) ticketStore.reset();
+      if (opts.refresh) {
+        await fetchTickets({ limit: 500, offset: 0, force: true });
+      }
+
+      toast.success("Ticket ditandai selesai oleh UIC");
+    } catch (err) {
+      toast.error(err?.message ?? "Gagal menandai tiket");
+      console.error(err);
+    } finally {
+      setDoingAction(false);
+    }
   };
+
 
   const handleActionSubmit = async () => {
     setIsProcessing(true);
@@ -424,45 +345,49 @@ const DivisionComplaintHandler = () => {
   };
 
   const getActionButton = (complaint, isInDetail = false) => {
-    const buttonClass = isInDetail
-      ? "px-6 py-3 text-sm font-semibold rounded-lg transition-colors"
-      : "px-2 py-1 text-xs rounded transition-colors";
-
     return (
-      <button
-        onClick={(e) => handleActionClick(complaint, e)}
-        className={`${buttonClass} bg-green-600 text-white hover:bg-green-700`}
+      <Button
+        variant="success"
+        size={isInDetail ? "lg" : "sm"}
+        icon={CheckSquare}
+        onClick={(e) => handleActionClick(complaint, e, { reset: true, refresh: true })}
       >
-        <CheckSquare
-          className={isInDetail ? "inline mr-2" : "hidden"}
-          size={16}
-        />
         Mark as Done
-      </button>
+      </Button>
     );
   };
 
-  const getNoteTypeStyle = (type) => {
+  const getNoteStyle = (type, division) => {
     const typeConfig = {
-      system: {
-        color: "border-gray-400",
-        bgColor: "bg-gray-50",
-        icon: MessageSquare,
-      },
-      note: { color: "border-blue-400", bgColor: "bg-blue-50", icon: FileText },
-      escalation: {
-        color: "border-orange-400",
-        bgColor: "bg-orange-50",
-        icon: AlertTriangle,
-      },
-      resolution: {
-        color: "border-green-400",
-        bgColor: "bg-green-50",
-        icon: CheckCircle,
-      },
+      system: { icon: MessageSquare },
+      note: { icon: FileText },
+      escalation: { icon: AlertTriangle },
+      resolution: { icon: CheckCircle },
+      status_change: { icon: Clock },
+      activity: { icon: MessageSquare },
     };
 
-    return typeConfig[type] || typeConfig.note;
+    const divisionConfig = {
+      "Open": { color: "border-blue-400", bgColor: "bg-blue-50" },
+      "Handled by CxC": { color: "border-yellow-400", bgColor: "bg-yellow-50" },
+      "Escalated": { color: "border-orange-400", bgColor: "bg-orange-50" },
+      "Done by UIC": { color: "border-purple-400", bgColor: "bg-purple-50" },
+      "Closed": { color: "border-green-400", bgColor: "bg-green-50" },
+      "CXC": { color: "border-blue-400", bgColor: "bg-blue-50" },
+      "OPR": { color: "border-green-400", bgColor: "bg-green-50" },
+      "IT": { color: "border-purple-400", bgColor: "bg-purple-50" },
+      "Finance": { color: "border-yellow-400", bgColor: "bg-yellow-50" },
+      "Security": { color: "border-red-400", bgColor: "bg-red-50" },
+      "ATM Operations": { color: "border-orange-400", bgColor: "bg-orange-50" },
+      "Call Center": { color: "border-pink-400", bgColor: "bg-pink-50" },
+      "Customer": { color: "border-gray-400", bgColor: "bg-gray-50" },
+      "Employee": { color: "border-indigo-400", bgColor: "bg-indigo-50" },
+    };
+
+    const typeStyle = typeConfig[type] || typeConfig.note;
+    const divisionStyle = divisionConfig[division] || { color: "border-gray-400", bgColor: "bg-gray-50" };
+
+    return { ...typeStyle, ...divisionStyle };
   };
 
   // Action Modal Component
@@ -500,32 +425,26 @@ const DivisionComplaintHandler = () => {
           </div>
 
           <div className="flex gap-3">
-            <button
+            <Button
+              variant="outline"
               onClick={() =>
                 setActionModal({ show: false, type: null, complaint: null })
               }
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               disabled={isProcessing}
+              className="flex-1"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="success"
+              icon={isProcessing ? RefreshCw : Send}
               onClick={handleActionSubmit}
               disabled={isProcessing}
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              loading={isProcessing}
+              className="flex-1"
             >
-              {isProcessing ? (
-                <>
-                  <RefreshCw size={16} className="animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Send size={16} />
-                  Confirm
-                </>
-              )}
-            </button>
+              {isProcessing ? "Processing..." : "Confirm"}
+            </Button>
           </div>
         </div>
       </div>
@@ -586,40 +505,75 @@ const DivisionComplaintHandler = () => {
             ))}
           </div>
           <div className="mt-3 pt-2 border-t border-gray-200 flex gap-2">
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={applyFilter}
-              className="flex-1 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+              className="flex-1"
             >
               Apply
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowFilterDropdown(null)}
-              className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50"
+              className="flex-1"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       </div>
     );
   };
 
+  if (viewMode === "attachments") {
+    return (
+      <div className="max-w-full mx-auto p-6 bg-white">
+        <div className="mb-4">
+          <Button
+            variant="grey"
+            icon={ArrowLeft}
+            onClick={backFromAttachments}
+            className="px-5 py-2.5"
+          >
+            Back to {selectedComplaint ? "Detail" : "List"}
+          </Button>
+        </div>
+        <Attachment
+          ticketId={selectedComplaint?.id}
+          ticketNumber={selectedComplaint?.noTiket}
+          ticket={selectedComplaint?.fullTicketData}
+        />
+      </div>
+    );
+  }
+
   if (viewMode === "detail") {
     return (
       <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <button
+          <Button
+            variant="grey"
+            icon={ArrowLeft}
             onClick={handleBackToTable}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            className="px-3 sm:px-5 py-2.5"
           >
-            <ArrowLeft size={16} />
-            Back to List
-          </button>
+            <span className="hidden sm:inline">Back to List</span>
+          </Button>
           <h2 className="text-2xl font-bold text-gray-900">
             Handle Complaint - {selectedComplaint?.noTiket}
           </h2>
-          <div className="ml-auto">
+          <Button
+            variant="grey"
+            icon={Paperclip}
+            onClick={openAttachments}
+            className="ml-auto px-5 py-2.5"
+          >
+            Attachments
+          </Button>
+          <div>
             {selectedComplaint?.priority &&
               getPriorityBadge(selectedComplaint?.priority)}
           </div>
@@ -653,11 +607,10 @@ const DivisionComplaintHandler = () => {
                   <div className="space-y-1">
                     <span className="text-gray-600">Time Remaining</span>
                     <p
-                      className={`font-medium ${
-                        selectedComplaint?.timeRemaining.includes("Overdue")
-                          ? "text-red-600"
-                          : "text-gray-900"
-                      }`}
+                      className={`font-medium ${selectedComplaint?.timeRemaining.includes("Overdue")
+                        ? "text-red-600"
+                        : "text-gray-900"
+                        }`}
                     >
                       {selectedComplaint?.timeRemaining}
                     </p>
@@ -760,13 +713,15 @@ const DivisionComplaintHandler = () => {
                   Available Actions
                 </h3>
                 <div className="w-full">
-                  <button
+                  <Button
+                    variant="success"
+                    icon={CheckSquare}
                     onClick={(e) => handleActionClick(selectedComplaint, e)}
-                    className="w-full px-6 py-3 text-sm font-semibold rounded-lg transition-colors bg-green-600 text-white hover:bg-green-700 flex items-center justify-center gap-2"
+                    className="w-full"
+                    size="lg"
                   >
-                    <CheckSquare size={16} />
                     Mark as Done
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -779,43 +734,81 @@ const DivisionComplaintHandler = () => {
                     Division Communication
                   </h3>
                   <span className="text-sm text-gray-500">
-                    {selectedComplaint?.divisionNotes?.length || 0} messages
+                    {(() => {
+                      const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
+                      const statusHistoryNotes = ticketDetail?.notes?.division || [];
+                      const rawDivisionNotes = ticketDetail?.__raw?.division_notes || [];
+                      return statusHistoryNotes.length + rawDivisionNotes.length;
+                    })()} messages
                   </span>
                 </div>
 
                 <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {selectedComplaint?.divisionNotes?.map((note) => {
-                    const typeStyle = getNoteTypeStyle(note.type);
-                    const IconComponent = typeStyle.icon;
+                  {(() => {
+                    const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
+                    const statusHistoryNotes = ticketDetail?.notes?.division || [];
+                    const rawDivisionNotes = ticketDetail?.__raw?.division_notes || [];
 
-                    return (
-                      <div
-                        key={note.id}
-                        className={`border-l-4 ${typeStyle.color} pl-4 ${typeStyle.bgColor} rounded-r-lg p-3`}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <IconComponent size={14} className="text-gray-600" />
-                          <span className="text-xs text-gray-600 font-medium">
-                            {note.timestamp}
-                          </span>
-                          <span className="text-xs text-gray-500">•</span>
-                          <div className="flex items-center gap-1">
-                            <Building2 size={12} className="text-gray-500" />
+                    // Combine both sources and sort by timestamp
+                    const allNotes = [...statusHistoryNotes, ...rawDivisionNotes]
+                      .sort((a, b) => {
+                        const dateA = new Date(a.timestamp);
+                        const dateB = new Date(b.timestamp);
+                        return dateA - dateB;
+                      });
+
+                    if (allNotes.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-gray-500">
+                          <MessageSquare size={48} className="mx-auto mb-2 text-gray-300" />
+                          <p>No division notes available</p>
+                        </div>
+                      );
+                    }
+
+                    return allNotes.map((note, index) => {
+                      const noteStyle = getNoteStyle(note.type || 'note', note.division);
+                      const IconComponent = noteStyle.icon;
+
+                      // Handle different timestamp formats
+                      const displayTimestamp = note.timestamp?.includes('/')
+                        ? note.timestamp
+                        : fmtDate(note.timestamp);
+
+                      return (
+                        <div
+                          key={note.id || `${note.division}-${index}`}
+                          className={`border-l-4 ${noteStyle.color} pl-4 ${noteStyle.bgColor} rounded-r-lg p-3`}
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <IconComponent size={14} className="text-gray-600" />
                             <span className="text-xs text-gray-600 font-medium">
-                              {note.division}
+                              {displayTimestamp}
+                            </span>
+                            <span className="text-xs text-gray-500">•</span>
+                            <div className="flex items-center gap-1">
+                              <Building2 size={12} className="text-gray-500" />
+                              <span className="text-xs text-gray-600 font-medium">
+                                {note.division}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-500">•</span>
+                            <span className="text-xs text-gray-500">
+                              {note.author}
                             </span>
                           </div>
-                          <span className="text-xs text-gray-500">•</span>
-                          <span className="text-xs text-gray-500">
-                            {note.author}
-                          </span>
+                          <p className="text-sm text-gray-900 leading-relaxed">
+                            {note.msg || note.message || 'No message'}
+                          </p>
+                          {note.statusCode && (
+                            <div className="mt-2 text-xs text-gray-500">
+                              Status: {note.statusName} ({note.statusCode})
+                            </div>
+                          )}
                         </div>
-                        <p className="text-sm text-gray-900 leading-relaxed">
-                          {note.message}
-                        </p>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             </div>
@@ -833,14 +826,15 @@ const DivisionComplaintHandler = () => {
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
                   rows={4}
                 />
-                <button
+                <Button
+                  variant="primary"
+                  icon={Send}
                   onClick={handleAddNote}
                   disabled={!newNote.trim()}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full"
                 >
-                  <Send size={16} />
                   Add Note
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -887,21 +881,42 @@ const DivisionComplaintHandler = () => {
 
         {/* Filter Controls */}
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={RefreshCw}
+            onClick={() => {
+              ticketStore.reset();
+              fetchTickets({ limit: 500, offset: 0, force: true });
+            }}
+            disabled={loading}
+            loading={loading}
+          >
+            Refresh
+          </Button>
           {Object.keys(filters).length > 0 && (
-            <button
+            <Button
+              variant="danger"
+              size="sm"
+              icon={X}
               onClick={clearAllFilters}
-              className="flex items-center gap-2 px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
             >
-              <X size={14} />
               Clear All Filters
-            </button>
+            </Button>
           )}
           <div className="text-sm text-gray-600">
-            Showing {processedComplaints.length} of {originalComplaints.length}{" "}
-            entries
+            {loading
+              ? "Loading…"
+              : `Showing ${processedComplaints.length} of ${originalComplaints.length} entries`}
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-50 text-red-700 px-4 py-2">
+          {error}
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -912,11 +927,7 @@ const DivisionComplaintHandler = () => {
                 Total Assigned
               </p>
               <p className="text-2xl font-bold text-blue-700">
-                {
-                  originalComplaints.filter(
-                    (c) => c.assignedTo === "Current User"
-                  ).length
-                }
+                {loading ? "..." : originalComplaints.length}
               </p>
             </div>
             <User className="text-blue-600" size={24} />
@@ -927,10 +938,13 @@ const DivisionComplaintHandler = () => {
             <div>
               <p className="text-sm text-yellow-600 font-medium">In Progress</p>
               <p className="text-2xl font-bold text-yellow-700">
-                {
-                  originalComplaints.filter((c) => c.status === "Inprogress")
-                    .length
-                }
+                {loading
+                  ? "..."
+                  : originalComplaints.filter(
+                    (c) =>
+                      c.status.includes("Progress") ||
+                      c.status.includes("Processing")
+                  ).length}
               </p>
             </div>
             <Clock className="text-yellow-600" size={24} />
@@ -941,10 +955,13 @@ const DivisionComplaintHandler = () => {
             <div>
               <p className="text-sm text-green-600 font-medium">Completed</p>
               <p className="text-2xl font-bold text-green-700">
-                {
-                  originalComplaints.filter((c) => c.status === "Completed")
-                    .length
-                }
+                {loading
+                  ? "..."
+                  : originalComplaints.filter(
+                    (c) =>
+                      c.status.includes("Closed") ||
+                      c.status.includes("Completed")
+                  ).length}
               </p>
             </div>
             <CheckCircle className="text-green-600" size={24} />
@@ -977,7 +994,7 @@ const DivisionComplaintHandler = () => {
 
       {/* Table */}
       <div className="overflow-x-auto bg-white rounded-lg shadow">
-        <table className="w-full border-collapse">
+        <table key={user?.npp} className="w-full border-collapse">
           <thead>
             <tr className="bg-gray-50">
               <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">
@@ -1016,11 +1033,10 @@ const DivisionComplaintHandler = () => {
                                 : column.key
                             )
                           }
-                          className={`hover:text-blue-600 ${
-                            filters[column.key]
-                              ? "text-blue-600"
-                              : "text-gray-400"
-                          }`}
+                          className={`hover:text-blue-600 ${filters[column.key]
+                            ? "text-blue-600"
+                            : "text-gray-400"
+                            }`}
                         >
                           <Filter size={14} />
                         </button>
@@ -1039,49 +1055,69 @@ const DivisionComplaintHandler = () => {
             </tr>
           </thead>
           <tbody>
-            {processedComplaints.map((complaint, index) => (
-              <tr
-                key={complaint.id}
-                onClick={() => handleRowClick(complaint)}
-                className="hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-200"
-              >
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {index + 1}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {complaint.tglInput}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 font-medium">
-                  {complaint.noTiket}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {complaint.customerName}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {complaint.category}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  {complaint.channel}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm">
-                  {getStatusBadge(complaint.status)}
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                  <span
-                    className={
-                      complaint.timeRemaining.includes("Overdue")
-                        ? "text-red-600 font-medium"
-                        : ""
-                    }
-                  >
-                    {complaint.timeRemaining}
-                  </span>
-                </td>
-                <td className="border border-gray-300 px-4 py-3 text-sm">
-                  {getActionButton(complaint)}
+            {loading ? (
+              <tr>
+                <td
+                  className="border border-gray-300 px-4 py-6 text-sm"
+                  colSpan={9}
+                >
+                  Loading…
                 </td>
               </tr>
-            ))}
+            ) : processedComplaints.length ? (
+              processedComplaints.map((complaint, index) => (
+                <tr
+                  key={complaint.id ?? `${complaint.noTiket}-${index}`}
+                  onClick={() => handleRowClick(complaint)}
+                  className="hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-200"
+                >
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {index + 1}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.tglInput}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 font-medium">
+                    {complaint.noTiket}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.customerName}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.category}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    {complaint.channel}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm">
+                    {getStatusBadge(complaint.status)}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                    <span
+                      className={
+                        complaint.timeRemaining.includes("Overdue")
+                          ? "text-red-600 font-medium"
+                          : ""
+                      }
+                    >
+                      {complaint.timeRemaining}
+                    </span>
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm">
+                    {getActionButton(complaint)}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  className="border border-gray-300 px-4 py-6 text-sm"
+                  colSpan={9}
+                >
+                  No data
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -1089,19 +1125,20 @@ const DivisionComplaintHandler = () => {
       {/* Pagination */}
       <div className="mt-6 flex justify-between items-center">
         <div className="text-sm text-gray-600">
-          Showing {processedComplaints.length} of {originalComplaints.length}{" "}
-          entries
+          {loading
+            ? "Loading…"
+            : `Showing ${processedComplaints.length} of ${originalComplaints.length} entries`}
         </div>
         <div className="flex gap-2">
-          <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
+          <Button variant="outline" size="sm">
             Previous
-          </button>
-          <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm">
+          </Button>
+          <Button variant="orange" size="sm">
             1
-          </button>
-          <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
+          </Button>
+          <Button variant="outline" size="sm">
             Next
-          </button>
+          </Button>
         </div>
       </div>
 

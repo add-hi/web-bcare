@@ -18,7 +18,7 @@ function normalizeBase(v) {
   return (s.startsWith("/") ? s : `/${s}`).replace(/\/+$/, "");
 }
 
-const rawBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+const rawBase = process.env.NEXT_PUBLIC_API_URL;
 const base = normalizeBase(rawBase);
 
 // If base already ends with /v1 (case-insensitive), keep it; else append /v1

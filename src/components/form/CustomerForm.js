@@ -1,15 +1,38 @@
-"use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React from "react";
 
-const CustomerForm = ({ detail, onChange }) => {
-  // field statis
+const CustomerForm = ({ detail }) => {
+  const getFieldValue = (label) => {
+    if (!detail?.customer) return "";
+    const c = detail.customer;
+    const map = {
+      CIF: c.cif,
+      Gender: c.gender,
+      Address: c.address,
+      "Account Number": c.accountNumber,
+      "Place Of Birth": c.placeOfBirth,
+      "Billing Address": c.billingAddress,
+      "Card Number": c.cardNumber,
+      "Home Phone": c.homePhone,
+      "Postal Code": c.postalCode,
+      "Customer Name": c.customerName,
+      Handphone: c.handphone,
+      "Office Phone": c.officePhone,
+      "Person ID": c.personId,
+      Email: c.email,
+      "Fax Phone": c.faxPhone,
+      "List Debit Card Number": c.listDebitCardNumber,
+    };
+    return map[label] ?? "";
+  };
+
+  // Tambahkan hint untuk span kolom responsif.
   const formData = [
     { label: "CIF" },
     { label: "Gender", type: "select", required: true },
-    { label: "Address", type: "textarea", required: true },
+    { label: "Address", type: "textarea", required: true, wide: true },
     { label: "Account Number" },
     { label: "Place Of Birth" },
-    { label: "Billing Address", type: "textarea", required: false },
+    { label: "Billing Address", type: "textarea", required: false, wide: true },
     { label: "Card Number" },
     { label: "Home Phone", required: true },
     { label: "Postal Code" },
@@ -22,89 +45,57 @@ const CustomerForm = ({ detail, onChange }) => {
     { label: "List Debit Card Number" },
   ];
 
-  const fieldKeyMap = {
-    "CIF": "cif",
-    "Gender": "gender",
-    "Address": "address",
-    "Account Number": "accountNumber",
-    "Place Of Birth": "placeOfBirth",
-    "Billing Address": "billingAddress",
-    "Card Number": "cardNumber",
-    "Home Phone": "homePhone",
-    "Postal Code": "postalCode",
-    "Customer Name": "customerName",
-    "Handphone": "handphone",
-    "Office Phone": "officePhone",
-    "Person ID": "personId",
-    "Email": "email",
-    "Fax Phone": "faxPhone",
-    "List Debit Card Number": "listDebitCardNumber",
-  };
-
-  // ambil dari detail.customer
-  const toInitial = (d = {}) => ({
-    cif: d.cif ?? "",
-    gender: d.gender ?? "",
-    address: d.address ?? "",
-    accountNumber: d.accountNumber ?? "",
-    placeOfBirth: d.placeOfBirth ?? "",
-    billingAddress: d.billingAddress ?? "",
-    cardNumber: d.cardNumber ?? "",
-    homePhone: d.homePhone ?? "",
-    postalCode: d.postalCode ?? "",
-    customerName: d.customerName ?? "",
-    handphone: d.handphone ?? "",
-    officePhone: d.officePhone ?? "",
-    personId: d.personId ?? "",
-    email: d.email ?? "",
-    faxPhone: d.faxPhone ?? "",
-    listDebitCardNumber: d.listDebitCardNumber ?? "",
-  });
-
-  const [form, setForm] = useState(toInitial(detail?.customer));
-  useEffect(() => {
-    const next = toInitial(detail?.customer);
-    setForm(next);
-    onChange?.(next);
-  }, [detail?.customer]); // remap saat ganti tiket
-
-  const update = (k, v) => setForm((prev) => { const n = { ...prev, [k]: v }; onChange?.(n); return n; });
-
-  const inputClassName =
-    "w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm";
-
-  const genderOptions = useMemo(() => [
-    { label: "Select gender", value: "" },
-    { label: "Male", value: "MALE" },
-    { label: "Female", value: "FEMALE" },
-    { label: "Other", value: "OTHER" },
-  ], []);
+  const inputBase =
+    "w-full px-3 py-2 border border-gray-300 rounded outline-none text-black text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50";
 
   return (
-    <div className="w-full bg-green-100 p-6 mb-6 relative rounded-lg border border-gray-300">
-      <div className="bg-green-300 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
-        <h2 className="text-lg font-semibold">Customer Info</h2>
+    <div className="w-full bg-green-100 p-4 sm:p-5 lg:p-6 mb-6 relative rounded-lg border border-gray-300">
+      <div className="-m-4 sm:-m-5 lg:-m-6 mb-6 bg-green-300 text-white text-center py-2 px-4 rounded-t-lg">
+        <h2 className="text-base sm:text-lg font-semibold">Customer Info</h2>
       </div>
-      <div className="bg-white border-gray-200 p-6 rounded-lg">
-        <div className="grid grid-cols-3 gap-x-6 gap-y-5">
+
+      <div className="bg-white border border-gray-200 p-4 sm:p-6 lg:p-6 rounded-lg">
+        {/* Grid responsif: 1 col (mobile), 2 col (tablet), 3 col (desktop) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 sm:gap-x-6 gap-y-4 sm:gap-y-5">
           {formData.map((field, idx) => {
-            const key = fieldKeyMap[field.label];
-            const value = form[key] ?? "";
+            // Textarea melebar: full di mobile, 2 kolom di sm, kembali 1 kolom di lg (supaya desktop existing)
+            const spanClass = field.wide
+              ? "col-span-1 sm:col-span-2 lg:col-span-1"
+              : "col-span-1";
+
             return (
-              <div key={idx} className="flex flex-col">
-                <label className="text-sm text-black font-medium mb-2 whitespace-nowrap">
-                  {field.label}{field.required && <span className="text-red-500 ml-1">*</span>}
+              <div key={idx} className={`flex flex-col ${spanClass} min-w-0`}>
+                {/* Label (boleh wrap) */}
+                <label className="text-xs sm:text-sm text-black font-medium mb-2 break-words">
+                  {field.label}
+                  {field.required && (
+                    <span className="text-red-500 ml-1">*</span>
+                  )}
                 </label>
 
+                {/* Input */}
                 {field.type === "select" ? (
-                  <select className={inputClassName} value={value} onChange={(e) => update(key, e.target.value)}>
-                    {genderOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  <select
+                    className={inputBase}
+                    value={getFieldValue(field.label)}
+                    disabled
+                    aria-readonly="true"
+                  >
+                    <option>{getFieldValue(field.label) || "-"}</option>
                   </select>
                 ) : field.type === "textarea" ? (
-                  <textarea className={inputClassName + " resize-none overflow-y-auto h-[40px]"} rows={1}
-                    value={value} onChange={(e) => update(key, e.target.value)} />
+                  <textarea
+                    className={`${inputBase} min-h-10 sm:min-h-[52px] break-words`}
+                    rows={2}
+                    value={getFieldValue(field.label)}
+                    readOnly
+                  />
                 ) : (
-                  <input className={inputClassName} value={value} onChange={(e) => update(key, e.target.value)} />
+                  <input
+                    className={inputBase}
+                    value={getFieldValue(field.label)}
+                    readOnly
+                  />
                 )}
               </div>
             );

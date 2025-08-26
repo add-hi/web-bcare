@@ -15,16 +15,38 @@ function getAccessToken() {
     }
 }
 
-// normalizer: response GET /v1/tickets/:id -> shape yang dipakai layar
 function mapDetail(data) {
-    // activities -> notes ringkas (division log) + raw division_notes
+    // Extract employee status history for division notes and complaint tracking
+    const statusHistory = data?.status_history || {};
+    const employeeStatusHistory = Array.isArray(statusHistory?.employee_status_history) ? statusHistory.employee_status_history : [];
+    const customerStatusHistory = Array.isArray(statusHistory?.customer_status_history) ? statusHistory.customer_status_history : [];
+    
+    // Create division notes from employee status history
+    const divisionNotesFromHistory = employeeStatusHistory.map((h) => ({
+        division: h?.status_name || h?.status_code || "Unknown",
+        timestamp: h?.changed_at || null,
+        msg: `Status changed to ${h?.status_name || h?.status_code} by ${h?.changed_by || 'System'}`,
+        author: h?.changed_by || "System",
+        type: "status_change",
+        statusCode: h?.status_code,
+        statusName: h?.status_name,
+        actionType: h?.action_type
+    }));
+    
+    // Fallback to activities if no status history
     const activities = Array.isArray(data?.activities) ? data.activities : [];
-    const division = activities.map((a) => ({
+    const divisionNotesFromActivities = activities.map((a) => ({
         division: a?.sender_type?.sender_type_name || a?.sender_type?.sender_type_code || "-",
         timestamp: a?.ticket_activity_time || null,
         msg: a?.content || "",
         author: (a?.sender_type?.sender_type_name || "Unknown"),
+        type: "activity"
     }));
+
+    // Use status history first, then activities, then division_notes
+    const divisionNotes = employeeStatusHistory.length > 0 
+        ? divisionNotesFromHistory 
+        : (Array.isArray(data?.division_notes) ? data.division_notes : divisionNotesFromActivities);
 
     const customer = data?.customer || {};
     const relatedAcc = data?.related_account || {};
@@ -38,12 +60,13 @@ function mapDetail(data) {
     const employee_status = data?.employee_status || {};
     const customer_status = data?.customer_status || {};
     const sla_info = data?.sla_info || {};
+    const terminal = data?.terminal || {};
 
     return {
         ids: {
             ticketId: data?.ticket_id ?? null,
             ticketNumber: data?.ticket_number ?? null,
-            customerId: customer?.customer_id ?? null,
+            customerId: customer?.customer_id ?? customer?.id ?? null,
             complaintId: complaint?.complaint_id ?? null,
             employeeId: employee?.employee_id ?? null,
         },
@@ -77,8 +100,11 @@ function mapDetail(data) {
         ticket: {
             description: data?.description ?? "",
             amount: data?.amount ?? null,
+            record: data?.record ?? "",
+            reason: data?.reason ?? "",
+            solution: data?.solution ?? "",
             channel: { code: issue_channel?.channel_code ?? "", name: issue_channel?.channel_name ?? "" },
-            terminal: { code: data?.terminal?.terminal_code ?? "", location: data?.terminal?.location ?? "" },
+            terminal: { code: terminal?.terminal_code ?? "", location: terminal?.location ?? "" },
             complaint: { code: complaint?.complaint_code ?? "", name: complaint?.complaint_name ?? "" },
             intakeSource: { code: intake_source?.source_code ?? "", name: intake_source?.source_name ?? "" },
             employee: { fullName: employee?.full_name ?? "", npp: employee?.npp ?? "", email: employee?.email ?? "" },
@@ -101,6 +127,8 @@ function mapDetail(data) {
             slaDays: policy?.sla_days ?? policy?.sla ?? null,
             slaHours: policy?.sla_hours ?? null,
             uicId: policy?.uic_id ?? null,
+            uicCode: policy?.uic_code ?? null,
+            uicName: policy?.uic_name ?? null,
         },
         sla: {
             committedDueAt: sla_info?.committed_due_at ?? null,
@@ -109,8 +137,12 @@ function mapDetail(data) {
             status: sla_info?.status ?? "",
         },
         notes: {
-            division,
+            division: divisionNotes,
             raw: data?.division_notes ?? null,
+        },
+        tracking: {
+            employeeStatusHistory: employeeStatusHistory,
+            customerStatusHistory: customerStatusHistory,
         },
         activities: activities || [],
         attachments: Array.isArray(data?.attachments) ? data.attachments : [],
@@ -126,20 +158,16 @@ export default function useTicketDetail(ticketId) {
     } = useTicketStore();
 
     const BASE = useMemo(() =>
-        (process.env.NEXT_PUBLIC_TICKET_API_BASE_URL || "https://275232686ea9.ngrok-free.app").replace(/\/$/, ""),
+        (process.env.NEXT_PUBLIC_API_URL).replace(/\/$/, ""),
         []);
 
     const effectiveId = ticketId ?? selectedId;
     const detail = effectiveId ? detailById[effectiveId] : null;
 
-    const fetchTicketDetail = useCallback(async (id, { force = false } = {}) => {
+    const fetchTicketDetail = useCallback(async (id, { force = true } = {}) => {
+
         const ticketIdToFetch = id ?? effectiveId;
         if (!ticketIdToFetch) return;
-
-        if (!force && detailById[ticketIdToFetch]) {
-            setSelectedId(ticketIdToFetch);
-            return; // pakai cache
-        }
 
         setDetailLoading(true);
         setDetailError(null);
