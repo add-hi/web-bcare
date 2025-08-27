@@ -145,22 +145,14 @@ const autoFilled = useMemo(() => {
               accountNumbers = [];
             }
 
-          // Process card numbers based on search context
-          if (searchContext?.searchType === "debit" || searchContext?.searchType === "credit") {
-            // Only show the searched card number
+          // Process card numbers - prioritize direct data from customerData
+          if (customerData?.cardNumber) {
+            // Use card number directly from customerData (set by InputFormRow)
+            cardNumbers = [customerData.cardNumber];
+          } else if (searchContext?.searchType === "debit" || searchContext?.searchType === "credit") {
+            // Show the searched card number
             cardNumbers = [searchContext.searchedNumber];
-          } else if (searchContext?.searchType === "account" && searchContext?.searchedNumber) {
-            // For account search, show cards related to that specific account
-            const searchedAccount = customerAccounts.find(
-              (acc) => acc.account_number.toString() === searchContext.searchedNumber
-            );
-            if (searchedAccount) {
-              const relatedCards = customerCards.filter(
-                (card) => card.account_id === searchedAccount.account_id
-              );
-              cardNumbers = relatedCards.length > 0 ? [relatedCards[0].card_number] : [];
-            }
-          } else if (customerCards.length > 0) {
+          } else if (customerCards && customerCards.length > 0) {
             // Show first card as fallback
             cardNumbers = [customerCards[0].card_number];
           } else {

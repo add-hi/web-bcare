@@ -82,37 +82,20 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
             const customer = customers[0]; // Take first match
             customerId = customer.customer_id;
             
-            // For card search, we need to find the specific card and account
+            // For card search, we already have the card info from search result
             if (sourceType === "debit" || sourceType === "credit") {
-              // Find the card that matches
-              const cardResponse = await fetch(`/api/v1/card`, { headers });
-              if (cardResponse.ok) {
-                const cards = await cardResponse.json();
-                const expectedType = sourceType === "credit" ? "KREDIT" : sourceType.toUpperCase();
-                
-                foundCard = cards.find((c) => {
-                  const numberMatch = c.card_number?.toString() === numberValue.trim();
-                  const typeMatch = c.card_type?.toUpperCase() === expectedType;
-                  const expMatch = expDate ? c.exp_date === expDate.trim() : true;
-                  return numberMatch && typeMatch && expMatch;
-                });
-                
-                if (foundCard) {
-                  related_card_id = foundCard.card_id;
-                  related_account_id = foundCard.account_id;
-                }
-              }
+              // Create a mock card object since we found the customer via card search
+              foundCard = {
+                card_id: `card_${customerId}_${numberValue.trim()}`, // Mock ID
+                card_number: numberValue.trim(),
+                card_type: sourceType === "credit" ? "KREDIT" : sourceType.toUpperCase(),
+                account_id: null // Will be filled when we get accounts
+              };
+              related_card_id = foundCard.card_id;
             } else if (sourceType === "account") {
-              // For account search, find the specific account
-              const accountsResponse = await fetch(`/api/v1/customers/${customerId}/accounts`, { headers });
-              if (accountsResponse.ok) {
-                const accountsData = await accountsResponse.json();
-                const accounts = Array.isArray(accountsData) ? accountsData : accountsData.data || [];
-                foundAccount = accounts.find(acc => acc.account_number?.toString() === numberValue.trim());
-                if (foundAccount) {
-                  related_account_id = foundAccount.account_id;
-                }
-              }
+              // For account search, we'll get the account in Step 3
+              // Just mark that we're searching by account
+              foundAccount = { account_number: numberValue.trim() };
             }
           }
         }
@@ -148,24 +131,42 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
         if (customerAccountsResponse.ok) {
           const accountsData = await customerAccountsResponse.json();
           customerAccounts = Array.isArray(accountsData) ? accountsData : accountsData.data || [];
+          
+          // Find the specific account if searching by account number
+          if (sourceType === "account" && foundAccount) {
+            const specificAccount = customerAccounts.find(acc => acc.account_number?.toString() === numberValue.trim());
+            if (specificAccount) {
+              related_account_id = specificAccount.account_id;
+              foundAccount = specificAccount;
+            }
+          }
+          
+          // For card search, find the account that matches the card
+          if (foundCard && customerAccounts.length > 0) {
+            // Use first account as related account for card
+            related_account_id = customerAccounts[0].account_id;
+            foundCard.account_id = customerAccounts[0].account_id;
+          }
         }
       } catch (error) {
         // No fallback since /v1/account doesn't exist
         customerAccounts = [];
       }
 
-      // Step 4: Fetch customer's cards
-      try {
-        const cardResponse = await fetch(`/api/v1/card`, { headers });
-        if (cardResponse.ok) {
-          const allCards = await cardResponse.json();
-          if (customerAccounts.length > 0) {
-            const customerAccountIds = customerAccounts.map(acc => acc.account_id);
-            customerCards = allCards.filter(card => customerAccountIds.includes(card.account_id));
+      // Step 4: Fetch all customer's cards using new customers endpoint
+      if (customerId) {
+        try {
+          const customerCardsResponse = await fetch(`/api/v1/customers/${customerId}/cards`, { headers });
+          if (customerCardsResponse.ok) {
+            const cardsData = await customerCardsResponse.json();
+            customerCards = Array.isArray(cardsData) ? cardsData : cardsData.data || [];
+          }
+        } catch (error) {
+          // If /customers/{id}/cards doesn't exist, keep foundCard if we have it
+          if (foundCard) {
+            customerCards = [foundCard];
           }
         }
-      } catch (error) {
-        // Silent fail for cards
       }
 
       setCustomerData(customer);
@@ -178,12 +179,18 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
           related_card_id,
           customerAccounts, // Include customer's accounts
           customerCards, // Include customer's cards
-          // simpan juga nomor yg dicari, biar di-save gak perlu lookup ulang
+          // simpan nomor yang dicari dan semua data terkait
           ...(sourceType === "account"
-            ? { accountNumber: numberValue.trim() }
+            ? { 
+                accountNumber: numberValue.trim(),
+                cardNumber: customerCards.length > 0 ? customerCards[0].card_number : ""
+              }
             : {}),
           ...(sourceType === "debit" || sourceType === "credit"
-            ? { cardNumber: numberValue.trim() }
+            ? { 
+                cardNumber: numberValue.trim(),
+                accountNumber: customerAccounts.length > 0 ? customerAccounts[0].account_number : ""
+              }
             : {}),
         },
         {
