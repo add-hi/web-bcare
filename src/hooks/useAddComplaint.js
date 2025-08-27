@@ -137,24 +137,34 @@ export default function useAddComplaint() {
           policyRes,
           uicRes,
         ] = await Promise.all([
-          fetch("/api/v1/channel", { headers }),
-          fetch("/api/v1/complaint_category", { headers }),
-          fetch("/api/v1/source", { headers }),
+          fetch("/api/v1/channels", { headers }),
+          fetch("/api/v1/complaint-categories", { headers }),
+          fetch("/api/v1/sources", { headers }),
           fetch("/api/v1/terminals", { headers }),
-          fetch("/api/v1/priority", { headers }),
-          fetch("/api/v1/complaint_policy", { headers }),
+          fetch("/api/v1/priorities", { headers }),
+          fetch("/api/v1/policies", { headers }),
           fetch("/api/v1/uics", { headers }),
         ]);
 
-        if (channelRes.ok) setChannels(await channelRes.json());
+        if (channelRes.ok) {
+          const channelData = await channelRes.json();
+          // Handle different response formats
+          const channels = Array.isArray(channelData) ? channelData : channelData.data || [];
+          setChannels(channels);
+        }
 
         if (categoryRes.ok) {
-          const cats = await categoryRes.json();
+          const categoryData = await categoryRes.json();
+          const cats = Array.isArray(categoryData) ? categoryData : categoryData.data || [];
           setAllCategories(cats);
           setCategories(cats);
         }
 
-        if (sourceRes.ok) setSources(await sourceRes.json());
+        if (sourceRes.ok) {
+          const sourceData = await sourceRes.json();
+          const sources = Array.isArray(sourceData) ? sourceData : sourceData.data || [];
+          setSources(sources);
+        }
         if (terminalRes.ok) {
           const terminalData = await terminalRes.json();
           // Handle different response formats
@@ -163,7 +173,11 @@ export default function useAddComplaint() {
             : terminalData.data || [];
           setTerminals(terminals);
         }
-        if (priorityRes.ok) setPriorities(await priorityRes.json());
+        if (priorityRes.ok) {
+          const priorityData = await priorityRes.json();
+          const priorities = Array.isArray(priorityData) ? priorityData : priorityData.data || [];
+          setPriorities(priorities);
+        }
 
         if (policyRes.ok) {
           const policyData = await policyRes.json();
