@@ -162,9 +162,29 @@ const autoFilled = useMemo(() => {
           console.error('Error fetching related data:', error);
         }
 
+        // Debug gender data
+        console.log('Customer gender data:', {
+          gender_type: customerData.gender_type,
+          gender: customerData.gender,
+          raw_customerData: customerData
+        });
+        
+        // Map gender to correct format
+        let genderValue = "";
+        const rawGender = customerData.gender_type || customerData.gender || "";
+        if (rawGender) {
+          // Convert to uppercase and handle different formats
+          const upperGender = rawGender.toString().toUpperCase();
+          if (upperGender === "MALE" || upperGender === "M" || upperGender === "L" || upperGender === "LAKI-LAKI") {
+            genderValue = "MALE";
+          } else if (upperGender === "FEMALE" || upperGender === "F" || upperGender === "P" || upperGender === "PEREMPUAN") {
+            genderValue = "FEMALE";
+          }
+        }
+        
         const mappedData = {
           cif: customerData.cif || "",
-          gender: customerData.gender_type || "",
+          gender: genderValue,
           address: customerData.address || "",
           accountNumber: accountNumbers.join(", ") || "",
           placeOfBirth: customerData.place_of_birth || "",

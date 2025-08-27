@@ -500,9 +500,15 @@ export default function useAddComplaint() {
         related_account_id = searchContext.related_account_id;
       }
 
-      // Use related_card_id from search context if available
+      // Use related_card_id from search context (should be the actual card ID)
       if (searchContext?.related_card_id) {
         related_card_id = searchContext.related_card_id;
+      } else if (searchContext?.customerCards && searchContext.customerCards.length > 0) {
+        // Use first card ID from customer cards
+        related_card_id = searchContext.customerCards[0].card_id;
+      } else if (customerData?.card_id) {
+        // Fallback to customerData card_id if available
+        related_card_id = customerData.card_id;
       }
 
       // Build ticket data matching exact body format
