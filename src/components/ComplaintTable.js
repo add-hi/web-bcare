@@ -351,11 +351,15 @@ const ComplaintTable = ({ isActive = false }) => {
 
     setIsAddingNote(true);
     try {
-      // Build note object (same as add complaint)
+      // Get existing notes first
+      const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
+      const existingNotes = ticketDetail?.__raw?.division_notes || [];
+      
+      // Build new note object
       const authorName = user?.full_name || user?.name || user?.email || "Unknown";
       const divisionName = user?.role_details?.role_name || user?.role || "Unknown";
       
-      const noteObject = {
+      const newNoteObject = {
         division: divisionName,
         timestamp: new Date().toLocaleDateString("id-ID", {
           day: "2-digit",
@@ -368,9 +372,12 @@ const ComplaintTable = ({ isActive = false }) => {
         author: authorName,
       };
 
-      // Use existing updateTicket function
+      // Combine existing notes with new note
+      const allNotes = [...existingNotes, newNoteObject];
+
+      // Use existing updateTicket function with all notes
       await updateTicket(selectedComplaint.id, {
-        division_notes: [noteObject]
+        division_notes: allNotes
       });
       
       // Refresh ticket detail to show new note

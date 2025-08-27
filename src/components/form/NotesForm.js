@@ -68,11 +68,24 @@ const InputForm = ({ detail, onChange }) => {
     setIsProcessing(true);
 
     try {
-      // Build note object
+      // Get existing notes from detail prop
+      const existingNotes = (() => {
+        try {
+          if (Array.isArray(detail?.__raw?.division_notes)) {
+            return detail.__raw.division_notes;
+          }
+          if (typeof detail?.__raw?.division_notes === "string") {
+            return JSON.parse(detail.__raw.division_notes);
+          }
+        } catch {}
+        return [];
+      })();
+      
+      // Build new note object
       const authorName = user?.full_name || user?.name || user?.email || "Unknown";
       const divisionName = user?.role_details?.role_name || user?.role || "Unknown";
       
-      const noteObject = {
+      const newNoteObject = {
         division: divisionName,
         timestamp: new Date().toLocaleDateString("id-ID", {
           day: "2-digit",
@@ -85,15 +98,18 @@ const InputForm = ({ detail, onChange }) => {
         author: authorName,
       };
 
+      // Combine existing notes with new note
+      const allNotes = [...existingNotes, newNoteObject];
+
       // Save to database using existing updateTicket
       await updateTicket(ticketId, {
-        division_notes: [noteObject]
+        division_notes: allNotes
       });
       
       // Update local state for immediate UI feedback
       const newNoteObj = {
         id: Date.now(),
-        ...noteObject,
+        ...newNoteObject,
         type: "note",
       };
 

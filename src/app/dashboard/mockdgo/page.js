@@ -48,6 +48,7 @@ const DivisionComplaintHandler = () => {
   const [actionNote, setActionNote] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [newNote, setNewNote] = useState("");
+  const [isAddingNote, setIsAddingNote] = useState(false);
   const didFetchRef = useRef(false);
   const router = useRouter();
 
@@ -277,15 +278,51 @@ const DivisionComplaintHandler = () => {
     // You might want to refresh the data or update the status locally here
   };
 
-  const handleAddNote = () => {
-    if (!newNote.trim()) return;
+  const handleAddNote = async () => {
+    if (!newNote.trim() || !selectedComplaint?.id) return;
 
-    // Reset the note input
-    setNewNote("");
+    setIsAddingNote(true);
+    try {
+      // Get existing notes first
+      const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
+      const existingNotes = ticketDetail?.__raw?.division_notes || [];
+      
+      // Build new note object
+      const authorName = user?.full_name || user?.name || user?.email || "Unknown";
+      const divisionName = user?.role_details?.role_name || user?.role || "Unknown";
+      
+      const newNoteObject = {
+        division: divisionName,
+        timestamp: new Date().toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        msg: newNote.trim(),
+        author: authorName,
+      };
 
-    // In a real app, you'd update the state with the new note
-    // For now, just show success
-    alert("Note added successfully!");
+      // Combine existing notes with new note
+      const allNotes = [...existingNotes, newNoteObject];
+
+      // Use existing updateTicket function with all notes
+      await updateTicket(selectedComplaint.id, {
+        division_notes: allNotes
+      });
+      
+      // Refresh ticket detail to show new note
+      await fetchTicketDetail(selectedComplaint.id, { force: true });
+      
+      toast.success("Note added successfully!");
+      setNewNote("");
+    } catch (error) {
+      console.error("Failed to add note:", error);
+      toast.error(error?.message || "Failed to add note");
+    } finally {
+      setIsAddingNote(false);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -816,10 +853,11 @@ const DivisionComplaintHandler = () => {
                   variant="primary"
                   icon={Send}
                   onClick={handleAddNote}
-                  disabled={!newNote.trim()}
+                  disabled={!newNote.trim() || isAddingNote}
+                  loading={isAddingNote}
                   className="w-full"
                 >
-                  Add Note
+                  {isAddingNote ? "Saving Note..." : "Save Note"}
                 </Button>
               </div>
             </div>
