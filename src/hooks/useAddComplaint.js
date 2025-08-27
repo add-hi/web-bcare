@@ -158,6 +158,19 @@ export default function useAddComplaint() {
           const cats = Array.isArray(categoryData) ? categoryData : categoryData.data || [];
           setAllCategories(cats);
           setCategories(cats);
+        } else {
+          // Try fallback endpoint
+          try {
+            const fallbackRes = await fetch("/api/v1/complaint-categories", { headers });
+            if (fallbackRes.ok) {
+              const categoryData = await fallbackRes.json();
+              const cats = Array.isArray(categoryData) ? categoryData : categoryData.data || [];
+              setAllCategories(cats);
+              setCategories(cats);
+            }
+          } catch (error) {
+            // Silent fail
+          }
         }
 
         if (sourceRes.ok) {
@@ -294,8 +307,15 @@ export default function useAddComplaint() {
     (channelId) => {
       if (channelId && policies.length > 0 && allCategories.length > 0) {
         const allowedComplaintIds = policies
-          .filter((policy) => policy.channel_id === Number(channelId))
-          .map((policy) => policy.complaint_id);
+          .filter((policy) => {
+            // Handle nested structure: policy.channel.channel_id
+            const policyChannelId = policy.channel?.channel_id || policy.channel_id;
+            return policyChannelId === Number(channelId);
+          })
+          .map((policy) => {
+            // Handle nested structure: policy.complaint_category.complaint_id
+            return policy.complaint_category?.complaint_id || policy.complaint_id;
+          });
 
         const filteredCategories = allCategories.filter((cat) =>
           allowedComplaintIds.includes(cat.complaint_id)
