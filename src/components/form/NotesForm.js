@@ -1,5 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import useUser from "@/hooks/useUser";
+import useTicketNotes from "@/hooks/useTicketNotes";
 import {
   MessageSquare,
   FileText,
@@ -12,6 +14,9 @@ import {
 } from "lucide-react";
 
 const InputForm = ({ detail, onChange }) => {
+  const { user } = useUser();
+  const { addNoteToTicket } = useTicketNotes();
+  const ticketId = detail?.ids?.ticketId;
   // Normalize initial notes: ensure array of {division, timestamp, msg, author}
   const initialDivisionNotes = (() => {
     try {
@@ -58,11 +63,18 @@ const InputForm = ({ detail, onChange }) => {
   const [newNote, setNewNote] = useState("");
 
   const handleAddNote = async () => {
-    if (!newNote.trim()) return;
+    if (!newNote.trim() || !ticketId) return;
 
     setIsProcessing(true);
 
     try {
+      // Save to database first
+      await addNoteToTicket(ticketId, newNote);
+      
+      // Then update local state for immediate UI feedback
+      const authorName = user?.full_name || user?.name || user?.email || "Unknown";
+      const divisionName = user?.role_details?.role_name || user?.role || "Unknown";
+      
       const newNoteObj = {
         id: Date.now(),
         timestamp: new Date().toLocaleDateString("id-ID", {
@@ -71,20 +83,20 @@ const InputForm = ({ detail, onChange }) => {
           year: "numeric",
           hour: "2-digit",
           minute: "2-digit",
-        }).replace(/\//g, "/").replace(",", ""),
-        division: "Current Division",
-        author: "Current User",
+        }),
+        division: divisionName,
+        author: authorName,
         msg: newNote,
         type: "note",
       };
 
       setDivisionNotes((prev) => [...prev, newNoteObj]);
+      setNewNote("");
     } catch (error) {
       console.error("Failed to add note:", error);
-      alert("Failed to add note. Please try again.");
+      // Error toast already shown in hook
     } finally {
       setIsProcessing(false);
-      setNewNote("");
     }
   };
 
@@ -203,11 +215,11 @@ const InputForm = ({ detail, onChange }) => {
 
           <button
             onClick={handleAddNote}
-            disabled={!newNote.trim() || isProcessing}
+            disabled={!newNote.trim() || isProcessing || !ticketId}
             className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <Send size={16} />
-            {isProcessing ? "Adding Note..." : "Add Note"}
+            {isProcessing ? "Saving Note..." : "Save Note"}
           </button>
 
 
