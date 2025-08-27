@@ -51,7 +51,7 @@ export default function useAddComplaint() {
     if (!accessToken) return null;
     
     try {
-      const { data } = await httpClient.get(`/v1/policies`, {
+      const { data } = await httpClient.get('/policies', {
         params: { channel_id: channelId, complaint_id: categoryId, limit: 1 },
         headers: { Authorization: accessToken }
       });
@@ -71,13 +71,13 @@ export default function useAddComplaint() {
     setLoadingData(true);
     try {
       const [channels, categories, sources, terminals, priorities, policies, uics] = await Promise.all([
-        httpClient.get('/v1/channels', { headers: { Authorization: accessToken } }),
-        httpClient.get('/v1/complaint-categories', { headers: { Authorization: accessToken } }),
-        httpClient.get('/v1/sources', { headers: { Authorization: accessToken } }),
-        httpClient.get('/v1/terminals', { headers: { Authorization: accessToken } }),
-        httpClient.get('/v1/priorities', { headers: { Authorization: accessToken } }),
-        httpClient.get('/v1/policies', { headers: { Authorization: accessToken } }),
-        httpClient.get('/v1/uics', { headers: { Authorization: accessToken } })
+        httpClient.get('/channels', { headers: { Authorization: accessToken } }),
+        httpClient.get('/complaint-categories', { headers: { Authorization: accessToken } }),
+        httpClient.get('/sources', { headers: { Authorization: accessToken } }),
+        httpClient.get('/terminals', { headers: { Authorization: accessToken } }),
+        httpClient.get('/priorities', { headers: { Authorization: accessToken } }),
+        httpClient.get('/policies', { headers: { Authorization: accessToken } }),
+        httpClient.get('/uics', { headers: { Authorization: accessToken } })
       ]);
 
       setChannels(channels.data?.data || channels.data || []);
@@ -105,7 +105,7 @@ export default function useAddComplaint() {
     if (!accessToken || !channelId) return allCategories;
     
     try {
-      const { data } = await httpClient.get('/v1/policies', {
+      const { data } = await httpClient.get('/policies', {
         params: { channel_id: channelId, limit: 50 },
         headers: { Authorization: accessToken }
       });
@@ -124,35 +124,7 @@ export default function useAddComplaint() {
     }
   }, [accessToken, allCategories]);
 
-  // Filter categories based on selected channel
-  const filterCategories = useCallback(
-    (channelId) => {
-      if (channelId && policies.length > 0 && allCategories.length > 0) {
-        const allowedComplaintIds = policies
-          .filter((policy) => {
-            const policyChannelId = policy.channel?.channel_id || policy.channel_id;
-            return policyChannelId === Number(channelId);
-          })
-          .map((policy) => {
-            return policy.complaint_category?.complaint_id || policy.complaint_id;
-          });
 
-        return allCategories.filter((cat) =>
-          allowedComplaintIds.includes(cat.complaint_id)
-        );
-      }
-      return allCategories;
-    },
-    [policies, allCategories]
-  );
-
-  // Update categories in store
-  const updateCategories = useCallback(
-    (filteredCategories) => {
-      setCategories(filteredCategories);
-    },
-    [setCategories]
-  );
 
   // Get UIC name based on channel and category
   const getUicName = useCallback(
@@ -346,7 +318,7 @@ export default function useAddComplaint() {
       console.log('Ticket data to be sent:', JSON.stringify(ticketData, null, 2));
       window.debugTicketData = ticketData;
 
-      const response = await httpClient.post('/v1/tickets', ticketData, {
+      const response = await httpClient.post('/tickets', ticketData, {
         headers: { Authorization: accessToken }
       });
 
@@ -422,8 +394,6 @@ export default function useAddComplaint() {
     terminals,
     priorities,
     uics,
-    currentEmployee,
-    currentRole,
     loadingData,
 
     // Actions
@@ -431,9 +401,7 @@ export default function useAddComplaint() {
     setDataFormData,
     setActionFormData,
     setNotesFormData,
-    filterCategories,
     fetchPoliciesByChannel,
-    updateCategories,
     getUicName,
     getSlaInfo,
     reset,

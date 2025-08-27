@@ -19,15 +19,22 @@ export default function useCustomerSearch() {
 
       if (!searchType) return null;
 
-      // Step 1: Search customer
-      const { data: searchResult } = await httpClient.get('/v1/customers', {
-        params: {
-          search: numberValue.trim(),
-          search_type: searchType,
-          limit: 10
-        },
-        headers: { Authorization: accessToken }
-      });
+      // Step 1: Search customer with error handling
+      let searchResult;
+      try {
+        const response = await httpClient.get('/customers', {
+          params: {
+            search: numberValue.trim(),
+            search_type: searchType,
+            limit: 10
+          },
+          headers: { Authorization: accessToken }
+        });
+        searchResult = response.data;
+      } catch (error) {
+        console.warn('Customer search failed:', error.message);
+        return null;
+      }
 
       const customers = searchResult?.data || searchResult || [];
       if (customers.length === 0) return null;
@@ -40,7 +47,7 @@ export default function useCustomerSearch() {
       let related_account_id = null;
       
       try {
-        const { data: accountsData } = await httpClient.get(`/v1/customers/${customerId}/accounts`, {
+        const { data: accountsData } = await httpClient.get(`/customers/${customerId}/accounts`, {
           headers: { Authorization: accessToken }
         });
         customerAccounts = Array.isArray(accountsData) ? accountsData : accountsData?.data || [];
@@ -64,7 +71,7 @@ export default function useCustomerSearch() {
       let related_card_id = null;
       
       try {
-        const { data: cardsData } = await httpClient.get(`/v1/customers/${customerId}/cards`, {
+        const { data: cardsData } = await httpClient.get(`/customers/${customerId}/cards`, {
           headers: { Authorization: accessToken }
         });
         customerCards = Array.isArray(cardsData) ? cardsData : cardsData?.data || [];
