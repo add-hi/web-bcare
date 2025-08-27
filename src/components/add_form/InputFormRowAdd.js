@@ -7,20 +7,10 @@ import React, {
   useImperativeHandle,
 } from "react";
 import Button from "@/components/ui/Button";
-
-function getAccessToken() {
-  try {
-    const raw = localStorage.getItem("auth");
-    if (!raw) return "";
-    const parsed = JSON.parse(raw);
-    const token = parsed?.state?.accessToken || "";
-    return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-  } catch {
-    return "";
-  }
-}
+import useCustomerSearch from "@/hooks/useCustomerSearch";
 
 const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
+  const { searchCustomer } = useCustomerSearch();
   const [inputType, setInputType] = useState("");
   const [sourceType, setSourceType] = useState("");
   const [expDate, setExpDate] = useState("");
@@ -50,159 +40,16 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
 
     setLoading(true);
     try {
-      let customerId = null;
-      let related_account_id = null;
-      let related_card_id = null;
-      let foundAccount = null;
-      let foundCard = null;
-
-      const headers = {
-        Accept: "application/json",
-        Authorization: getAccessToken(),
-        "ngrok-skip-browser-warning": "true",
-      };
-
-      // Step 1: Search customer using new /customers endpoint with search parameters
-      let searchType = "";
-      if (sourceType === "account") {
-        searchType = "account";
-      } else if (sourceType === "debit" || sourceType === "credit") {
-        searchType = "card";
-      }
-
-      if (searchType) {
-        const searchUrl = `/api/v1/customers?search=${encodeURIComponent(numberValue.trim())}&search_type=${searchType}&limit=10`;
-        const searchResponse = await fetch(searchUrl, { headers });
-        
-        if (searchResponse.ok) {
-          const searchResult = await searchResponse.json();
-          const customers = searchResult.data || searchResult || [];
-          
-          if (customers.length > 0) {
-            const customer = customers[0]; // Take first match
-            customerId = customer.customer_id;
-            
-            // For card search, we already have the card info from search result
-            if (sourceType === "debit" || sourceType === "credit") {
-              // Create a mock card object since we found the customer via card search
-              foundCard = {
-                card_id: `card_${customerId}_${numberValue.trim()}`, // Mock ID
-                card_number: numberValue.trim(),
-                card_type: sourceType === "credit" ? "KREDIT" : sourceType.toUpperCase(),
-                account_id: null // Will be filled when we get accounts
-              };
-              related_card_id = foundCard.card_id;
-            } else if (sourceType === "account") {
-              // For account search, we'll get the account in Step 3
-              // Just mark that we're searching by account
-              foundAccount = { account_number: numberValue.trim() };
-            }
-          }
-        }
-      }
-
-      if (!customerId) {
+      const result = await searchCustomer(numberValue, sourceType);
+      
+      if (!result) {
         alert("Number not found");
         return;
       }
 
-      // Step 2: Get full customer data (already have from search, but get fresh data)
-      let customer = null;
-      if (customerId) {
-        const customerResponse = await fetch(`/api/v1/customers?search=${customerId}&search_type=customer&limit=1`, { headers });
-        if (customerResponse.ok) {
-          const customerResult = await customerResponse.json();
-          const customers = customerResult.data || customerResult || [];
-          customer = customers.find(c => c.customer_id === customerId) || customers[0];
-        }
-      }
-      
-      if (!customer) {
-        alert("Customer not found");
-        return;
-      }
-
-      // Step 3: Fetch customer's accounts using new endpoint
-      let customerAccounts = [];
-      let customerCards = [];
-      
-      try {
-        const customerAccountsResponse = await fetch(`/api/v1/customers/${customerId}/accounts`, { headers });
-        if (customerAccountsResponse.ok) {
-          const accountsData = await customerAccountsResponse.json();
-          customerAccounts = Array.isArray(accountsData) ? accountsData : accountsData.data || [];
-          
-          // Find the specific account if searching by account number
-          if (sourceType === "account" && foundAccount) {
-            const specificAccount = customerAccounts.find(acc => acc.account_number?.toString() === numberValue.trim());
-            if (specificAccount) {
-              related_account_id = specificAccount.account_id;
-              foundAccount = specificAccount;
-            }
-          }
-          
-          // For card search, find the account that matches the card
-          if (foundCard && customerAccounts.length > 0) {
-            // Use first account as related account for card
-            related_account_id = customerAccounts[0].account_id;
-            foundCard.account_id = customerAccounts[0].account_id;
-          }
-        }
-      } catch (error) {
-        // No fallback since /v1/account doesn't exist
-        customerAccounts = [];
-      }
-
-      // Step 4: Fetch all customer's cards using new customers endpoint
-      if (customerId) {
-        try {
-          const customerCardsResponse = await fetch(`/api/v1/customers/${customerId}/cards`, { headers });
-          if (customerCardsResponse.ok) {
-            const cardsData = await customerCardsResponse.json();
-            customerCards = Array.isArray(cardsData) ? cardsData : cardsData.data || [];
-          }
-        } catch (error) {
-          // If /customers/{id}/cards doesn't exist, keep foundCard if we have it
-          if (foundCard) {
-            customerCards = [foundCard];
-          }
-        }
-      }
-
-      setCustomerData(customer);
+      setCustomerData(result.customer);
       setIsReadOnly(true);
-
-      onCustomerData?.(
-        {
-          ...customer,
-          related_account_id,
-          related_card_id,
-          customerAccounts, // Include customer's accounts
-          customerCards, // Include customer's cards
-          // simpan nomor yang dicari dan semua data terkait
-          ...(sourceType === "account"
-            ? { 
-                accountNumber: numberValue.trim(),
-                cardNumber: customerCards.length > 0 ? customerCards[0].card_number : ""
-              }
-            : {}),
-          ...(sourceType === "debit" || sourceType === "credit"
-            ? { 
-                cardNumber: numberValue.trim(),
-                accountNumber: customerAccounts.length > 0 ? customerAccounts[0].account_number : ""
-              }
-            : {}),
-        },
-        {
-          searchedNumber: numberValue.trim(),
-          searchType: sourceType,
-          related_account_id,
-          related_card_id,
-          customerAccounts, // Include in search context too
-          customerCards, // Include customer's cards in context
-        },
-        inputType
-      );
+      onCustomerData?.(result.customer, result.searchContext, inputType);
     } catch (error) {
       console.error("Search error:", error);
       alert("Error fetching data: " + (error?.message || "Unknown error"));

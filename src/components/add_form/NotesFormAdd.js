@@ -50,8 +50,8 @@ const InputForm = () => {
           })
           .replace(/\//g, "/")
           .replace(",", ""),
-        division: (user?.role_details?.role_name || user?.role || "Unknown Division"),
-        author: (user?.full_name || user?.name || user?.email || "Unknown User"),
+        division: user?.role_details?.role_name || user?.role || "Unknown Division",
+        author: user?.full_name || user?.name || user?.email || "Unknown User",
         message: newNote,
         type: "note",
       };

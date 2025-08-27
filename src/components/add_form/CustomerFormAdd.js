@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
+import useCustomerData from "@/hooks/useCustomerData";
 
 const CustomerForm = ({
   detail,
@@ -8,6 +9,7 @@ const CustomerForm = ({
   searchContext,
   inputType,
 }) => {
+  const { processCustomerData } = useCustomerData();
   // field statis
   const formData = [
     { label: "CIF" },
@@ -86,132 +88,25 @@ const autoFilled = useMemo(() => {
     setLocked(autoFilled); // kunci otomatis saat hasil search mengisi form
   }, [autoFilled]);
 
-  // Update form when customer data from API changes
+  // Update form when customer data changes
   useEffect(() => {
-    // Skip API calls for non_nasabah input type
     if (inputType === "non_nasabah") {
       return;
     }
     
     if (customerData) {
-      const fetchRelatedData = async () => {
-        let accountNumbers = [];
-        let cardNumbers = [];
-        let accounts = [];
-
-        try {
-          // Get authorization token
-          const getAccessToken = () => {
-            try {
-              const raw = localStorage.getItem("auth");
-              if (!raw) return "";
-              const parsed = JSON.parse(raw);
-              const token = parsed?.state?.accessToken || "";
-              return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-            } catch {
-              return "";
-            }
-          };
-
-          const headers = {
-            Accept: "application/json",
-            Authorization: getAccessToken(),
-            "ngrok-skip-browser-warning": "true",
-          };
-
-          // Use customer accounts and cards from search context (already fetched by InputFormRow)
-          let customerAccounts = [];
-          let customerCards = [];
-          
-          if (searchContext?.customerAccounts) {
-            customerAccounts = searchContext.customerAccounts;
-          }
-          
-          if (searchContext?.customerCards) {
-            customerCards = searchContext.customerCards;
-          }
-
-            // Filter based on search context
-            if (
-              searchContext?.searchType === "account" &&
-              searchContext?.searchedNumber
-            ) {
-              // Only show the searched account number
-              accountNumbers = [searchContext.searchedNumber];
-            } else if (customerAccounts.length > 0) {
-              // Show first account as fallback
-              accountNumbers = [customerAccounts[0].account_number];
-            } else {
-              accountNumbers = [];
-            }
-
-          // Process card numbers - prioritize direct data from customerData
-          if (customerData?.cardNumber) {
-            // Use card number directly from customerData (set by InputFormRow)
-            cardNumbers = [customerData.cardNumber];
-          } else if (searchContext?.searchType === "debit" || searchContext?.searchType === "credit") {
-            // Show the searched card number
-            cardNumbers = [searchContext.searchedNumber];
-          } else if (customerCards && customerCards.length > 0) {
-            // Show first card as fallback
-            cardNumbers = [customerCards[0].card_number];
-          } else {
-            cardNumbers = [];
-          }
-        } catch (error) {
-          console.error('Error fetching related data:', error);
-        }
-
-        // Debug gender data
-        console.log('Customer gender data:', {
-          gender_type: customerData.gender_type,
-          gender: customerData.gender,
-          raw_customerData: customerData
-        });
-        
-        // Map gender to correct format
-        let genderValue = "";
-        const rawGender = customerData.gender_type || customerData.gender || "";
-        if (rawGender) {
-          // Convert to uppercase and handle different formats
-          const upperGender = rawGender.toString().toUpperCase();
-          if (upperGender === "MALE" || upperGender === "M" || upperGender === "L" || upperGender === "LAKI-LAKI") {
-            genderValue = "MALE";
-          } else if (upperGender === "FEMALE" || upperGender === "F" || upperGender === "P" || upperGender === "PEREMPUAN") {
-            genderValue = "FEMALE";
-          }
-        }
-        
-        const mappedData = {
-          cif: customerData.cif || "",
-          gender: genderValue,
-          address: customerData.address || "",
-          accountNumber: accountNumbers.join(", ") || "",
-          placeOfBirth: customerData.place_of_birth || "",
-          billingAddress: customerData.billing_address || "",
-          cardNumber: cardNumbers.join(", ") || "",
-          homePhone: customerData.home_phone || "",
-          postalCode: customerData.postal_code || "",
-          customerName: customerData.full_name || "",
-          handphone: customerData.phone_number || "",
-          officePhone: customerData.office_phone || "",
-          personId: customerData.nik || "",
-          email: customerData.email || "",
-          faxPhone: customerData.fax_phone || "",
-        };
+      const mappedData = processCustomerData(customerData, searchContext);
+      if (mappedData) {
         const newFormData = { ...form, ...mappedData };
         setForm(newFormData);
         onChange?.(newFormData);
-      };
-
-      fetchRelatedData();
+      }
     } else {
-      // Reset form when customerData is null (after reset)
       const resetData = toInitial({});
       setForm(resetData);
       onChange?.(resetData);
     }
-  }, [customerData, inputType]);
+  }, [customerData, searchContext, inputType, processCustomerData]);
 
   // const update = (k, v) => setForm((prev) => { const n = { ...prev, [k]: v }; onChange?.(n); return n; });
 

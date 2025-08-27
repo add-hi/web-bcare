@@ -102,6 +102,7 @@ const DataForm = ({ detail, onChange, mode = "detail" }) => {
     priorities,
     policies,
     filterCategories,
+    fetchPoliciesByChannel,
     updateCategories,
     getSlaInfo,
   } = useAddComplaint();
@@ -176,58 +177,16 @@ const DataForm = ({ detail, onChange, mode = "detail" }) => {
   // State untuk menyimpan filtered categories
   const [filteredCategories, setFilteredCategories] = useState(allCategories);
 
-  // Fetch policies berdasarkan channel yang dipilih
-  const fetchPoliciesByChannel = async (channelId) => {
-    try {
-      const getAccessToken = () => {
-        try {
-          const raw = localStorage.getItem("auth");
-          if (!raw) return "";
-          const parsed = JSON.parse(raw);
-          const token = parsed?.state?.accessToken || "";
-          return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-        } catch {
-          return "";
-        }
-      };
 
-      const headers = {
-        Accept: "application/json",
-        Authorization: getAccessToken(),
-        "ngrok-skip-browser-warning": "true",
-      };
-
-      const response = await fetch(`/api/v1/policies?channel_id=${channelId}&limit=50`, { headers });
-      if (response.ok) {
-        const policyData = await response.json();
-        const channelPolicies = Array.isArray(policyData) ? policyData : policyData.data || [];
-        
-        // Ambil complaint_id dari policies yang match dengan channel
-        const allowedComplaintIds = channelPolicies.map(p => 
-          p.complaint_category?.complaint_id || p.complaint_id
-        );
-        
-        // Filter categories berdasarkan complaint_id yang diizinkan
-        const filtered = allCategories.filter(cat => 
-          allowedComplaintIds.includes(cat.complaint_id)
-        );
-        
-        setFilteredCategories(filtered);
-      }
-    } catch (error) {
-      // Jika gagal, tampilkan semua categories
-      setFilteredCategories(allCategories);
-    }
-  };
 
   // Effect untuk fetch policies ketika channel berubah
   useEffect(() => {
     if (mode === "add" && form.channelId) {
-      fetchPoliciesByChannel(form.channelId);
+      fetchPoliciesByChannel(form.channelId).then(setFilteredCategories);
     } else {
       setFilteredCategories(allCategories);
     }
-  }, [mode, form.channelId, allCategories]);
+  }, [mode, form.channelId, allCategories, fetchPoliciesByChannel]);
 
 
 

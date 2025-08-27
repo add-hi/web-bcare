@@ -1,63 +1,14 @@
 "use client";
 import { useCallback, useEffect } from "react";
 import useAddComplaintStore from "@/store/addComplaintStore";
+import useUser from "@/hooks/useUser";
+import httpClient from "@/lib/httpClient";
 import toast from "react-hot-toast";
-
-// === Single-flight guards (dipakai bareng semua komponen) ===
-let dropdownOnce = null; // untuk /channel, /category, dst
-let userOnce = null; // untuk /me atau /employee
-let dropdownLoaded = false; // flag lokal, anti-refetch walau store tak punya isDataFetched
-let userLoaded = false; // flag lokal, anti-refetch walau store tak punya isUserFetched
-
-const isFn = (f) => typeof f === "function";
-
-function getAccessToken() {
-  try {
-    const raw = localStorage.getItem("auth");
-    if (!raw) return "";
-    const parsed = JSON.parse(raw);
-    const token = parsed?.state?.accessToken || "";
-    return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-  } catch {
-    return "";
-  }
-}
-
-function decodeNameFromJWT(bearer) {
-  try {
-    const token = bearer.replace(/^Bearer\s+/i, "");
-    const [h, p] = token.split(".");
-    if (!p) return "";
-    const b64 = p.replace(/-/g, "+").replace(/_/g, "/");
-    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
-    const payload = JSON.parse(atob(b64 + pad));
-    return payload.full_name || payload.name || payload.username || "";
-  } catch {
-    return "";
-  }
-}
-
-// export default function useAddComplaint() {
-//   const store = useAddComplaintStore();
-//   const {
-//     // State
-//     customerData, searchContext, inputType,
-//     dataFormData, actionFormData, notesFormData,
-//     channels, categories, allCategories, policies, sources, terminals, priorities, uics,
-//     employees, roles, currentEmployee, currentRole,
-//     loadingData, isDataFetched, isUserFetched,
-
-//     // Actions
-//     setCustomerData, setDataFormData, setActionFormData, setNotesFormData,
-//     setChannels, setCategories, setAllCategories, setPolicies, setSources,
-//     setTerminals, setPriorities, setUics, setEmployees, setRoles,
-//     setCurrentEmployee, setCurrentRole, setLoadingData, reset,
-//     setIsDataFetched, setIsUserFetched
-
-//   } = store;
 
 export default function useAddComplaint() {
   const store = useAddComplaintStore();
+  const { user, accessToken } = useUser();
+  
   const {
     // State
     customerData,
@@ -74,13 +25,8 @@ export default function useAddComplaint() {
     terminals,
     priorities,
     uics,
-    employees,
-    roles,
-    currentEmployee,
-    currentRole,
     loadingData,
     isDataFetched,
-    isUserFetched,
 
     // Actions
     setCustomerData,
@@ -95,236 +41,88 @@ export default function useAddComplaint() {
     setTerminals,
     setPriorities,
     setUics,
-    setEmployees,
-    setRoles,
-    setCurrentEmployee,
-    setCurrentRole,
     setLoadingData,
     setIsDataFetched,
-    setIsUserFetched,
     reset,
   } = store;
 
-  const get = () => store;
-
   // Fetch specific policy for channel and category
   const fetchPolicyInfo = useCallback(async (channelId, categoryId) => {
+    if (!accessToken) return null;
+    
     try {
-      const Authorization = getAccessToken();
-      if (!Authorization) return null;
-
-      const headers = {
-        Accept: "application/json",
-        Authorization,
-        "ngrok-skip-browser-warning": "true",
-      };
-
-      const response = await fetch(`/api/v1/policies?channel_id=${channelId}&complaint_id=${categoryId}&limit=1`, { headers });
-      if (response.ok) {
-        const policyData = await response.json();
-        const policies = Array.isArray(policyData) ? policyData : policyData.data || [];
-        return policies[0] || null;
-      }
+      const { data } = await httpClient.get(`/v1/policies`, {
+        params: { channel_id: channelId, complaint_id: categoryId, limit: 1 },
+        headers: { Authorization: accessToken }
+      });
+      
+      const policies = Array.isArray(data) ? data : data?.data || [];
+      return policies[0] || null;
     } catch (error) {
       console.error('Failed to fetch policy:', error);
+      return null;
     }
-    return null;
-  }, []);
+  }, [accessToken]);
 
-  // === DROPDOWN: sekali saja untuk semua komponen ===
-  const fetchDropdownDataOnce = useCallback(async () => {
-    // kalau sudah pernah sukses (flag lokal) atau store sudah tandai fetched, stop
-    if (dropdownLoaded || isDataFetched) return;
+  // Fetch dropdown data
+  const fetchDropdownData = useCallback(async () => {
+    if (isDataFetched || !accessToken) return;
+    
+    setLoadingData(true);
+    try {
+      const [channels, categories, sources, terminals, priorities, policies, uics] = await Promise.all([
+        httpClient.get('/v1/channels', { headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/complaint-categories', { headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/sources', { headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/terminals', { headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/priorities', { headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/policies', { headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/uics', { headers: { Authorization: accessToken } })
+      ]);
 
-    // kalau sudah ada request yang lagi jalan, re-use
-    if (dropdownOnce) return dropdownOnce;
+      setChannels(channels.data?.data || channels.data || []);
+      const cats = categories.data?.data || categories.data || [];
+      setAllCategories(cats);
+      setCategories(cats);
+      setSources(sources.data?.data || sources.data || []);
+      setTerminals(terminals.data?.data || terminals.data || []);
+      setPriorities(priorities.data?.data || priorities.data || []);
+      setPolicies(policies.data?.data || policies.data || []);
+      setUics(uics.data?.data || uics.data || []);
+      
+      setIsDataFetched(true);
+    } catch (error) {
+      console.error('Failed to fetch dropdown data:', error);
+    } finally {
+      setLoadingData(false);
+    }
+  }, [isDataFetched, accessToken, setLoadingData, setChannels, setCategories, setAllCategories, setSources, setTerminals, setPriorities, setPolicies, setUics, setIsDataFetched]);
 
-    dropdownOnce = (async () => {
-      // kalau store punya setLoadingData baru dipanggil
-      if (isFn(setLoadingData)) setLoadingData(true);
-      try {
-        const Authorization = getAccessToken();
-        if (!Authorization) return;
 
-        const headers = {
-          Accept: "application/json",
-          Authorization,
-          "ngrok-skip-browser-warning": "true",
-        };
 
-        const [
-          channelRes,
-          categoryRes,
-          sourceRes,
-          terminalRes,
-          priorityRes,
-          policyRes,
-          uicRes,
-        ] = await Promise.all([
-          fetch("/api/v1/channels", { headers }),
-          fetch("/api/v1/complaint-categories", { headers }),
-          fetch("/api/v1/sources", { headers }),
-          fetch("/api/v1/terminals", { headers }),
-          fetch("/api/v1/priorities", { headers }),
-          fetch("/api/v1/policies", { headers }),
-          fetch("/api/v1/uics", { headers }),
-        ]);
-
-        if (channelRes.ok) {
-          const channelData = await channelRes.json();
-          // Handle different response formats
-          const channels = Array.isArray(channelData) ? channelData : channelData.data || [];
-          setChannels(channels);
-        }
-
-        if (categoryRes.ok) {
-          const categoryData = await categoryRes.json();
-          const cats = Array.isArray(categoryData) ? categoryData : categoryData.data || [];
-          setAllCategories(cats);
-          setCategories(cats);
-        } else {
-          // Try fallback endpoint
-          try {
-            const fallbackRes = await fetch("/api/v1/complaint-categories", { headers });
-            if (fallbackRes.ok) {
-              const categoryData = await fallbackRes.json();
-              const cats = Array.isArray(categoryData) ? categoryData : categoryData.data || [];
-              setAllCategories(cats);
-              setCategories(cats);
-            }
-          } catch (error) {
-            // Silent fail
-          }
-        }
-
-        if (sourceRes.ok) {
-          const sourceData = await sourceRes.json();
-          const sources = Array.isArray(sourceData) ? sourceData : sourceData.data || [];
-          setSources(sources);
-        }
-        if (terminalRes.ok) {
-          const terminalData = await terminalRes.json();
-          // Handle different response formats
-          const terminals = Array.isArray(terminalData)
-            ? terminalData
-            : terminalData.data || [];
-          setTerminals(terminals);
-        }
-        if (priorityRes.ok) {
-          const priorityData = await priorityRes.json();
-          const priorities = Array.isArray(priorityData) ? priorityData : priorityData.data || [];
-          setPriorities(priorities);
-        }
-
-        if (policyRes.ok) {
-          const policyData = await policyRes.json();
-          setPolicies(
-            Array.isArray(policyData) ? policyData : policyData.data || []
-          );
-        }
-
-        if (uicRes.ok) {
-          const uicData = await uicRes.json();
-          setUics(uicData.data || []);
-        } else {
-          setUics([]);
-        }
-
-        // tandai loaded pakai flag lokal
-        dropdownLoaded = true;
-        // kalau store menyediakan setter, update juga (opsional)
-        if (isFn(setIsDataFetched)) setIsDataFetched(true);
-      } finally {
-        if (isFn(setLoadingData)) setLoadingData(false);
-      }
-    })().catch((err) => {
-      // kalau gagal, biar bisa retry
-      dropdownOnce = null;
-      throw err;
-    });
-
-    return dropdownOnce;
-  }, [
-    isDataFetched, // aman meski undefined (falsy)
-    setLoadingData,
-    setChannels,
-    setCategories,
-    setAllCategories,
-    setSources,
-    setTerminals,
-    setPriorities,
-    setPolicies,
-    setUics,
-  ]);
-
-  // === USER: sekali saja untuk semua komponen ===
-  const fetchCurrentUserOnce = useCallback(async () => {
-    // hindari refetch: pakai flag lokal + guard store
-    if (userLoaded || isUserFetched || currentEmployee) return;
-    if (userOnce) return userOnce;
-
-    userOnce = (async () => {
-      const Authorization = getAccessToken();
-      if (!Authorization) return;
-
-      const headers = {
-        Accept: "application/json",
-        Authorization,
-        "ngrok-skip-browser-warning": "true",
-      };
-
-      try {
-        const meRes = await fetch("/api/v1/auth/me", { headers });
-        if (meRes.ok) {
-          const me = await meRes.json();
-          setCurrentEmployee({
-            ...me,
-            full_name:
-              me.full_name || me.fullName || me.name || me.username || "",
-          });
-          const roleName =
-            me.role_details?.role_name || me.role_name || me.role || "";
-          setCurrentRole({ role_name: roleName });
-
-          userLoaded = true; // flag lokal
-          if (isFn(setIsUserFetched)) setIsUserFetched(true); // opsional
-          return;
-        }
-      } catch (_) {}
-
-      const employeeRes = await fetch("/api/v1/employee", { headers });
-      if (employeeRes.ok) {
-        const employeeData = await employeeRes.json();
-        const employee = Array.isArray(employeeData)
-          ? employeeData[0]
-          : employeeData;
-        if (employee) setCurrentEmployee(employee);
-
-        if (employee?.role_id) {
-          const roleRes = await fetch("/api/v1/role", { headers });
-          if (roleRes.ok) {
-            const roleData = await roleRes.json();
-            const role = roleData.find((r) => r.role_id === employee.role_id);
-            setCurrentRole(role);
-          }
-        }
-
-        userLoaded = true; // flag lokal
-        if (isFn(setIsUserFetched)) setIsUserFetched(true); // opsional
-      }
-    })().catch((err) => {
-      userOnce = null;
-      throw err;
-    });
-
-    return userOnce;
-  }, [
-    isUserFetched,
-    currentEmployee,
-    setCurrentEmployee,
-    setCurrentRole,
-    setIsUserFetched,
-  ]);
+  // Fetch policies by channel and filter categories
+  const fetchPoliciesByChannel = useCallback(async (channelId) => {
+    if (!accessToken || !channelId) return allCategories;
+    
+    try {
+      const { data } = await httpClient.get('/v1/policies', {
+        params: { channel_id: channelId, limit: 50 },
+        headers: { Authorization: accessToken }
+      });
+      
+      const channelPolicies = Array.isArray(data) ? data : data?.data || [];
+      const allowedComplaintIds = channelPolicies.map(p => 
+        p.complaint_category?.complaint_id || p.complaint_id
+      );
+      
+      return allCategories.filter(cat => 
+        allowedComplaintIds.includes(cat.complaint_id)
+      );
+    } catch (error) {
+      console.error('Failed to fetch policies by channel:', error);
+      return allCategories;
+    }
+  }, [accessToken, allCategories]);
 
   // Filter categories based on selected channel
   const filterCategories = useCallback(
@@ -332,20 +130,16 @@ export default function useAddComplaint() {
       if (channelId && policies.length > 0 && allCategories.length > 0) {
         const allowedComplaintIds = policies
           .filter((policy) => {
-            // Handle nested structure: policy.channel.channel_id
             const policyChannelId = policy.channel?.channel_id || policy.channel_id;
             return policyChannelId === Number(channelId);
           })
           .map((policy) => {
-            // Handle nested structure: policy.complaint_category.complaint_id
             return policy.complaint_category?.complaint_id || policy.complaint_id;
           });
 
-        const filteredCategories = allCategories.filter((cat) =>
+        return allCategories.filter((cat) =>
           allowedComplaintIds.includes(cat.complaint_id)
         );
-
-        return filteredCategories;
       }
       return allCategories;
     },
@@ -415,58 +209,15 @@ export default function useAddComplaint() {
     window.dispatchEvent(new CustomEvent("resetAllForms"));
   }, [reset]);
 
-  // Update ticket status after creation (workaround for backend limitation)
-  const updateTicketStatus = useCallback(
-    async (ticketId, statusIds, action) => {
-      const Authorization = getAccessToken();
-      if (!Authorization) {
-        throw new Error("No authorization token for status update");
-      }
 
-      const updateData = {
-        customer_status_id: statusIds.customer_status_id,
-        employee_status_id: statusIds.employee_status_id,
-      };
-
-      const response = await fetch(`/api/v1/tickets/${ticketId}`, {
-        method: "PATCH",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: Authorization,
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify(updateData),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `Failed to save ticket: ${response.status} - ${errorText}`
-        );
-      }
-
-      const result = await response.json();
-
-      return result;
-    },
-    []
-  );
 
   // Save ticket function
   const saveTicket = useCallback(async () => {
-    // Get fresh store state
-    const storeState = get();
-
-    // Check if actionFormData exists in fresh store
-    if (!storeState.actionFormData) {
-      // Handle missing actionFormData
+    if (!accessToken) {
+      throw new Error("No authorization token found");
     }
+    
     try {
-      const Authorization = getAccessToken();
-      if (!Authorization) {
-        throw new Error("No authorization token found");
-      }
 
       // Get policy_id based on channel and category
       const policy = policies.find(
@@ -486,7 +237,6 @@ export default function useAddComplaint() {
         return { customer_status_id: 1, employee_status_id: 1 };
       };
 
-      // Use actionFormData from hook (more reliable than store state)
       const currentActionData = actionFormData;
 
       const statusIds = getStatusIds(currentActionData?.action);
@@ -574,23 +324,7 @@ export default function useAddComplaint() {
 
       // Add division_notes in correct JSON format
       if (notesFormData?.newNote) {
-        // Get user data from localStorage (same as useUser hook)
-        const getUser = () => {
-          try {
-            const raw = localStorage.getItem("auth");
-            if (!raw) return null;
-            const parsed = JSON.parse(raw);
-            return parsed?.state?.user || null;
-          } catch {
-            return null;
-          }
-        };
-        
-        const user = getUser();
-        const authz = getAccessToken();
-        const jwtName = decodeNameFromJWT(authz);
-        
-        const authorName = user?.full_name || user?.name || user?.email || jwtName || "Unknown";
+        const authorName = user?.full_name || user?.name || user?.email || "Unknown";
         const divisionName = user?.role_details?.role_name || user?.role || "Unknown";
           
         const noteObject = {
@@ -612,32 +346,11 @@ export default function useAddComplaint() {
       console.log('Ticket data to be sent:', JSON.stringify(ticketData, null, 2));
       window.debugTicketData = ticketData;
 
-      const response = await fetch("/api/v1/tickets", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: Authorization,
-          "ngrok-skip-browser-warning": "true",
-          "X-Requested-With": "XMLHttpRequest",
-        },
-        body: JSON.stringify(ticketData),
+      const response = await httpClient.post('/v1/tickets', ticketData, {
+        headers: { Authorization: accessToken }
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        toast.error(
-          `Gagal membuat ticket (${response.status} ${response.statusText}).\n\n` +
-            `${
-              errorText?.slice(0, 500) || "Tidak ada detail error dari server."
-            }`
-        );
-        throw new Error(
-          `Failed to save ticket: ${response.status} - ${errorText}`
-        );
-      }
-
-      const result = await response.json();
+      const result = response.data;
 
       // Toast sukses
       try {
@@ -661,17 +374,7 @@ export default function useAddComplaint() {
       );
       throw error;
     }
-  }, [
-    dataFormData,
-    actionFormData,
-    notesFormData,
-    customerData,
-    currentEmployee,
-    currentRole,
-    policies,
-    resetAllForms,
-    get,
-  ]);
+  }, [dataFormData, actionFormData, notesFormData, customerData, user, policies, resetAllForms, accessToken]);
 
   // useEffect(() => {
   //   fetchDropdownData();
@@ -687,9 +390,8 @@ export default function useAddComplaint() {
   //   }
   // }, []);
   useEffect(() => {
-    fetchDropdownDataOnce();
-    fetchCurrentUserOnce();
-  }, [fetchDropdownDataOnce, fetchCurrentUserOnce]);
+    fetchDropdownData();
+  }, [fetchDropdownData]);
 
   // return {
   //   // State
@@ -730,6 +432,7 @@ export default function useAddComplaint() {
     setActionFormData,
     setNotesFormData,
     filterCategories,
+    fetchPoliciesByChannel,
     updateCategories,
     getUicName,
     getSlaInfo,
