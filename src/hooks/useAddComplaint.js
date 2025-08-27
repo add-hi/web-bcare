@@ -574,26 +574,24 @@ export default function useAddComplaint() {
 
       // Add division_notes in correct JSON format
       if (notesFormData?.newNote) {
-        // Ensure user data is loaded
-        await fetchCurrentUserOnce();
+        // Get user data from localStorage (same as useUser hook)
+        const getUser = () => {
+          try {
+            const raw = localStorage.getItem("auth");
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            return parsed?.state?.user || null;
+          } catch {
+            return null;
+          }
+        };
         
+        const user = getUser();
         const authz = getAccessToken();
         const jwtName = decodeNameFromJWT(authz);
         
-        // Get fresh store state after fetch
-        const freshState = get();
-        
-        const authorName =
-          freshState.currentEmployee?.full_name ||
-          freshState.currentEmployee?.name ||
-          freshState.currentEmployee?.fullName ||
-          jwtName ||
-          "Unknown";
-          
-        const divisionName = 
-          freshState.currentRole?.role_name ||
-          freshState.currentRole?.name ||
-          "Unknown";
+        const authorName = user?.full_name || user?.name || user?.email || jwtName || "Unknown";
+        const divisionName = user?.role_details?.role_name || user?.role || "Unknown";
           
         const noteObject = {
           division: divisionName,
