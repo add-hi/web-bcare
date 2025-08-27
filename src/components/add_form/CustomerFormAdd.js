@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import useCustomerData from "@/hooks/useCustomerData";
+import useCustomerSearch from "@/hooks/useCustomerSearch";
 
 const CustomerForm = ({
   detail,
@@ -9,7 +9,7 @@ const CustomerForm = ({
   searchContext,
   inputType,
 }) => {
-  const { processCustomerData } = useCustomerData();
+  const { processCustomerData } = useCustomerSearch();
   // field statis
   const formData = [
     { label: "CIF" },

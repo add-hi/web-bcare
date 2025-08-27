@@ -69,7 +69,6 @@ export default function useCustomerSearch() {
         });
         customerCards = Array.isArray(cardsData) ? cardsData : cardsData?.data || [];
       } catch (error) {
-        // Fallback for card search
         if (sourceType === "debit" || sourceType === "credit") {
           const mockCard = {
             card_id: `card_${customerId}_${numberValue.trim()}`,
@@ -113,5 +112,58 @@ export default function useCustomerSearch() {
     }
   }, [accessToken]);
 
-  return { searchCustomer };
+  const processCustomerData = useCallback((customerData, searchContext) => {
+    if (!customerData) return null;
+
+    let accountNumbers = [];
+    let cardNumbers = [];
+
+    const customerAccounts = searchContext?.customerAccounts || [];
+    const customerCards = searchContext?.customerCards || [];
+
+    if (searchContext?.searchType === "account" && searchContext?.searchedNumber) {
+      accountNumbers = [searchContext.searchedNumber];
+    } else if (customerAccounts.length > 0) {
+      accountNumbers = [customerAccounts[0].account_number];
+    }
+
+    if (customerData?.cardNumber) {
+      cardNumbers = [customerData.cardNumber];
+    } else if (searchContext?.searchType === "debit" || searchContext?.searchType === "credit") {
+      cardNumbers = [searchContext.searchedNumber];
+    } else if (customerCards && customerCards.length > 0) {
+      cardNumbers = [customerCards[0].card_number];
+    }
+
+    let genderValue = "";
+    const rawGender = customerData.gender_type || customerData.gender || "";
+    if (rawGender) {
+      const upperGender = rawGender.toString().toUpperCase();
+      if (upperGender === "MALE" || upperGender === "M" || upperGender === "L" || upperGender === "LAKI-LAKI") {
+        genderValue = "MALE";
+      } else if (upperGender === "FEMALE" || upperGender === "F" || upperGender === "P" || upperGender === "PEREMPUAN") {
+        genderValue = "FEMALE";
+      }
+    }
+
+    return {
+      cif: customerData.cif || "",
+      gender: genderValue,
+      address: customerData.address || "",
+      accountNumber: accountNumbers.join(", ") || "",
+      placeOfBirth: customerData.place_of_birth || "",
+      billingAddress: customerData.billing_address || "",
+      cardNumber: cardNumbers.join(", ") || "",
+      homePhone: customerData.home_phone || "",
+      postalCode: customerData.postal_code || "",
+      customerName: customerData.full_name || "",
+      handphone: customerData.phone_number || "",
+      officePhone: customerData.office_phone || "",
+      personId: customerData.nik || "",
+      email: customerData.email || "",
+      faxPhone: customerData.fax_phone || "",
+    };
+  }, []);
+
+  return { searchCustomer, processCustomerData };
 }
