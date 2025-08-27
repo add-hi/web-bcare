@@ -119,13 +119,17 @@ const autoFilled = useMemo(() => {
             "ngrok-skip-browser-warning": "true",
           };
 
-          // Fetch accounts for this customer
-          const accountResponse = await fetch("/api/v1/account", { headers });
-          if (accountResponse.ok) {
-            accounts = await accountResponse.json();
-            const customerAccounts = accounts.filter((acc) => {
-              return acc.customer_id === customerData.customer_id;
-            });
+          // Use customer accounts and cards from search context (already fetched by InputFormRow)
+          let customerAccounts = [];
+          let customerCards = [];
+          
+          if (searchContext?.customerAccounts) {
+            customerAccounts = searchContext.customerAccounts;
+          }
+          
+          if (searchContext?.customerCards) {
+            customerCards = searchContext.customerCards;
+          }
 
             // Filter based on search context
             if (
@@ -141,63 +145,29 @@ const autoFilled = useMemo(() => {
               accountNumbers = [];
             }
 
-            // Fetch cards for this customer's accounts
-            const cardResponse = await fetch("/api/v1/card", { headers });
-            if (cardResponse.ok) {
-              const cards = await cardResponse.json();
-
-              if (customerAccounts.length > 0) {
-                // Get account_ids from customer's accounts
-                const customerAccountIds = customerAccounts.map(
-                  (acc) => acc.account_id
-                );
-
-                // Filter cards that belong to customer's accounts
-                const customerCards = cards.filter((card) => {
-                  const belongsToCustomer = customerAccountIds.includes(
-                    card.account_id
-                  );
-                  return belongsToCustomer;
-                });
-
-                // Filter based on search context
-                if (
-                  searchContext?.searchType === "debit" ||
-                  searchContext?.searchType === "credit"
-                ) {
-                  // Only show the searched card number
-                  cardNumbers = [searchContext.searchedNumber];
-                } else if (
-                  searchContext?.searchType === "account" &&
-                  searchContext?.searchedNumber
-                ) {
-                  // For account search, show only the first card related to that specific searched account
-                  const searchedAccount = accounts.find(
-                    (acc) =>
-                      acc.account_number.toString() ===
-                      searchContext.searchedNumber
-                  );
-                  if (searchedAccount) {
-                    const relatedCards = cards.filter(
-                      (card) => card.account_id === searchedAccount.account_id
-                    );
-                    cardNumbers =
-                      relatedCards.length > 0
-                        ? [relatedCards[0].card_number]
-                        : [];
-                  }
-                } else if (customerCards.length > 0) {
-                  // Show first card as fallback
-                  cardNumbers = [customerCards[0].card_number];
-                } else {
-                  cardNumbers = [];
-                }
-              } else {
-                console.log("No customer accounts found, skipping card lookup");
-              }
+          // Process card numbers based on search context
+          if (searchContext?.searchType === "debit" || searchContext?.searchType === "credit") {
+            // Only show the searched card number
+            cardNumbers = [searchContext.searchedNumber];
+          } else if (searchContext?.searchType === "account" && searchContext?.searchedNumber) {
+            // For account search, show cards related to that specific account
+            const searchedAccount = customerAccounts.find(
+              (acc) => acc.account_number.toString() === searchContext.searchedNumber
+            );
+            if (searchedAccount) {
+              const relatedCards = customerCards.filter(
+                (card) => card.account_id === searchedAccount.account_id
+              );
+              cardNumbers = relatedCards.length > 0 ? [relatedCards[0].card_number] : [];
             }
+          } else if (customerCards.length > 0) {
+            // Show first card as fallback
+            cardNumbers = [customerCards[0].card_number];
+          } else {
+            cardNumbers = [];
           }
         } catch (error) {
+          console.error('Error fetching related data:', error);
         }
 
         const mappedData = {

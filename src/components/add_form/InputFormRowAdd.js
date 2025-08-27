@@ -62,46 +62,56 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
         "ngrok-skip-browser-warning": "true",
       };
 
+      // Step 1: Search customer using new /customers endpoint with search parameters
+      let searchType = "";
       if (sourceType === "account") {
-        const accountResponse = await fetch(`/api/v1/account`, { headers });
-        if (accountResponse.ok) {
-          const accounts = await accountResponse.json();
-          foundAccount = accounts.find(
-            (acc) => acc.account_number?.toString() === numberValue.trim()
-          );
-          if (foundAccount) {
-            related_account_id = foundAccount.account_id ?? null;
-            customerId = foundAccount.customer_id ?? null;
-          }
-        }
+        searchType = "account";
       } else if (sourceType === "debit" || sourceType === "credit") {
-        const cardResponse = await fetch(`/api/v1/card`, { headers });
-        if (cardResponse.ok) {
-          const cards = await cardResponse.json();
-          const expectedType =
-            sourceType === "credit" ? "KREDIT" : sourceType.toUpperCase();
+        searchType = "card";
+      }
 
-          foundCard = cards.find((c) => {
-            const numberMatch =
-              c.card_number?.toString() === numberValue.trim();
-            const typeMatch = c.card_type?.toUpperCase() === expectedType;
-            const expMatch = expDate ? c.exp_date === expDate.trim() : true;
-            return numberMatch && typeMatch && expMatch;
-          });
-
-          if (foundCard) {
-            related_card_id = foundCard.card_id ?? null;
-
-            // ambil account pemilik card untuk dapat customer_id
-            const accountResponse = await fetch(`/api/v1/account`, { headers });
-            if (accountResponse.ok) {
-              const accounts = await accountResponse.json();
-              foundAccount = accounts.find(
-                (acc) => acc.account_id === foundCard.account_id
-              );
-              if (foundAccount) {
-                related_account_id = foundAccount.account_id ?? null;
-                customerId = foundAccount.customer_id ?? null;
+      if (searchType) {
+        const searchUrl = `/api/v1/customers?search=${encodeURIComponent(numberValue.trim())}&search_type=${searchType}&limit=10`;
+        const searchResponse = await fetch(searchUrl, { headers });
+        
+        if (searchResponse.ok) {
+          const searchResult = await searchResponse.json();
+          const customers = searchResult.data || searchResult || [];
+          
+          if (customers.length > 0) {
+            const customer = customers[0]; // Take first match
+            customerId = customer.customer_id;
+            
+            // For card search, we need to find the specific card and account
+            if (sourceType === "debit" || sourceType === "credit") {
+              // Find the card that matches
+              const cardResponse = await fetch(`/api/v1/card`, { headers });
+              if (cardResponse.ok) {
+                const cards = await cardResponse.json();
+                const expectedType = sourceType === "credit" ? "KREDIT" : sourceType.toUpperCase();
+                
+                foundCard = cards.find((c) => {
+                  const numberMatch = c.card_number?.toString() === numberValue.trim();
+                  const typeMatch = c.card_type?.toUpperCase() === expectedType;
+                  const expMatch = expDate ? c.exp_date === expDate.trim() : true;
+                  return numberMatch && typeMatch && expMatch;
+                });
+                
+                if (foundCard) {
+                  related_card_id = foundCard.card_id;
+                  related_account_id = foundCard.account_id;
+                }
+              }
+            } else if (sourceType === "account") {
+              // For account search, find the specific account
+              const accountsResponse = await fetch(`/api/v1/customers/${customerId}/accounts`, { headers });
+              if (accountsResponse.ok) {
+                const accountsData = await accountsResponse.json();
+                const accounts = Array.isArray(accountsData) ? accountsData : accountsData.data || [];
+                foundAccount = accounts.find(acc => acc.account_number?.toString() === numberValue.trim());
+                if (foundAccount) {
+                  related_account_id = foundAccount.account_id;
+                }
               }
             }
           }
@@ -113,17 +123,49 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
         return;
       }
 
-      // fetch customer
-      const customerResponse = await fetch(`/api/v1/customer`, { headers });
-      if (!customerResponse.ok) {
-        alert("Error fetching customer data");
+      // Step 2: Get full customer data (already have from search, but get fresh data)
+      let customer = null;
+      if (customerId) {
+        const customerResponse = await fetch(`/api/v1/customers?search=${customerId}&search_type=customer&limit=1`, { headers });
+        if (customerResponse.ok) {
+          const customerResult = await customerResponse.json();
+          const customers = customerResult.data || customerResult || [];
+          customer = customers.find(c => c.customer_id === customerId) || customers[0];
+        }
+      }
+      
+      if (!customer) {
+        alert("Customer not found");
         return;
       }
-      const customers = await customerResponse.json();
-      const customer = customers.find((c) => c.customer_id === customerId);
-      if (!customer) {
-        alert("Customer data not found");
-        return;
+
+      // Step 3: Fetch customer's accounts using new endpoint
+      let customerAccounts = [];
+      let customerCards = [];
+      
+      try {
+        const customerAccountsResponse = await fetch(`/api/v1/customers/${customerId}/accounts`, { headers });
+        if (customerAccountsResponse.ok) {
+          const accountsData = await customerAccountsResponse.json();
+          customerAccounts = Array.isArray(accountsData) ? accountsData : accountsData.data || [];
+        }
+      } catch (error) {
+        // No fallback since /v1/account doesn't exist
+        customerAccounts = [];
+      }
+
+      // Step 4: Fetch customer's cards
+      try {
+        const cardResponse = await fetch(`/api/v1/card`, { headers });
+        if (cardResponse.ok) {
+          const allCards = await cardResponse.json();
+          if (customerAccounts.length > 0) {
+            const customerAccountIds = customerAccounts.map(acc => acc.account_id);
+            customerCards = allCards.filter(card => customerAccountIds.includes(card.account_id));
+          }
+        }
+      } catch (error) {
+        // Silent fail for cards
       }
 
       setCustomerData(customer);
@@ -134,6 +176,8 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
           ...customer,
           related_account_id,
           related_card_id,
+          customerAccounts, // Include customer's accounts
+          customerCards, // Include customer's cards
           // simpan juga nomor yg dicari, biar di-save gak perlu lookup ulang
           ...(sourceType === "account"
             ? { accountNumber: numberValue.trim() }
@@ -147,6 +191,8 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
           searchType: sourceType,
           related_account_id,
           related_card_id,
+          customerAccounts, // Include in search context too
+          customerCards, // Include customer's cards in context
         },
         inputType
       );

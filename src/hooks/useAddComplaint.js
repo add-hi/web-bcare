@@ -237,7 +237,7 @@ export default function useAddComplaint() {
       };
 
       try {
-        const meRes = await fetch("/api/v1/me", { headers });
+        const meRes = await fetch("/api/v1/auth/me", { headers });
         if (meRes.ok) {
           const me = await meRes.json();
           setCurrentEmployee({
@@ -449,60 +449,14 @@ export default function useAddComplaint() {
       let related_account_id = null;
       let related_card_id = null;
 
-      // Lookup account ID by account number from form
-      if (customerData?.accountNumber) {
-        const accountNum = customerData.accountNumber.split(",")[0].trim();
-
-        try {
-          const accountResponse = await fetch("/api/v1/account", {
-            headers: {
-              Accept: "application/json",
-              Authorization: Authorization,
-              "ngrok-skip-browser-warning": "true",
-            },
-          });
-
-          if (accountResponse.ok) {
-            const accounts = await accountResponse.json();
-            const matchedAccount = accounts.find(
-              (acc) => acc.account_number.toString() === accountNum
-            );
-
-            if (matchedAccount) {
-              related_account_id = matchedAccount.account_id;
-            }
-          }
-        } catch (error) {
-          // Silent fail
-        }
+      // Use related_account_id from search context if available
+      if (searchContext?.related_account_id) {
+        related_account_id = searchContext.related_account_id;
       }
 
-      // Lookup card ID by card number from form
-      if (customerData?.cardNumber) {
-        const cardNum = customerData.cardNumber.split(",")[0].trim();
-
-        try {
-          const cardResponse = await fetch("/api/v1/card", {
-            headers: {
-              Accept: "application/json",
-              Authorization: Authorization,
-              "ngrok-skip-browser-warning": "true",
-            },
-          });
-
-          if (cardResponse.ok) {
-            const cards = await cardResponse.json();
-            const matchedCard = cards.find(
-              (card) => card.card_number.toString() === cardNum
-            );
-
-            if (matchedCard) {
-              related_card_id = matchedCard.card_id;
-            }
-          }
-        } catch (error) {
-          // Silent fail
-        }
+      // Use related_card_id from search context if available
+      if (searchContext?.related_card_id) {
+        related_card_id = searchContext.related_card_id;
       }
 
       // Build ticket data matching exact body format
