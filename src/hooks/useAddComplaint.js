@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import useAddComplaintStore from "@/store/addComplaintStore";
 import useUser from "@/hooks/useUser";
 import httpClient from "@/lib/httpClient";
@@ -8,6 +8,11 @@ import toast from "react-hot-toast";
 export default function useAddComplaint() {
   const store = useAddComplaintStore();
   const { user, accessToken } = useUser();
+  
+  const BASE = useMemo(
+    () => (process.env.NEXT_PUBLIC_API_URL).replace(/\/$/, ""),
+    []
+  );
   
   const {
     // State
@@ -51,7 +56,8 @@ export default function useAddComplaint() {
     if (!accessToken) return null;
     
     try {
-      const { data } = await httpClient.get('/policies', {
+      const { data } = await httpClient.get('/v1/policies', {
+        baseURL: BASE,
         params: { channel_id: channelId, complaint_id: categoryId, limit: 1 },
         headers: { Authorization: accessToken }
       });
@@ -71,13 +77,13 @@ export default function useAddComplaint() {
     setLoadingData(true);
     try {
       const [channels, categories, sources, terminals, priorities, policies, uics] = await Promise.all([
-        httpClient.get('/channels', { headers: { Authorization: accessToken } }),
-        httpClient.get('/complaint-categories', { headers: { Authorization: accessToken } }),
-        httpClient.get('/sources', { headers: { Authorization: accessToken } }),
-        httpClient.get('/terminals', { headers: { Authorization: accessToken } }),
-        httpClient.get('/priorities', { headers: { Authorization: accessToken } }),
-        httpClient.get('/policies', { headers: { Authorization: accessToken } }),
-        httpClient.get('/uics', { headers: { Authorization: accessToken } })
+        httpClient.get('/v1/channels', { baseURL: BASE, headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/complaint-categories', { baseURL: BASE, headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/sources', { baseURL: BASE, headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/terminals', { baseURL: BASE, headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/priorities', { baseURL: BASE, headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/policies', { baseURL: BASE, headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/uics', { baseURL: BASE, headers: { Authorization: accessToken } })
       ]);
 
       setChannels(channels.data?.data || channels.data || []);
@@ -105,7 +111,8 @@ export default function useAddComplaint() {
     if (!accessToken || !channelId) return allCategories;
     
     try {
-      const { data } = await httpClient.get('/policies', {
+      const { data } = await httpClient.get('/v1/policies', {
+        baseURL: BASE,
         params: { channel_id: channelId, limit: 50 },
         headers: { Authorization: accessToken }
       });
@@ -318,7 +325,8 @@ export default function useAddComplaint() {
       console.log('Ticket data to be sent:', JSON.stringify(ticketData, null, 2));
       window.debugTicketData = ticketData;
 
-      const response = await httpClient.post('/tickets', ticketData, {
+      const response = await httpClient.post('/v1/tickets', ticketData, {
+        baseURL: BASE,
         headers: { Authorization: accessToken }
       });
 

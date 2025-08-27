@@ -1,10 +1,15 @@
 "use client";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import httpClient from "@/lib/httpClient";
 import useUser from "@/hooks/useUser";
 
 export default function useCustomerSearch() {
   const { accessToken } = useUser();
+  
+  const BASE = useMemo(
+    () => (process.env.NEXT_PUBLIC_API_URL).replace(/\/$/, ""),
+    []
+  );
 
   const searchCustomer = useCallback(async (numberValue, sourceType) => {
     if (!accessToken || !numberValue.trim() || !sourceType) return null;
@@ -22,7 +27,8 @@ export default function useCustomerSearch() {
       // Step 1: Search customer with error handling
       let searchResult;
       try {
-        const response = await httpClient.get('/customers', {
+        const response = await httpClient.get('/v1/customers', {
+          baseURL: BASE,
           params: {
             search: numberValue.trim(),
             search_type: searchType,
@@ -47,7 +53,8 @@ export default function useCustomerSearch() {
       let related_account_id = null;
       
       try {
-        const { data: accountsData } = await httpClient.get(`/customers/${customerId}/accounts`, {
+        const { data: accountsData } = await httpClient.get(`/v1/customers/${customerId}/accounts`, {
+          baseURL: BASE,
           headers: { Authorization: accessToken }
         });
         customerAccounts = Array.isArray(accountsData) ? accountsData : accountsData?.data || [];
@@ -71,7 +78,8 @@ export default function useCustomerSearch() {
       let related_card_id = null;
       
       try {
-        const { data: cardsData } = await httpClient.get(`/customers/${customerId}/cards`, {
+        const { data: cardsData } = await httpClient.get(`/v1/customers/${customerId}/cards`, {
+          baseURL: BASE,
           headers: { Authorization: accessToken }
         });
         customerCards = Array.isArray(cardsData) ? cardsData : cardsData?.data || [];
