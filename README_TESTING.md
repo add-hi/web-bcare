@@ -248,7 +248,6 @@ screen.debug(screen.getByRole('button'))
 screen.logTestingPlaygroundURL()
 
 // Check if element exists
-console.log(screen.queryByText('Text'))
 ```
 
 ### 3. Async Debugging

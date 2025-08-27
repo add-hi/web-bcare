@@ -264,7 +264,6 @@ const DataForm = ({ detail, onChange, mode = "detail" }) => {
     setForm((p) => {
       const n = { ...p, [k]: v };
       setTimeout(() => {
-        console.log('DataForm onChange called with:', n);
         onChange?.(n);
       }, 0);
       return n;

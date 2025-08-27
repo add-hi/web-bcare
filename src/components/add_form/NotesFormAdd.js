@@ -55,11 +55,9 @@ const InputForm = () => {
       };
 
       // Save to store for ticket creation
-      console.log('NotesForm setNotesFormData called with:', { newNote });
       setNotesFormData({ newNote });
       
       setDivisionNotes((prev) => [...prev, mockNewNote]);
-      console.log("Note added to local display and store:", { newNote });
     } catch (error) {
       console.error("Failed to add note:", error);
       alert("Failed to add note. Please try again.");

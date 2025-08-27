@@ -79,7 +79,6 @@ const InputForm = ({ detail, onChange }) => {
       };
 
       setDivisionNotes((prev) => [...prev, newNoteObj]);
-      console.log("Note added:", newNoteObj);
     } catch (error) {
       console.error("Failed to add note:", error);
       alert("Failed to add note. Please try again.");

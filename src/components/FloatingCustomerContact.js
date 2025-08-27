@@ -24,8 +24,6 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
   // ====== Socket Configuration ======
   const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL;
 
-  // console.log(`CUS-${detail.ids.customerId}`);
-
   // Generate consistent UID per browser
   const uid = useMemo(() => {
     if (typeof window === "undefined") return "guest";
@@ -113,7 +111,6 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
   const startLocalStream = useCallback(async () => {
     if (streamRef.current) return streamRef.current;
     try {
-      console.log("Requesting microphone access...");
 
       // Check if getUserMedia is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -124,7 +121,6 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
         video: false,
         audio: true,
       });
-      console.log("Microphone access granted");
       streamRef.current = stream;
       // Audio stream doesn't need video element setup
       return stream;
@@ -155,7 +151,6 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
     
     // Handle remote audio stream
     pc.ontrack = (event) => {
-      console.log('Received remote audio stream');
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = event.streams[0];
       }

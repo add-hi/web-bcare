@@ -36,14 +36,9 @@ const InputForm = () => {
   // Auto-fill Unit To based on channel and category selection
   useEffect(() => {
     const { channelId, categoryId } = dataFormData;
-    // console.log('ActionForm - dataFormData:', dataFormData);
-    // console.log('ActionForm - channelId:', channelId, 'categoryId:', categoryId);
-    // console.log('ActionForm - policies length:', policies.length, 'uics length:', uics.length);
-    
+
     if (channelId && categoryId) {
       const uicName = getUicName(channelId, categoryId);
-      // console.log('ActionForm - getUicName result:', uicName);
-      
       if (uicName) {
         setFormData(prev => {
           const newData = { ...prev, unitTo: uicName };
@@ -90,13 +85,10 @@ const InputForm = () => {
   }, [currentRole, setActionFormData]);
 
   const handleInputChange = (field, value) => {
-    console.log('🔄 ActionForm handleInputChange:', field, '=', value);
     setFormData(prev => {
       const newData = { ...prev, [field]: value };
       // Use setTimeout to avoid setState during render
       setTimeout(() => {
-        console.log('💾 ActionForm setActionFormData called with:', newData);
-        console.log('🎯 ActionForm - action value being set:', newData.action);
         setActionFormData(newData);
       }, 0);
       return newData;
