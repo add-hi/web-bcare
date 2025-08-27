@@ -24,6 +24,9 @@ import Button from "@/components/ui/Button";
 const PAGE_SIZE = 10;
 const LIMIT = PAGE_SIZE;
 
+// ✅ default filter untuk agent
+const DEFAULT_AGENT_STATUS = ["open", "handled by cxc"];
+
 const ComplaintList = ({ isActive = false, isAgent = false }) => {
   const [viewMode, setViewMode] = useState("table"); // 'table' | 'detail' | 'add' | 'attachments'
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -65,9 +68,19 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
       limit: LIMIT,
       offset: 0,
       force: true,
-      status: isAgent ? "open" : undefined, // gunakan undefined daripada '' agar konsisten
+      status: '', // ⬅️ selalu kosong agar backend kirim semua data
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, isAgent]);
+
+  // ✅ Set default filter (client-side) untuk agent: open + handled by cxc
+  useEffect(() => {
+    if (!isActive || !isAgent) return;
+    setFilters((prev) => {
+      const already = Array.isArray(prev.status) && prev.status.length > 0;
+      if (already) return prev;
+      return { ...prev, status: DEFAULT_AGENT_STATUS };
+    });
   }, [isActive, isAgent]);
 
   // Fetch data when page changes (after initialization)
@@ -80,7 +93,7 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
       limit: LIMIT,
       offset,
       force: false,
-      status: isAgent ? "open" : undefined,
+      status: '', // ⬅️ selalu kosong agar backend kirim semua data
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, isActive, isAgent]);
@@ -132,7 +145,7 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
 
   const onDetailSubmitSuccess = async () => {
     const offset = (currentPage - 1) * LIMIT;
-    await fetchTicketsRef.current({ limit: LIMIT, offset, force: true });
+    await fetchTicketsRef.current({ limit: LIMIT, offset, force: true, status: '' });
     setViewMode("table");
   };
 
@@ -733,9 +746,8 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
                               showFilterDropdown === col.key ? null : col.key
                             )
                           }
-                          className={`hover:text-blue-600 ${
-                            filters[col.key] ? "text-blue-600" : "text-gray-400"
-                          }`}
+                          className={`hover:text-blue-600 ${filters[col.key] ? "text-blue-600" : "text-gray-400"
+                            }`}
                         >
                           <Filter size={14} />
                         </button>
@@ -785,10 +797,10 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 font-medium">
                     {c.noTiket}
                   </td>
-                                    <td className="border border-gray-300 px-4 py-3 text-sm">
+                  <td className="border border-gray-300 px-4 py-3 text-sm">
                     <StatusBadge status={c.status} />
                   </td>
-                                    <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                     {c.customerName}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
@@ -812,8 +824,6 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                     {c.unitNow}
                   </td>
-
-
                 </tr>
               ))
             ) : (
