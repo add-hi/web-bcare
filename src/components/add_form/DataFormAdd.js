@@ -234,24 +234,28 @@ const DataForm = ({ detail, onChange, mode = "detail" }) => {
   // ambil SLA & deskripsi saat channel+category terisi (add mode)
   useEffect(() => {
     if (mode === "add" && form.channelId && form.categoryId) {
-      const slaInfo = getSlaInfo(form.channelId, form.categoryId);
+      const fetchSlaInfo = async () => {
+        const slaInfo = await getSlaInfo(form.channelId, form.categoryId);
 
-      const d = Number(slaInfo.slaDays) || 0;
-      const h = Number(slaInfo.slaHours) || 0;
+        const d = Number(slaInfo.slaDays) || 0;
+        const h = Number(slaInfo.slaHours) || 0;
 
-      // update SLA di form
-      update("slaDays", d);
-      update("slaHours", h);
+        // update SLA di form
+        update("slaDays", d);
+        update("slaHours", h);
 
-      // [ADDED] hitung & isi committed due langsung, walau createdTime belum diganti-ganti
-      const nextDue = computeCommittedDue(form.createdTime, d, h); // [ADDED]
-      if (nextDue && form.committedDueAt !== nextDue) {             // [ADDED]
-        update("committedDueAt", nextDue);                          // [ADDED]
-      }
+        // [ADDED] hitung & isi committed due langsung, walau createdTime belum diganti-ganti
+        const nextDue = computeCommittedDue(form.createdTime, d, h); // [ADDED]
+        if (nextDue && form.committedDueAt !== nextDue) {             // [ADDED]
+          update("committedDueAt", nextDue);                          // [ADDED]
+        }
 
-      if (slaInfo.description) {
-        update("description", slaInfo.description);
-      }
+        if (slaInfo.description) {
+          update("description", slaInfo.description);
+        }
+      };
+      
+      fetchSlaInfo();
     }
   }, [mode, form.channelId, form.categoryId, getSlaInfo]);
 

@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import useAddComplaint from "@/hooks/useAddComplaint";
+import useUser from "@/hooks/useUser";
 import Button from "@/components/ui/Button";
 
 const InputForm = () => {
   const {
-    dataFormData, currentEmployee, currentRole, policies, uics, getUicName, saveTicket, setActionFormData
+    dataFormData, policies, uics, getUicName, saveTicket, setActionFormData
   } = useAddComplaint();
+  const { user } = useUser();
   
   const [formData, setFormData] = useState({
     action: "",
@@ -24,37 +26,43 @@ const InputForm = () => {
 
   // Auto-fill Form Unit with current user role
   useEffect(() => {
-    if (currentRole?.role_name) {
+    const roleName = user?.role_details?.role_name || user?.role || "";
+    if (roleName) {
       setFormData(prev => {
-        const newData = { ...prev, formUnit: currentRole.role_name };
+        const newData = { ...prev, formUnit: roleName };
         setTimeout(() => setActionFormData(newData), 0);
         return newData;
       });
     }
-  }, [currentRole, setActionFormData]);
+  }, [user, setActionFormData]);
 
   // Auto-fill Unit To based on channel and category selection
   useEffect(() => {
     const { channelId, categoryId } = dataFormData;
 
     if (channelId && categoryId) {
-      const uicName = getUicName(channelId, categoryId);
-      if (uicName) {
-        setFormData(prev => {
-          const newData = { ...prev, unitTo: uicName };
-          setTimeout(() => setActionFormData(newData), 0);
-          return newData;
-        });
-      }
+      const fetchUicName = async () => {
+        const uicName = await getUicName(channelId, categoryId);
+        if (uicName) {
+          setFormData(prev => {
+            const newData = { ...prev, unitTo: uicName };
+            setTimeout(() => setActionFormData(newData), 0);
+            return newData;
+          });
+        }
+      };
+      
+      fetchUicName();
     }
-  }, [dataFormData, getUicName, policies, uics, setActionFormData]);
+  }, [dataFormData, getUicName, setActionFormData]);
   
   // Reset form when dataFormData is cleared
   useEffect(() => {
     if (!dataFormData.channelId && !dataFormData.categoryId) {
+      const roleName = user?.role_details?.role_name || user?.role || "";
       const resetData = {
         action: "",
-        formUnit: currentRole?.role_name || "",
+        formUnit: roleName,
         unitTo: "",
         closedTime: "",
         solution: "",
@@ -63,14 +71,15 @@ const InputForm = () => {
       setFormData(resetData);
       setActionFormData(resetData);
     }
-  }, [dataFormData, currentRole, setActionFormData]);
+  }, [dataFormData, user, setActionFormData]);
 
   // Listen for reset event
   useEffect(() => {
     const handleReset = () => {
+      const roleName = user?.role_details?.role_name || user?.role || "";
       const resetData = {
         action: "",
-        formUnit: currentRole?.role_name || "",
+        formUnit: roleName,
         unitTo: "",
         closedTime: "",
         solution: "",
@@ -82,7 +91,7 @@ const InputForm = () => {
 
     window.addEventListener('resetAllForms', handleReset);
     return () => window.removeEventListener('resetAllForms', handleReset);
-  }, [currentRole, setActionFormData]);
+  }, [user, setActionFormData]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => {

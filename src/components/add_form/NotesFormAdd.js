@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import useAddComplaint from "@/hooks/useAddComplaint";
+import useUser from "@/hooks/useUser";
 import {
   MessageSquare,
   FileText,
@@ -13,7 +14,8 @@ import {
 } from "lucide-react";
 
 const InputForm = () => {
-  const { currentEmployee, currentRole, setNotesFormData } = useAddComplaint();
+  const { setNotesFormData } = useAddComplaint();
+  const { user } = useUser();
   const [divisionNotes, setDivisionNotes] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [newNote, setNewNote] = useState("");
@@ -48,8 +50,8 @@ const InputForm = () => {
           })
           .replace(/\//g, "/")
           .replace(",", ""),
-        division: currentRole?.role_name || "Unknown Division",
-        author: currentEmployee?.full_name || "Unknown User",
+        division: (user?.role_details?.role_name || user?.role || "Unknown Division"),
+        author: (user?.full_name || user?.name || user?.email || "Unknown User"),
         message: newNote,
         type: "note",
       };

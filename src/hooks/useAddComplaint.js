@@ -107,6 +107,30 @@ export default function useAddComplaint() {
 
   const get = () => store;
 
+  // Fetch specific policy for channel and category
+  const fetchPolicyInfo = useCallback(async (channelId, categoryId) => {
+    try {
+      const Authorization = getAccessToken();
+      if (!Authorization) return null;
+
+      const headers = {
+        Accept: "application/json",
+        Authorization,
+        "ngrok-skip-browser-warning": "true",
+      };
+
+      const response = await fetch(`/api/v1/policies?channel_id=${channelId}&complaint_id=${categoryId}&limit=1`, { headers });
+      if (response.ok) {
+        const policyData = await response.json();
+        const policies = Array.isArray(policyData) ? policyData : policyData.data || [];
+        return policies[0] || null;
+      }
+    } catch (error) {
+      console.error('Failed to fetch policy:', error);
+    }
+    return null;
+  }, []);
+
   // === DROPDOWN: sekali saja untuk semua komponen ===
   const fetchDropdownDataOnce = useCallback(async () => {
     // kalau sudah pernah sukses (flag lokal) atau store sudah tandai fetched, stop
@@ -338,50 +362,52 @@ export default function useAddComplaint() {
 
   // Get UIC name based on channel and category
   const getUicName = useCallback(
-    (channelId, categoryId) => {
-      if (channelId && categoryId && policies.length > 0) {
-        const policy = policies.find(
-          (p) =>
-            p.channel_id === Number(channelId) &&
-            p.complaint_id === Number(categoryId)
-        );
-
-        if (policy && policy.uic_id) {
-          if (uics.length > 0) {
-            const uic = uics.find((u) => u.uic_id === policy.uic_id);
-            return uic?.uic_name || "";
-          } else {
-            // Fallback when UIC data is not available
-            return `UIC ID: ${policy.uic_id}`;
+    async (channelId, categoryId) => {
+      if (channelId && categoryId) {
+        const policy = await fetchPolicyInfo(channelId, categoryId);
+        
+        if (policy) {
+          // Try to get UIC name from nested structure first
+          const uicName = policy.uic?.division_name || policy.uic?.uic_name;
+          if (uicName) {
+            return uicName;
+          }
+          
+          // Fallback to lookup in uics array
+          const uicId = policy.uic?.division_id || policy.uic_id;
+          if (uicId && uics.length > 0) {
+            const uic = uics.find((u) => u.uic_id === uicId || u.division_id === uicId);
+            return uic?.uic_name || uic?.division_name || "";
+          }
+          
+          // Last fallback
+          if (uicId) {
+            return `UIC ID: ${uicId}`;
           }
         }
       }
       return "";
     },
-    [policies, uics]
+    [fetchPolicyInfo, uics]
   );
 
   // Get SLA info based on channel and category
   const getSlaInfo = useCallback(
-    (channelId, categoryId) => {
-      if (channelId && categoryId && policies.length > 0) {
-        const policy = policies.find(
-          (p) =>
-            p.channel_id === Number(channelId) &&
-            p.complaint_id === Number(categoryId)
-        );
-
+    async (channelId, categoryId) => {
+      if (channelId && categoryId) {
+        const policy = await fetchPolicyInfo(channelId, categoryId);
+        
         if (policy) {
           return {
-            slaDays: policy.sla,
-            slaHours: policy.sla * 24,
+            slaDays: policy.sla_days || policy.sla,
+            slaHours: policy.sla_hours || (policy.sla_days || policy.sla) * 24,
             description: policy.description,
           };
         }
       }
       return { slaDays: "", slaHours: "", description: "" };
     },
-    [policies]
+    [fetchPolicyInfo]
   );
 
   const resetAllForms = useCallback(() => {
@@ -516,15 +542,15 @@ export default function useAddComplaint() {
 
           return null;
         })(),
-        amount: dataFormData?.amount ? Number(dataFormData.amount) : null,
+        amount: dataFormData?.amount && dataFormData.amount !== "" ? Number(dataFormData.amount) : null,
         record: dataFormData?.record || "",
         related_account_id: related_account_id,
         related_card_id: related_card_id,
-        terminal_id: dataFormData?.terminalId || null,
+        terminal_id: dataFormData?.terminalId && dataFormData.terminalId !== "" ? Number(dataFormData.terminalId) : null,
         intake_source_id: dataFormData?.sourceId
           ? Number(dataFormData.sourceId)
           : null,
-        priority_id: dataFormData?.priorityId || null,
+        priority_id: dataFormData?.priorityId && dataFormData.priorityId !== "" ? Number(dataFormData.priorityId) : null,
         reason: currentActionData?.reason || "",
         solution: currentActionData?.solution || "",
       };
@@ -542,31 +568,45 @@ export default function useAddComplaint() {
 
       // Add division_notes in correct JSON format
       if (notesFormData?.newNote) {
+        // Ensure user data is loaded
+        await fetchCurrentUserOnce();
+        
         const authz = getAccessToken();
         const jwtName = decodeNameFromJWT(authz);
+        
+        // Get fresh store state after fetch
+        const freshState = get();
+        
         const authorName =
-          currentEmployee?.full_name ||
-          currentEmployee?.name ||
-          currentEmployee?.fullName ||
-          jwtName || // ✅ JWT fallback
+          freshState.currentEmployee?.full_name ||
+          freshState.currentEmployee?.name ||
+          freshState.currentEmployee?.fullName ||
+          jwtName ||
           "Unknown";
+          
+        const divisionName = 
+          freshState.currentRole?.role_name ||
+          freshState.currentRole?.name ||
+          "Unknown";
+          
         const noteObject = {
-          division: currentRole?.role_name || "Unknown",
+          division: divisionName,
           timestamp: new Date().toLocaleDateString("id-ID", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
           }),
           msg: notesFormData.newNote,
-          author: authorName, // ✅ use robust author
+          author: authorName,
         };
 
         // Send as array of objects (backend expects this format)
         ticketData.division_notes = [noteObject];
       }
 
-      // Don't remove any fields - send everything including null values
-      // Backend should handle null values properly
+      // Debug: log ticket data before sending
+      console.log('Ticket data to be sent:', JSON.stringify(ticketData, null, 2));
+      window.debugTicketData = ticketData;
 
       const response = await fetch("/api/v1/tickets", {
         method: "POST",
