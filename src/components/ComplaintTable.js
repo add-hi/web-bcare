@@ -345,8 +345,6 @@ const ComplaintTable = ({ isActive = false }) => {
 
   const handleAddNote = () => {
     if (newNote.trim()) {
-      // In a real app, this would make an API call
-      console.log("Adding note:", newNote);
       setNewNote("");
     }
   };

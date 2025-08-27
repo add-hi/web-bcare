@@ -88,7 +88,6 @@ export default function useUser() {
 
   useEffect(() => {
     initialize();
-    // tidak ada timer lagi, jadi tidak perlu cleanup
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

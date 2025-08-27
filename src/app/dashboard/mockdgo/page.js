@@ -234,10 +234,6 @@ const DivisionComplaintHandler = () => {
     event?.stopPropagation();
     if (doingAction) return;
 
-    console.log(complaint.id);
-    console.log(event);
-    console.log(opts);
-
     try {
       setDoingAction(true);
 
@@ -275,13 +271,6 @@ const DivisionComplaintHandler = () => {
       unitId: "division_cxc",
     };
 
-    console.log("Sending to backend:", payload);
-
-    // This would trigger notifications to mobile app
-    console.log(
-      `Triggering mark_done notification for ticket ${actionModal.complaint.noTiket}`
-    );
-
     setIsProcessing(false);
     setActionModal({ show: false, type: null, complaint: null });
 
@@ -290,9 +279,6 @@ const DivisionComplaintHandler = () => {
 
   const handleAddNote = () => {
     if (!newNote.trim()) return;
-
-    // Here you would add the note to the backend
-    console.log("Adding note:", newNote);
 
     // Reset the note input
     setNewNote("");

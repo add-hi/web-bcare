@@ -100,10 +100,6 @@ const autoFilled = useMemo(() => {
         let accounts = [];
 
         try {
-          console.log("=== DEBUGGING CUSTOMER DATA ===");
-          console.log("Customer data:", customerData);
-          console.log("Looking for customer_id:", customerData.customer_id);
-
           // Get authorization token
           const getAccessToken = () => {
             try {
@@ -125,18 +121,11 @@ const autoFilled = useMemo(() => {
 
           // Fetch accounts for this customer
           const accountResponse = await fetch("/api/v1/account", { headers });
-          console.log("Account API response status:", accountResponse.status);
           if (accountResponse.ok) {
             accounts = await accountResponse.json();
-            console.log("All accounts from API:", accounts);
             const customerAccounts = accounts.filter((acc) => {
-              console.log(
-                `Checking account ${acc.account_id}: customer_id ${acc.customer_id} === ${customerData.customer_id}?`,
-                acc.customer_id === customerData.customer_id
-              );
               return acc.customer_id === customerData.customer_id;
             });
-            console.log("Filtered customer accounts:", customerAccounts);
 
             // Filter based on search context
             if (
@@ -151,23 +140,16 @@ const autoFilled = useMemo(() => {
             } else {
               accountNumbers = [];
             }
-            console.log("Final account numbers:", accountNumbers);
 
             // Fetch cards for this customer's accounts
             const cardResponse = await fetch("/api/v1/card", { headers });
-            console.log("Card API response status:", cardResponse.status);
             if (cardResponse.ok) {
               const cards = await cardResponse.json();
-              console.log("All cards from API:", cards);
 
               if (customerAccounts.length > 0) {
                 // Get account_ids from customer's accounts
                 const customerAccountIds = customerAccounts.map(
                   (acc) => acc.account_id
-                );
-                console.log(
-                  "Customer account IDs to match:",
-                  customerAccountIds
                 );
 
                 // Filter cards that belong to customer's accounts
@@ -175,19 +157,8 @@ const autoFilled = useMemo(() => {
                   const belongsToCustomer = customerAccountIds.includes(
                     card.account_id
                   );
-                  console.log(
-                    `Card ${card.card_number} (account_id: ${card.account_id}) belongs to customer:`,
-                    belongsToCustomer
-                  );
-                  console.log(
-                    "Checking if",
-                    card.account_id,
-                    "is in",
-                    customerAccountIds
-                  );
                   return belongsToCustomer;
                 });
-                console.log("Filtered customer cards:", customerCards);
 
                 // Filter based on search context
                 if (
@@ -221,15 +192,12 @@ const autoFilled = useMemo(() => {
                 } else {
                   cardNumbers = [];
                 }
-                console.log("Final card numbers:", cardNumbers);
               } else {
                 console.log("No customer accounts found, skipping card lookup");
               }
             }
           }
-          console.log("=== END DEBUGGING ===");
         } catch (error) {
-          console.error("Error fetching related data:", error);
         }
 
         const mappedData = {

@@ -1,9 +1,3 @@
-// src/lib/jwtUtils.js
-/**
- * Simple JWT decoder utility
- * Decodes JWT payload without verification (client-side only)
- */
-
 export function decodeJWT(token) {
   try {
     // Remove 'Bearer ' prefix if present
@@ -32,17 +26,11 @@ export function decodeJWT(token) {
   }
 }
 
-/**
- * Extract NPP from JWT token
- */
 export function extractNPPFromToken(token) {
   const payload = decodeJWT(token);
   return payload?.npp || null;
 }
 
-/**
- * Extract user info from JWT token
- */
 export function extractUserFromToken(token) {
   const payload = decodeJWT(token);
   if (!payload) return null;

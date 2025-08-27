@@ -5,9 +5,9 @@ import toast from "react-hot-toast";
 
 // === Single-flight guards (dipakai bareng semua komponen) ===
 let dropdownOnce = null; // untuk /channel, /category, dst
-let userOnce = null;     // untuk /me atau /employee
+let userOnce = null; // untuk /me atau /employee
 let dropdownLoaded = false; // flag lokal, anti-refetch walau store tak punya isDataFetched
-let userLoaded = false;     // flag lokal, anti-refetch walau store tak punya isUserFetched
+let userLoaded = false; // flag lokal, anti-refetch walau store tak punya isUserFetched
 
 const isFn = (f) => typeof f === "function";
 
@@ -37,7 +37,6 @@ function decodeNameFromJWT(bearer) {
   }
 }
 
-
 // export default function useAddComplaint() {
 //   const store = useAddComplaintStore();
 //   const {
@@ -58,7 +57,6 @@ function decodeNameFromJWT(bearer) {
 //   } = store;
 
 export default function useAddComplaint() {
-  
   const store = useAddComplaintStore();
   const {
     // State
@@ -109,183 +107,112 @@ export default function useAddComplaint() {
 
   const get = () => store;
 
-  // Fetch all dropdown data on mount
-  // const fetchDropdownData = useCallback(async () => {
-  //   if (isDataFetched || loadingData) {
-  //     console.log("Skipping fetchDropdownData - already fetched or loading");
-  //     return;
-  //   }
+  // === DROPDOWN: sekali saja untuk semua komponen ===
+  const fetchDropdownDataOnce = useCallback(async () => {
+    // kalau sudah pernah sukses (flag lokal) atau store sudah tandai fetched, stop
+    if (dropdownLoaded || isDataFetched) return;
 
-  //   setLoadingData(true);
-  //   try {
-  //     const Authorization = getAccessToken();
-  //     if (!Authorization) {
-  //       console.error("No authorization token found");
-  //       setLoadingData(false);
-  //       return;
-  //     }
+    // kalau sudah ada request yang lagi jalan, re-use
+    if (dropdownOnce) return dropdownOnce;
 
-  //     const headers = {
-  //       Accept: "application/json",
-  //       Authorization: Authorization,
-  //       "ngrok-skip-browser-warning": "true",
-  //     };
+    dropdownOnce = (async () => {
+      // kalau store punya setLoadingData baru dipanggil
+      if (isFn(setLoadingData)) setLoadingData(true);
+      try {
+        const Authorization = getAccessToken();
+        if (!Authorization) return;
 
-  //     const [
-  //       channelRes,
-  //       categoryRes,
-  //       sourceRes,
-  //       terminalRes,
-  //       priorityRes,
-  //       policyRes,
-  //       uicRes,
-  //     ] = await Promise.all([
-  //       fetch("/api/v1/channel", { headers }),
-  //       fetch("/api/v1/complaint_category", { headers }),
-  //       fetch("/api/v1/source", { headers }),
-  //       fetch("/api/v1/terminal", { headers }),
-  //       fetch("/api/v1/priority", { headers }),
-  //       fetch("/api/v1/complaint_policy", { headers }),
-  //       fetch("/api/v1/uics", { headers }),
-  //     ]);
+        const headers = {
+          Accept: "application/json",
+          Authorization,
+          "ngrok-skip-browser-warning": "true",
+        };
 
-  //     if (channelRes.ok) setChannels(await channelRes.json());
-  //     if (categoryRes.ok) {
-  //       const cats = await categoryRes.json();
-  //       setAllCategories(cats);
-  //       setCategories(cats);
-  //     }
-  //     if (sourceRes.ok) setSources(await sourceRes.json());
-  //     if (terminalRes.ok) setTerminals(await terminalRes.json());
-  //     if (priorityRes.ok) setPriorities(await priorityRes.json());
-  //     if (policyRes.ok) {
-  //       const policyData = await policyRes.json();
-  //       setPolicies(
-  //         Array.isArray(policyData) ? policyData : policyData.data || []
-  //       );
-  //     }
-  //     if (uicRes.ok) {
-  //       const uicData = await uicRes.json();
-  //       setUics(uicData.data || []);
-  //     } else {
-  //       console.warn(
-  //         "UIC API failed with status:",
-  //         uicRes.status,
-  //         "Continuing without UIC data"
-  //       );
-  //       setUics([]);
-  //     }
+        const [
+          channelRes,
+          categoryRes,
+          sourceRes,
+          terminalRes,
+          priorityRes,
+          policyRes,
+          uicRes,
+        ] = await Promise.all([
+          fetch("/api/v1/channel", { headers }),
+          fetch("/api/v1/complaint_category", { headers }),
+          fetch("/api/v1/source", { headers }),
+          fetch("/api/v1/terminals", { headers }),
+          fetch("/api/v1/priority", { headers }),
+          fetch("/api/v1/complaint_policy", { headers }),
+          fetch("/api/v1/uics", { headers }),
+        ]);
 
-  //     setIsDataFetched(true);
-  //   } catch (error) {
-  //     console.error("Error fetching dropdown data:", error);
-  //   } finally {
-  //     setLoadingData(false);
-  //   }
-  // }, [
-  //   isDataFetched,
-  //   loadingData,
-  //   setChannels,
-  //   setCategories,
-  //   setAllCategories,
-  //   setSources,
-  //   setTerminals,
-  //   setPriorities,
-  //   setPolicies,
-  //   setUics,
-  //   setLoadingData,
-  //   setIsDataFetched,
-  // ]);
+        if (channelRes.ok) setChannels(await channelRes.json());
 
-  // Fetch current user data
-  // const fetchCurrentUser = useCallback(async () => {
-  //   if (isUserFetched || currentEmployee) {
-  //     return;
-  //   }
+        if (categoryRes.ok) {
+          const cats = await categoryRes.json();
+          setAllCategories(cats);
+          setCategories(cats);
+        }
 
-  //   try {
-  //     const Authorization = getAccessToken();
+        if (sourceRes.ok) setSources(await sourceRes.json());
+        if (terminalRes.ok) {
+          const terminalData = await terminalRes.json();
+          // Handle different response formats
+          const terminals = Array.isArray(terminalData)
+            ? terminalData
+            : terminalData.data || [];
+          setTerminals(terminals);
+        }
+        if (priorityRes.ok) setPriorities(await priorityRes.json());
 
-  //     if (!Authorization) {
-  //       return;
-  //     }
+        if (policyRes.ok) {
+          const policyData = await policyRes.json();
+          setPolicies(
+            Array.isArray(policyData) ? policyData : policyData.data || []
+          );
+        }
 
-  //     const headers = {
-  //       Accept: "application/json",
-  //       Authorization: Authorization,
-  //       "ngrok-skip-browser-warning": "true",
-  //     };
-  //       // 1) Try the profile first — usually contains the logged-in user
-  //  try {
-  //    const meRes = await fetch("/api/v1/me", { headers });
-  //    if (meRes.ok) {
-  //      const me = await meRes.json();
-  //      // normalize & store
-  //      const normalizedEmp = {
-  //        ...me,
-  //        full_name: me.full_name || me.fullName || me.name || me.username || "",
-  //      };
-  //      setCurrentEmployee(normalizedEmp);
-  //      // role, if present
-  //      const roleName =
-  //        me.role_details?.role_name || me.role_name || me.role || "";
-  //      setCurrentRole({ role_name: roleName });
-  //      setIsUserFetched(true);
-  //      return;
-  //    }
-  //  } catch (e) {
-  //    console.warn("GET /api/v1/me failed, fallback to /employee", e);
-  //  }
+        if (uicRes.ok) {
+          const uicData = await uicRes.json();
+          setUics(uicData.data || []);
+        } else {
+          setUics([]);
+        }
 
-  //     console.log("Fetching current user data...");
-  //     const employeeRes = await fetch("/api/v1/employee", { headers });
-  //     if (employeeRes.ok) {
-  //       const employeeData = await employeeRes.json();
+        // tandai loaded pakai flag lokal
+        dropdownLoaded = true;
+        // kalau store menyediakan setter, update juga (opsional)
+        if (isFn(setIsDataFetched)) setIsDataFetched(true);
+      } finally {
+        if (isFn(setLoadingData)) setLoadingData(false);
+      }
+    })().catch((err) => {
+      // kalau gagal, biar bisa retry
+      dropdownOnce = null;
+      throw err;
+    });
 
-  //       const employee = Array.isArray(employeeData)
-  //         ? employeeData[0]
-  //         : employeeData;
+    return dropdownOnce;
+  }, [
+    isDataFetched, // aman meski undefined (falsy)
+    setLoadingData,
+    setChannels,
+    setCategories,
+    setAllCategories,
+    setSources,
+    setTerminals,
+    setPriorities,
+    setPolicies,
+    setUics,
+  ]);
 
-  //       // ✅ penting: simpan employee ke store
-  //       if (employee) {
-  //         setCurrentEmployee(employee);
-  //       }
+  // === USER: sekali saja untuk semua komponen ===
+  const fetchCurrentUserOnce = useCallback(async () => {
+    // hindari refetch: pakai flag lokal + guard store
+    if (userLoaded || isUserFetched || currentEmployee) return;
+    if (userOnce) return userOnce;
 
-  //       if (employee?.role_id) {
-  //         const roleRes = await fetch("/api/v1/role", { headers });
-  //         if (roleRes.ok) {
-  //           const roleData = await roleRes.json();
-  //           const role = roleData.find((r) => r.role_id === employee.role_id);
-
-  //           setCurrentRole(role);
-  //         }
-  //       }
-  //       setIsUserFetched(true);
-  //     } else {
-  //       console.error("Failed to fetch employee data:", employeeRes.status);
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching current user:", error);
-  //   }
-  // }, [
-  //   isUserFetched,
-  //   currentEmployee,
-  //   setCurrentEmployee,
-  //   setCurrentRole,
-  //   setIsUserFetched,
-  // ]);
-// === DROPDOWN: sekali saja untuk semua komponen ===
-const fetchDropdownDataOnce = useCallback(async () => {
-  // kalau sudah pernah sukses (flag lokal) atau store sudah tandai fetched, stop
-  if (dropdownLoaded || isDataFetched) return;
-
-  // kalau sudah ada request yang lagi jalan, re-use
-  if (dropdownOnce) return dropdownOnce;
-
-  dropdownOnce = (async () => {
-    // kalau store punya setLoadingData baru dipanggil
-    if (isFn(setLoadingData)) setLoadingData(true);
-    try {
+    userOnce = (async () => {
       const Authorization = getAccessToken();
       if (!Authorization) return;
 
@@ -295,129 +222,58 @@ const fetchDropdownDataOnce = useCallback(async () => {
         "ngrok-skip-browser-warning": "true",
       };
 
-      const [
-        channelRes, categoryRes, sourceRes, terminalRes,
-        priorityRes, policyRes, uicRes,
-      ] = await Promise.all([
-        fetch("/api/v1/channel", { headers }),
-        fetch("/api/v1/complaint_category", { headers }),
-        fetch("/api/v1/source", { headers }),
-        fetch("/api/v1/terminals", { headers }),
-        fetch("/api/v1/priority", { headers }),
-        fetch("/api/v1/complaint_policy", { headers }),
-        fetch("/api/v1/uics", { headers }),
-      ]);
+      try {
+        const meRes = await fetch("/api/v1/me", { headers });
+        if (meRes.ok) {
+          const me = await meRes.json();
+          setCurrentEmployee({
+            ...me,
+            full_name:
+              me.full_name || me.fullName || me.name || me.username || "",
+          });
+          const roleName =
+            me.role_details?.role_name || me.role_name || me.role || "";
+          setCurrentRole({ role_name: roleName });
 
-      if (channelRes.ok) setChannels(await channelRes.json());
-
-      if (categoryRes.ok) {
-        const cats = await categoryRes.json();
-        setAllCategories(cats);
-        setCategories(cats);
-      }
-
-      if (sourceRes.ok)   setSources(await sourceRes.json());
-      if (terminalRes.ok) {
-        const terminalData = await terminalRes.json();
-        // Handle different response formats
-        const terminals = Array.isArray(terminalData) ? terminalData : (terminalData.data || []);
-        setTerminals(terminals);
-      }
-      if (priorityRes.ok) setPriorities(await priorityRes.json());
-
-      if (policyRes.ok) {
-        const policyData = await policyRes.json();
-        setPolicies(Array.isArray(policyData) ? policyData : policyData.data || []);
-      }
-
-      if (uicRes.ok) {
-        const uicData = await uicRes.json();
-        setUics(uicData.data || []);
-      } else {
-        setUics([]);
-      }
-
-      // tandai loaded pakai flag lokal
-      dropdownLoaded = true;
-      // kalau store menyediakan setter, update juga (opsional)
-      if (isFn(setIsDataFetched)) setIsDataFetched(true);
-    } finally {
-      if (isFn(setLoadingData)) setLoadingData(false);
-    }
-  })().catch(err => {
-    // kalau gagal, biar bisa retry
-    dropdownOnce = null;
-    throw err;
-  });
-
-  return dropdownOnce;
-}, [
-  isDataFetched, // aman meski undefined (falsy)
-  setLoadingData,
-  setChannels, setCategories, setAllCategories, setSources, setTerminals,
-  setPriorities, setPolicies, setUics
-]);
-
-
-// === USER: sekali saja untuk semua komponen ===
-const fetchCurrentUserOnce = useCallback(async () => {
-  // hindari refetch: pakai flag lokal + guard store
-  if (userLoaded || isUserFetched || currentEmployee) return;
-  if (userOnce) return userOnce;
-
-  userOnce = (async () => {
-    const Authorization = getAccessToken();
-    if (!Authorization) return;
-
-    const headers = {
-      Accept: "application/json",
-      Authorization,
-      "ngrok-skip-browser-warning": "true",
-    };
-
-    try {
-      const meRes = await fetch("/api/v1/me", { headers });
-      if (meRes.ok) {
-        const me = await meRes.json();
-        setCurrentEmployee({
-          ...me,
-          full_name: me.full_name || me.fullName || me.name || me.username || "",
-        });
-        const roleName = me.role_details?.role_name || me.role_name || me.role || "";
-        setCurrentRole({ role_name: roleName });
-
-        userLoaded = true;                 // flag lokal
-        if (isFn(setIsUserFetched)) setIsUserFetched(true); // opsional
-        return;
-      }
-    } catch (_) {}
-
-    const employeeRes = await fetch("/api/v1/employee", { headers });
-    if (employeeRes.ok) {
-      const employeeData = await employeeRes.json();
-      const employee = Array.isArray(employeeData) ? employeeData[0] : employeeData;
-      if (employee) setCurrentEmployee(employee);
-
-      if (employee?.role_id) {
-        const roleRes = await fetch("/api/v1/role", { headers });
-        if (roleRes.ok) {
-          const roleData = await roleRes.json();
-          const role = roleData.find(r => r.role_id === employee.role_id);
-          setCurrentRole(role);
+          userLoaded = true; // flag lokal
+          if (isFn(setIsUserFetched)) setIsUserFetched(true); // opsional
+          return;
         }
+      } catch (_) {}
+
+      const employeeRes = await fetch("/api/v1/employee", { headers });
+      if (employeeRes.ok) {
+        const employeeData = await employeeRes.json();
+        const employee = Array.isArray(employeeData)
+          ? employeeData[0]
+          : employeeData;
+        if (employee) setCurrentEmployee(employee);
+
+        if (employee?.role_id) {
+          const roleRes = await fetch("/api/v1/role", { headers });
+          if (roleRes.ok) {
+            const roleData = await roleRes.json();
+            const role = roleData.find((r) => r.role_id === employee.role_id);
+            setCurrentRole(role);
+          }
+        }
+
+        userLoaded = true; // flag lokal
+        if (isFn(setIsUserFetched)) setIsUserFetched(true); // opsional
       }
+    })().catch((err) => {
+      userOnce = null;
+      throw err;
+    });
 
-      userLoaded = true;                 // flag lokal
-      if (isFn(setIsUserFetched)) setIsUserFetched(true); // opsional
-    }
-  })().catch(err => {
-    userOnce = null;
-    throw err;
-  });
-
-  return userOnce;
-}, [isUserFetched, currentEmployee, setCurrentEmployee, setCurrentRole, setIsUserFetched]);
-
+    return userOnce;
+  }, [
+    isUserFetched,
+    currentEmployee,
+    setCurrentEmployee,
+    setCurrentRole,
+    setIsUserFetched,
+  ]);
 
   // Filter categories based on selected channel
   const filterCategories = useCallback(
@@ -512,7 +368,7 @@ const fetchCurrentUserOnce = useCallback(async () => {
         employee_status_id: statusIds.employee_status_id,
       };
 
-      const response = await fetch(`/api/v1/ticket/${ticketId}`, {
+      const response = await fetch(`/api/v1/tickets/${ticketId}`, {
         method: "PATCH",
         headers: {
           Accept: "application/json",
@@ -525,7 +381,9 @@ const fetchCurrentUserOnce = useCallback(async () => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to save ticket: ${response.status} - ${errorText}`);
+        throw new Error(
+          `Failed to save ticket: ${response.status} - ${errorText}`
+        );
       }
 
       const result = await response.json();
@@ -580,7 +438,7 @@ const fetchCurrentUserOnce = useCallback(async () => {
       // Lookup account ID by account number from form
       if (customerData?.accountNumber) {
         const accountNum = customerData.accountNumber.split(",")[0].trim();
-        
+
         try {
           const accountResponse = await fetch("/api/v1/account", {
             headers: {
@@ -592,10 +450,10 @@ const fetchCurrentUserOnce = useCallback(async () => {
 
           if (accountResponse.ok) {
             const accounts = await accountResponse.json();
-            const matchedAccount = accounts.find((acc) => 
-              acc.account_number.toString() === accountNum
+            const matchedAccount = accounts.find(
+              (acc) => acc.account_number.toString() === accountNum
             );
-            
+
             if (matchedAccount) {
               related_account_id = matchedAccount.account_id;
             }
@@ -608,7 +466,7 @@ const fetchCurrentUserOnce = useCallback(async () => {
       // Lookup card ID by card number from form
       if (customerData?.cardNumber) {
         const cardNum = customerData.cardNumber.split(",")[0].trim();
-        
+
         try {
           const cardResponse = await fetch("/api/v1/card", {
             headers: {
@@ -620,10 +478,10 @@ const fetchCurrentUserOnce = useCallback(async () => {
 
           if (cardResponse.ok) {
             const cards = await cardResponse.json();
-            const matchedCard = cards.find((card) => 
-              card.card_number.toString() === cardNum
+            const matchedCard = cards.find(
+              (card) => card.card_number.toString() === cardNum
             );
-            
+
             if (matchedCard) {
               related_card_id = matchedCard.card_id;
             }
@@ -650,21 +508,24 @@ const fetchCurrentUserOnce = useCallback(async () => {
           : null,
         committed_due_at: (() => {
           // Try multiple sources for committed_due_at
-          const committedDue = dataFormData?.committedDueAt || dataFormData?.committed_due_at;
-          
+          const committedDue =
+            dataFormData?.committedDueAt || dataFormData?.committed_due_at;
+
           if (committedDue) {
             return new Date(committedDue).toISOString();
           }
-          
+
           // Fallback: calculate from created_time + SLA if available
           if (dataFormData?.createdTime && dataFormData?.slaDays) {
             const createdDate = new Date(dataFormData.createdTime);
             const committedDate = new Date(createdDate);
-            committedDate.setDate(committedDate.getDate() + parseInt(dataFormData.slaDays));
+            committedDate.setDate(
+              committedDate.getDate() + parseInt(dataFormData.slaDays)
+            );
             committedDate.setHours(0, 0, 0, 0);
             return committedDate.toISOString();
           }
-          
+
           return null;
         })(),
         amount: dataFormData?.amount ? Number(dataFormData.amount) : null,
@@ -693,15 +554,14 @@ const fetchCurrentUserOnce = useCallback(async () => {
 
       // Add division_notes in correct JSON format
       if (notesFormData?.newNote) {
-
- const authz = getAccessToken();
- const jwtName = decodeNameFromJWT(authz);
- const authorName =
-   currentEmployee?.full_name ||
-   currentEmployee?.name ||
-   currentEmployee?.fullName ||
-   jwtName ||                       // ✅ JWT fallback
-   "Unknown";
+        const authz = getAccessToken();
+        const jwtName = decodeNameFromJWT(authz);
+        const authorName =
+          currentEmployee?.full_name ||
+          currentEmployee?.name ||
+          currentEmployee?.fullName ||
+          jwtName || // ✅ JWT fallback
+          "Unknown";
         const noteObject = {
           division: currentRole?.role_name || "Unknown",
           timestamp: new Date().toLocaleDateString("id-ID", {
@@ -710,7 +570,7 @@ const fetchCurrentUserOnce = useCallback(async () => {
             year: "numeric",
           }),
           msg: notesFormData.newNote,
-          author: authorName,              // ✅ use robust author
+          author: authorName, // ✅ use robust author
         };
 
         // Send as array of objects (backend expects this format)
@@ -719,23 +579,6 @@ const fetchCurrentUserOnce = useCallback(async () => {
 
       // Don't remove any fields - send everything including null values
       // Backend should handle null values properly
-      
-      // 🔍 DEBUG: Log data yang dikirim ke backend
-      console.log('=== TICKET DATA SENT TO BACKEND ===');
-      console.log('📦 dataFormData from store:', dataFormData);
-      console.log('📅 dataFormData.committedDueAt:', dataFormData?.committedDueAt);
-      console.log('📅 dataFormData.transactionDate:', dataFormData?.transactionDate);
-      console.log('📤 Full ticketData:', JSON.stringify(ticketData, null, 2));
-      console.log('📅 committed_due_at value:', ticketData.committed_due_at);
-      console.log('📅 transaction_date value:', ticketData.transaction_date);
-      console.log('🎯 Key fields check:');
-      console.log('   - action:', ticketData.action);
-      console.log('   - customer_id:', ticketData.customer_id);
-      console.log('   - issue_channel_id:', ticketData.issue_channel_id);
-      console.log('   - complaint_id:', ticketData.complaint_id);
-      console.log('   - priority_id:', ticketData.priority_id);
-      console.log('   - terminal_id:', ticketData.terminal_id);
-      console.log('=====================================');
 
       const response = await fetch("/api/v1/tickets", {
         method: "POST",
@@ -753,7 +596,9 @@ const fetchCurrentUserOnce = useCallback(async () => {
         const errorText = await response.text();
         toast.error(
           `Gagal membuat ticket (${response.status} ${response.statusText}).\n\n` +
-          `${errorText?.slice(0, 500) || 'Tidak ada detail error dari server.'}`
+            `${
+              errorText?.slice(0, 500) || "Tidak ada detail error dari server."
+            }`
         );
         throw new Error(
           `Failed to save ticket: ${response.status} - ${errorText}`
@@ -761,26 +606,27 @@ const fetchCurrentUserOnce = useCallback(async () => {
       }
 
       const result = await response.json();
-      
+
       // Toast sukses
       try {
         const d = result?.data ?? result ?? {};
-        const ticketNumber = d.ticket_number ?? d.ticketNo ?? d.ticket ?? d.number ?? '-';
-        const ticketId = d.ticket_id ?? d.id ?? d.ticketId ?? '-';
+        const ticketNumber =
+          d.ticket_number ?? d.ticketNo ?? d.ticket ?? d.number ?? "-";
+        const ticketId = d.ticket_id ?? d.id ?? d.ticketId ?? "-";
         toast.success(
-          `Ticket Number: ${ticketNumber}\n` +
-          `Ticket ID: ${ticketId}`
+          `Ticket Number: ${ticketNumber}\n` + `Ticket ID: ${ticketId}`
         );
       } catch (e) {
-        toast.success('Ticket berhasil dibuat!');
+        toast.success("Ticket berhasil dibuat!");
       }
-
 
       resetAllForms();
 
       return result;
     } catch (error) {
-      toast.error(`Gagal membuat ticket.\n\n${error?.message || 'Unknown error'}`);
+      toast.error(
+        `Gagal membuat ticket.\n\n${error?.message || "Unknown error"}`
+      );
       throw error;
     }
   }, [
@@ -809,9 +655,9 @@ const fetchCurrentUserOnce = useCallback(async () => {
   //   }
   // }, []);
   useEffect(() => {
-  fetchDropdownDataOnce();
-  fetchCurrentUserOnce();
-}, [fetchDropdownDataOnce, fetchCurrentUserOnce]);
+    fetchDropdownDataOnce();
+    fetchCurrentUserOnce();
+  }, [fetchDropdownDataOnce, fetchCurrentUserOnce]);
 
   // return {
   //   // State
