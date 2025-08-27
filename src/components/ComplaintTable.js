@@ -30,6 +30,7 @@ import Attachment from "@/components/Attachment";
 import FloatingCustomerContact from "@/components/FloatingCustomerContact";
 import useTicketDetail from "@/hooks/useTicketDetail";
 import useTicketStore from "@/store/ticketStore";
+import useUser from "@/hooks/useUser";
 import Button from "@/components/ui/Button";
 import StatusBadge from "@/components/ui/StatusBadge";
 
@@ -48,7 +49,9 @@ const ComplaintTable = ({ isActive = false }) => {
   // API integration
   const { list, loading, error, pagination, fetchTickets, updateTicket } = useTicket();
   const { selectedId, detail, fetchTicketDetail } = useTicketDetail();
+  const { user } = useUser();
   const [doingAction, setDoingAction] = useState(false);
+  const [isAddingNote, setIsAddingNote] = useState(false);
   const ticketStore = useTicketStore();
 
   const PAGE_SIZE = 10;
@@ -343,9 +346,43 @@ const ComplaintTable = ({ isActive = false }) => {
     setSelectedComplaint(null);
   };
 
-  const handleAddNote = () => {
-    if (newNote.trim()) {
+  const handleAddNote = async () => {
+    if (!newNote.trim() || !selectedComplaint?.id) return;
+
+    setIsAddingNote(true);
+    try {
+      // Build note object (same as add complaint)
+      const authorName = user?.full_name || user?.name || user?.email || "Unknown";
+      const divisionName = user?.role_details?.role_name || user?.role || "Unknown";
+      
+      const noteObject = {
+        division: divisionName,
+        timestamp: new Date().toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        msg: newNote.trim(),
+        author: authorName,
+      };
+
+      // Use existing updateTicket function
+      await updateTicket(selectedComplaint.id, {
+        division_notes: [noteObject]
+      });
+      
+      // Refresh ticket detail to show new note
+      await fetchTicketDetail(selectedComplaint.id, { force: true });
+      
+      toast.success("Note added successfully!");
       setNewNote("");
+    } catch (error) {
+      console.error("Failed to add note:", error);
+      toast.error(error?.message || "Failed to add note");
+    } finally {
+      setIsAddingNote(false);
     }
   };
 
@@ -928,10 +965,11 @@ const ComplaintTable = ({ isActive = false }) => {
                   variant="primary"
                   icon={Send}
                   onClick={handleAddNote}
-                  disabled={!newNote.trim()}
+                  disabled={!newNote.trim() || isAddingNote}
+                  loading={isAddingNote}
                   className="w-full"
                 >
-                  Add Note
+                  {isAddingNote ? "Saving Note..." : "Save Note"}
                 </Button>
               </div>
             </div>

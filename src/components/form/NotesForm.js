@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import useUser from "@/hooks/useUser";
-import useTicketNotes from "@/hooks/useTicketNotes";
+import useTicket from "@/hooks/useTicket";
 import {
   MessageSquare,
   FileText,
@@ -15,7 +15,7 @@ import {
 
 const InputForm = ({ detail, onChange }) => {
   const { user } = useUser();
-  const { addNoteToTicket } = useTicketNotes();
+  const { updateTicket } = useTicket();
   const ticketId = detail?.ids?.ticketId;
   // Normalize initial notes: ensure array of {division, timestamp, msg, author}
   const initialDivisionNotes = (() => {
@@ -68,15 +68,12 @@ const InputForm = ({ detail, onChange }) => {
     setIsProcessing(true);
 
     try {
-      // Save to database first
-      await addNoteToTicket(ticketId, newNote);
-      
-      // Then update local state for immediate UI feedback
+      // Build note object
       const authorName = user?.full_name || user?.name || user?.email || "Unknown";
       const divisionName = user?.role_details?.role_name || user?.role || "Unknown";
       
-      const newNoteObj = {
-        id: Date.now(),
+      const noteObject = {
+        division: divisionName,
         timestamp: new Date().toLocaleDateString("id-ID", {
           day: "2-digit",
           month: "2-digit",
@@ -84,9 +81,19 @@ const InputForm = ({ detail, onChange }) => {
           hour: "2-digit",
           minute: "2-digit",
         }),
-        division: divisionName,
-        author: authorName,
         msg: newNote,
+        author: authorName,
+      };
+
+      // Save to database using existing updateTicket
+      await updateTicket(ticketId, {
+        division_notes: [noteObject]
+      });
+      
+      // Update local state for immediate UI feedback
+      const newNoteObj = {
+        id: Date.now(),
+        ...noteObject,
         type: "note",
       };
 
