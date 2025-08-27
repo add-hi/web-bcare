@@ -1,6 +1,20 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+
+// Simple responsive hook using existing patterns
+const useResponsive = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkSize = () => setIsMobile(window.innerWidth < 768);
+    checkSize();
+    window.addEventListener('resize', checkSize);
+    return () => window.removeEventListener('resize', checkSize);
+  }, []);
+  
+  return { isMobile };
+};
 import {
   BarChart,
   Bar,
@@ -52,6 +66,8 @@ const Dashboard = () => {
   const [showMyTicketsOnly, setShowMyTicketsOnly] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const { isMobile } = useResponsive();
+
 
   // LIST untuk tab Complaints (tetap dari useFeedback)
   const {
@@ -353,17 +369,18 @@ const Dashboard = () => {
                 <h3 className="text-xl font-semibold mb-4">
                   Status Distribution
                 </h3>
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
                       data={statusData.filter(item => item.value > 0)}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
+                      innerRadius={50}
+                      outerRadius={80}
                       paddingAngle={5}
                       dataKey="value"
-                      label={({name, value}) => `${name}: ${value}`}
+                      label={!isMobile ? ({name, value}) => `${name}: ${value}` : false}
+                      labelLine={false}
                     >
                       {statusData.filter(item => item.value > 0).map((entry, i) => (
                         <Cell key={i} fill={entry.color} />
@@ -391,8 +408,8 @@ const Dashboard = () => {
                 <h3 className="text-xl font-semibold mb-4">
                   Tickets by Category (Top 8)
                 </h3>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={categoryData}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={categoryData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis allowDecimals={false} />
