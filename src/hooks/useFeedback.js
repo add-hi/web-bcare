@@ -32,7 +32,7 @@ export default function useFeedback() {
       ]);
 
       const feedbackList = feedbackResponse.data?.data ?? [];
-      const ticketsList = ticketsResponse.data ?? [];
+      const ticketsList = ticketsResponse.data.data ?? [];
 
       if (feedbackList.length === 0) {
         setItems([]);

@@ -214,7 +214,7 @@ export default function LoginPage() {
           </form>
 
           {/* Forgot Password Link */}
-          <div className="mt-6 text-center">
+          {/* <div className="mt-6 text-center">
             <button
               type="button"
               onClick={() => setShowForgotPassword(true)}
@@ -222,7 +222,7 @@ export default function LoginPage() {
             >
               Forgot your password?
             </button>
-          </div>
+          </div> */}
 
           {/* Footer */}
           <div className="mt-8 text-center">
