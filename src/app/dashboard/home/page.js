@@ -27,17 +27,15 @@ import useFeedback from "@/hooks/useFeedback";
 import useTicket from "@/hooks/useTicket";
 import Button from "@/components/ui/Button";
 
-// Normalisasi status berbagai istilah API ke 3 bucket
+// Normalisasi status ke 3 kategori berdasarkan status sebenarnya
 function normalizeStatus(s) {
-  const x = String(s || "").toLowerCase();
-  if (/(closed|selesai|done|resolved)/.test(x)) return "closed";
-  if (
-    /(processing|progress|handled|escalated|verification|accepted|in\s*-?\s*progress)/.test(
-      x
-    )
-  )
-    return "in-progress";
-  return "open";
+  const status = String(s || "");
+  
+  if (status === "Closed") return "closed";
+  if (status === "Handled by CxC" || status === "Escalated" || status === "Done by UIC") return "in-progress";
+  if (status === "Open") return "open";
+  
+  return "open"; // default fallback
 }
 
 // Format ISO -> 'YYYY-MM-DD'
@@ -101,7 +99,7 @@ const Dashboard = () => {
           t?.complaint?.complaint_code ||
           "Unknown",
         status: normalizeStatus(
-          t?.customer_status?.customer_status_name || t?.status
+          t?.employee_status?.employee_status_name || t?.customer_status?.customer_status_name || t?.status
         ),
         rating: typeof fb?.rating === "number" ? fb.rating : null, // ⬅️ rating dari feedback
         assignedTo: t?.employee?.id ?? t?.employee_id ?? null,
@@ -358,21 +356,35 @@ const Dashboard = () => {
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
                     <Pie
-                      data={statusData}
+                      data={statusData.filter(item => item.value > 0)}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
                       outerRadius={100}
                       paddingAngle={5}
                       dataKey="value"
+                      label={({name, value}) => `${name}: ${value}`}
                     >
-                      {statusData.map((entry, i) => (
+                      {statusData.filter(item => item.value > 0).map((entry, i) => (
                         <Cell key={i} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip formatter={(value, name) => [value, name]} />
                   </PieChart>
                 </ResponsiveContainer>
+                <div className="mt-4 flex flex-wrap justify-center gap-4">
+                  {statusData.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{backgroundColor: item.color}}
+                      ></div>
+                      <span className="text-sm text-gray-600">
+                        {item.name}: {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">

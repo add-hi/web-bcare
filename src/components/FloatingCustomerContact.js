@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import io from "socket.io-client";
 
-export default function FloatingCustomerContact({ room = "general", detail }) {
+export default function FloatingCustomerContact({ room, detail }) {
   // ====== Socket Configuration ======
   const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL;
 
@@ -111,7 +111,6 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
   const startLocalStream = useCallback(async () => {
     if (streamRef.current) return streamRef.current;
     try {
-
       // Check if getUserMedia is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("Microphone not supported in this browser");
@@ -144,36 +143,36 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
 
   const createPeerConnection = useCallback(async () => {
     if (peerConnectionRef.current) return peerConnectionRef.current;
-    
+
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
-    
+
     // Handle remote audio stream
     pc.ontrack = (event) => {
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = event.streams[0];
       }
     };
-    
+
     // Handle ICE candidates
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        socketRef.current?.emit('webrtc:ice-candidate', {
+        socketRef.current?.emit("webrtc:ice-candidate", {
           room: ACTIVE_ROOM,
-          candidate: event.candidate
+          candidate: event.candidate,
         });
       }
     };
-    
+
     // Add local audio stream
     const stream = streamRef.current;
     if (stream) {
-      stream.getTracks().forEach(track => {
+      stream.getTracks().forEach((track) => {
         pc.addTrack(track, stream);
       });
     }
-    
+
     peerConnectionRef.current = pc;
     return pc;
   }, [ACTIVE_ROOM]);
@@ -182,24 +181,27 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
     const pc = await createPeerConnection();
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    
-    socketRef.current?.emit('webrtc:offer', {
+
+    socketRef.current?.emit("webrtc:offer", {
       room: ACTIVE_ROOM,
-      offer: offer
+      offer: offer,
     });
   }, [createPeerConnection, ACTIVE_ROOM]);
-  
-  const createAnswer = useCallback(async (offer) => {
-    const pc = await createPeerConnection();
-    await pc.setRemoteDescription(offer);
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    
-    socketRef.current?.emit('webrtc:answer', {
-      room: ACTIVE_ROOM,
-      answer: answer
-    });
-  }, [createPeerConnection, ACTIVE_ROOM]);
+
+  const createAnswer = useCallback(
+    async (offer) => {
+      const pc = await createPeerConnection();
+      await pc.setRemoteDescription(offer);
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      socketRef.current?.emit("webrtc:answer", {
+        room: ACTIVE_ROOM,
+        answer: answer,
+      });
+    },
+    [createPeerConnection, ACTIVE_ROOM]
+  );
 
   // ====== Socket lifecycle ======
   useEffect(() => {
@@ -297,17 +299,17 @@ export default function FloatingCustomerContact({ room = "general", detail }) {
       stopLocalStream();
     });
     // WebRTC signaling
-    sock.on('webrtc:offer', async ({ offer }) => {
+    sock.on("webrtc:offer", async ({ offer }) => {
       await createAnswer(offer);
     });
-    
-    sock.on('webrtc:answer', async ({ answer }) => {
+
+    sock.on("webrtc:answer", async ({ answer }) => {
       if (peerConnectionRef.current) {
         await peerConnectionRef.current.setRemoteDescription(answer);
       }
     });
-    
-    sock.on('webrtc:ice-candidate', async ({ candidate }) => {
+
+    sock.on("webrtc:ice-candidate", async ({ candidate }) => {
       if (peerConnectionRef.current) {
         await peerConnectionRef.current.addIceCandidate(candidate);
       }
