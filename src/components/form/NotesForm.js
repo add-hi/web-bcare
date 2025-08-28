@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import useUser from "@/hooks/useUser";
 import useTicket from "@/hooks/useTicket";
+import toast from "react-hot-toast";
 import {
   MessageSquare,
   FileText,
@@ -13,7 +14,7 @@ import {
   User,
 } from "lucide-react";
 
-const InputForm = ({ detail, onChange }) => {
+const InputForm = ({ detail, onChange, onNoteAdded }) => {
   const { user } = useUser();
   const { updateTicket } = useTicket();
   const ticketId = detail?.ids?.ticketId;
@@ -114,10 +115,17 @@ const InputForm = ({ detail, onChange }) => {
       };
 
       setDivisionNotes((prev) => [...prev, newNoteObj]);
+      toast.success("Note added successfully!");
       setNewNote("");
+      
+      // Refresh parent data if callback provided
+      onNoteAdded?.();
+      
+      // Refresh parent data if callback provided
+      onNoteAdded?.();
     } catch (error) {
       console.error("Failed to add note:", error);
-      // Error toast already shown in hook
+      toast.error(error?.message || "Failed to add note");
     } finally {
       setIsProcessing(false);
     }

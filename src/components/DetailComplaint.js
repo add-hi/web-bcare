@@ -161,7 +161,11 @@ function DetailComplaint({ ticketId, onSuccess }) {
 
       <CustomerForm detail={detail} onChange={setCustomerForm} />
       <DataForm detail={detail} onChange={setDataForm} />
-      <NotesForm detail={detail} onChange={setDivisionNotes} />
+      <NotesForm 
+        detail={detail} 
+        onChange={setDivisionNotes}
+        onNoteAdded={() => fetchTicketDetail(effectiveId, { force: true })}
+      />
 
       <ActionForm
         detail={detail}
