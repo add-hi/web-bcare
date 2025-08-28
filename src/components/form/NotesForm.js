@@ -21,23 +21,25 @@ const InputForm = ({ detail, onChange, onNoteAdded }) => {
   // Normalize initial notes: ensure array of {division, timestamp, msg, author}
   const initialDivisionNotes = (() => {
     try {
-      if (Array.isArray(detail?.notes?.division)) return detail.notes.division.map(n => ({
-        division: n.division ?? n.Division ?? n.division_name ?? "CXC",
-        timestamp: n.timestamp ?? n.time ?? n.date ?? "",
-        msg: n.msg ?? n.message ?? n.content ?? "",
-        author: n.author ?? n.Author ?? "Unknown",
-      }));
+      if (Array.isArray(detail?.notes?.division))
+        return detail.notes.division.map((n) => ({
+          division: n.division ?? n.Division ?? n.division_name ?? "CXC",
+          timestamp: n.timestamp ?? n.time ?? n.date ?? "",
+          msg: n.msg ?? n.message ?? n.content ?? "",
+          author: n.author ?? n.Author ?? "Unknown",
+        }));
       if (typeof detail?.__raw?.division_notes === "string") {
         const parsed = JSON.parse(detail.__raw.division_notes);
-        if (Array.isArray(parsed)) return parsed.map(n => ({
-          division: n.division ?? n.Division ?? "CXC",
-          timestamp: n.timestamp ?? n.time ?? "",
-          msg: n.msg ?? n.message ?? "",
-          author: n.author ?? "Unknown",
-        }));
+        if (Array.isArray(parsed))
+          return parsed.map((n) => ({
+            division: n.division ?? n.Division ?? "CXC",
+            timestamp: n.timestamp ?? n.time ?? "",
+            msg: n.msg ?? n.message ?? "",
+            author: n.author ?? "Unknown",
+          }));
       }
       if (Array.isArray(detail?.__raw?.division_notes)) {
-        return detail.__raw.division_notes.map(n => ({
+        return detail.__raw.division_notes.map((n) => ({
           division: n.division ?? "CXC",
           timestamp: n.timestamp ?? "",
           msg: n.msg ?? "",
@@ -52,12 +54,15 @@ const InputForm = ({ detail, onChange, onNoteAdded }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   // propagate to parent
   useEffect(() => {
-    onChange && onChange(divisionNotes.map(n => ({
-      division: n.division ?? "CXC",
-      timestamp: n.timestamp ?? "",
-      msg: n.msg ?? n.message ?? "",
-      author: n.author ?? "Unknown",
-    })));
+    onChange &&
+      onChange(
+        divisionNotes.map((n) => ({
+          division: n.division ?? "CXC",
+          timestamp: n.timestamp ?? "",
+          msg: n.msg ?? n.message ?? "",
+          author: n.author ?? "Unknown",
+        }))
+      );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [divisionNotes]);
 
@@ -81,11 +86,13 @@ const InputForm = ({ detail, onChange, onNoteAdded }) => {
         } catch {}
         return [];
       })();
-      
+
       // Build new note object
-      const authorName = user?.full_name || user?.name || user?.email || "Unknown";
-      const divisionName = user?.role_details?.role_name || user?.role || "Unknown";
-      
+      const authorName =
+        user?.full_name || user?.name || user?.email || "Unknown";
+      const divisionName =
+        user?.role_details?.role_name || user?.role || "Unknown";
+
       const newNoteObject = {
         division: divisionName,
         timestamp: new Date().toLocaleDateString("id-ID", {
@@ -104,9 +111,9 @@ const InputForm = ({ detail, onChange, onNoteAdded }) => {
 
       // Save to database using existing updateTicket
       await updateTicket(ticketId, {
-        division_notes: allNotes
+        division_notes: allNotes,
       });
-      
+
       // Update local state for immediate UI feedback
       const newNoteObj = {
         id: Date.now(),
@@ -117,10 +124,10 @@ const InputForm = ({ detail, onChange, onNoteAdded }) => {
       setDivisionNotes((prev) => [...prev, newNoteObj]);
       toast.success("Note added successfully!");
       setNewNote("");
-      
+
       // Refresh parent data if callback provided
       onNoteAdded?.();
-      
+
       // Refresh parent data if callback provided
       onNoteAdded?.();
     } catch (error) {
@@ -134,25 +141,28 @@ const InputForm = ({ detail, onChange, onNoteAdded }) => {
   // Get note styling based on division and type
   const getNoteStyle = (division, type = "note") => {
     const divisionConfig = {
-      "CXC": { color: "border-blue-400", bgColor: "bg-blue-50" },
-      "DGO": { color: "border-green-400", bgColor: "bg-green-50" },
-      "IT": { color: "border-purple-400", bgColor: "bg-purple-50" },
-      "Finance": { color: "border-yellow-400", bgColor: "bg-yellow-50" },
-      "Security": { color: "border-red-400", bgColor: "bg-red-50" },
+      CXC: { color: "border-blue-400", bgColor: "bg-blue-50" },
+      DGO: { color: "border-green-400", bgColor: "bg-green-50" },
+      IT: { color: "border-purple-400", bgColor: "bg-purple-50" },
+      Finance: { color: "border-yellow-400", bgColor: "bg-yellow-50" },
+      Security: { color: "border-red-400", bgColor: "bg-red-50" },
       "ATM Operations": { color: "border-orange-400", bgColor: "bg-orange-50" },
       "Call Center": { color: "border-pink-400", bgColor: "bg-pink-50" },
     };
-    
+
     const typeConfig = {
       system: { icon: MessageSquare },
       note: { icon: FileText },
       escalation: { icon: AlertTriangle },
       resolution: { icon: CheckCircle },
     };
-    
-    const divisionStyle = divisionConfig[division] || { color: "border-gray-400", bgColor: "bg-gray-50" };
+
+    const divisionStyle = divisionConfig[division] || {
+      color: "border-gray-400",
+      bgColor: "bg-gray-50",
+    };
     const typeStyle = typeConfig[type] || typeConfig.note;
-    
+
     return { ...divisionStyle, ...typeStyle };
   };
 
@@ -164,7 +174,6 @@ const InputForm = ({ detail, onChange, onNoteAdded }) => {
       {/* Header */}
       <div className="bg-blue-500 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
         <h2 className="text-lg font-semibold">Notes</h2>
-
       </div>
 
       {/* Division Communication History */}
@@ -252,12 +261,8 @@ const InputForm = ({ detail, onChange, onNoteAdded }) => {
             <Send size={16} />
             {isProcessing ? "Saving Note..." : "Save Note"}
           </button>
-
-
         </div>
       </div>
-
-
     </div>
   );
 };
