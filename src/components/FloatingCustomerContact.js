@@ -406,9 +406,11 @@ export default function FloatingCustomerContact({ room, detail }) {
     try {
       await startLocalStream();
       sock.emit("call:invite", { room: ACTIVE_ROOM });
-      setCallStatus("ringing");
+      setCallStatus("in-call");
       setShowCallUI(true);
       setActiveTab("call");
+      callStartAt.current = Date.now();
+      setCallDuration(0);
     } catch (error) {
       console.error("Failed to start microphone for call:", error);
     }
