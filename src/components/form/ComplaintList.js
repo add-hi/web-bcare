@@ -11,6 +11,7 @@ import {
   Plus,
   ArrowLeft,
   Paperclip,
+  RefreshCw,
 } from "lucide-react";
 import DetailComplaint from "@/components/DetailComplaint";
 import AddComplaint from "@/components/AddComplaint";
@@ -33,70 +34,20 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
   const [filters, setFilters] = useState({});
   const [showFilterDropdown, setShowFilterDropdown] = useState(null);
 
-  // list + pagination dari hook (PASTIKAN hook mengembalikan `pagination`)
-  const { list, loading, error, pagination, fetchTickets, updateTicket } =
-    useTicket();
-
-  // detail
+  // API integration - fetch all tickets for client-side processing
+  const { list, loading, error, fetchTickets, updateTicket } = useTicket();
   const { selectedId, fetchTicketDetail } = useTicketDetail();
   const ticketStore = useTicketStore();
 
-  // ===== Pagination state =====
-  const limit = pagination?.limit ?? PAGE_SIZE;
-  const total = pagination?.total ?? 0;
-  const totalPages = Math.max(
-    1,
-    pagination?.pages ?? (Math.ceil(total / limit) || 1)
-  );
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Initialize with first page on mount
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  const fetchTicketsRef = React.useRef(fetchTickets);
+  // Fetch all tickets once when component becomes active
   useEffect(() => {
-    fetchTicketsRef.current = fetchTickets;
-  }, [fetchTickets]);
-  const didInitRef = React.useRef(false);
-
-  useEffect(() => {
-    if (!isActive) return;
-    if (didInitRef.current) return;
-    didInitRef.current = true;
-
-    fetchTicketsRef.current({
-      limit: LIMIT,
-      offset: 0,
-      force: true,
-      status: '', // ⬅️ selalu kosong agar backend kirim semua data
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, isAgent]);
-
-  // ✅ Set default filter (client-side) untuk agent: open + handled by cxc
-  useEffect(() => {
-    if (!isActive || !isAgent) return;
-    setFilters((prev) => {
-      const already = Array.isArray(prev.status) && prev.status.length > 0;
-      if (already) return prev;
-      return { ...prev, status: DEFAULT_AGENT_STATUS };
-    });
-  }, [isActive, isAgent]);
-
-  // Fetch data when page changes (after initialization)
-  useEffect(() => {
-    if (!isActive) return;
-    if (!didInitRef.current) return;
-
-    const offset = (currentPage - 1) * LIMIT;
-    fetchTicketsRef.current({
-      limit: LIMIT,
-      offset,
-      force: false,
-      status: '', // ⬅️ selalu kosong agar backend kirim semua data
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, isActive, isAgent]);
+    if (isActive) {
+      // Fetch all tickets at once for client-side pagination
+      fetchTickets({ limit: 1000, offset: 0, force: false });
+    }
+  }, [isActive]); // Only fetch once when component becomes active
 
   // helper tanggal dd/MM/yyyy
   const fmtDate = (iso) => {
@@ -109,10 +60,18 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
     return `${dd}/${mm}/${yyyy}`;
   };
 
-  // map ke rows tabel (No. Tiket = ticket_id)
+  // Map API data and filter for agent view (handled by cxc + open only)
   const originalComplaints = useMemo(() => {
     if (!Array.isArray(list)) return [];
-    return list.map((t) => {
+
+    // Filter tickets for agent view: only "open" and "handled by cxc" status
+    const filteredList = list.filter((t) => {
+      const status =
+        t?.employee_status?.employee_status_name?.toLowerCase() || "";
+      return status === "open" || status === "handled by cxc";
+    });
+
+    return filteredList.map((t) => {
       const id = t?.ticket_id ?? null;
       return {
         id,
@@ -144,8 +103,7 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
     [...new Set(originalComplaints.map((i) => i[key] || "-"))].sort();
 
   const onDetailSubmitSuccess = async () => {
-    const offset = (currentPage - 1) * LIMIT;
-    await fetchTicketsRef.current({ limit: LIMIT, offset, force: true, status: '' });
+    await fetchTickets({ limit: 1000, offset: 0, force: true });
     setViewMode("table");
   };
 
@@ -207,6 +165,15 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
     return filtered;
   }, [filters, sortConfig, originalComplaints]);
 
+  // Client-side pagination
+  const paginatedComplaints = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const endIndex = startIndex + PAGE_SIZE;
+    return processedComplaints.slice(startIndex, endIndex);
+  }, [processedComplaints, currentPage]);
+
+  const totalPages = Math.ceil(processedComplaints.length / PAGE_SIZE);
+
   const handleSort = (key) =>
     setSortConfig((prev) => ({
       key,
@@ -245,31 +212,6 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
   const openAttachments = () => setViewMode("attachments");
   const backFromAttachments = () =>
     setViewMode(selectedId ? "detail" : "table");
-
-  // ===== UI helpers =====
-  const startIndex = (pagination?.offset ?? (currentPage - 1) * LIMIT) + 1;
-  const endIndex = Math.min(startIndex + (list?.length || 0) - 1, total);
-
-  const pageNumbers = useMemo(() => {
-    const pages = totalPages;
-    const curr = Math.min(Math.max(currentPage, 1), pages);
-    const windowSize = 5;
-    let start = Math.max(1, curr - Math.floor(windowSize / 2));
-    let end = Math.min(pages, start + windowSize - 1);
-    if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
-
-    const arr = [];
-    if (start > 1) {
-      arr.push(1);
-      if (start > 2) arr.push("…");
-    }
-    for (let p = start; p <= end; p++) arr.push(p);
-    if (end < pages) {
-      if (end < pages - 1) arr.push("…");
-      arr.push(pages);
-    }
-    return arr;
-  }, [currentPage, totalPages]);
 
   // ===== RENDER =====
 
@@ -341,13 +283,6 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
           >
             <span className="hidden sm:inline">Back to List</span>
           </Button>
-          {/* <button
-            onClick={openAttachments}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <Paperclip size={18} />
-            Attachments
-          </button> */}
         </div>
         <AddComplaint />
       </div>
@@ -697,8 +632,29 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
           <div className="text-sm text-gray-600">
             {loading
               ? "Loading…"
-              : `Showing ${startIndex}-${endIndex} of ${total} entries`}
+              : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
+                  currentPage * PAGE_SIZE,
+                  processedComplaints.length
+                )} of ${processedComplaints.length} entries`}
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={RefreshCw}
+            onClick={() => {
+              setCurrentPage(1);
+              fetchTickets({
+                limit: 1000,
+                offset: 0,
+                force: true,
+              });
+            }}
+            disabled={loading}
+            loading={loading}
+            className="px-4 py-2"
+          >
+            Refresh
+          </Button>
         </div>
       </div>
 
@@ -746,8 +702,9 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
                               showFilterDropdown === col.key ? null : col.key
                             )
                           }
-                          className={`hover:text-blue-600 ${filters[col.key] ? "text-blue-600" : "text-gray-400"
-                            }`}
+                          className={`hover:text-blue-600 ${
+                            filters[col.key] ? "text-blue-600" : "text-gray-400"
+                          }`}
                         >
                           <Filter size={14} />
                         </button>
@@ -780,16 +737,15 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
                   Loading…
                 </td>
               </tr>
-            ) : processedComplaints.length ? (
-              processedComplaints.map((c, i) => (
+            ) : paginatedComplaints.length ? (
+              paginatedComplaints.map((c, i) => (
                 <tr
                   key={c.id ?? `${c.noTiket}-${i}`}
                   onClick={() => handleRowClick(c)}
                   className="hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-200"
                 >
-                  {/* No = nomor absolut (berdasarkan offset), No. Tiket = ticket_id */}
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
-                    {(pagination?.offset ?? (currentPage - 1) * LIMIT) + i + 1}
+                    {(currentPage - 1) * PAGE_SIZE + i + 1}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                     {c.tglInput}
@@ -845,7 +801,12 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
         <div className="text-sm text-gray-600 order-2 sm:order-1">
           {loading
             ? "Loading…"
-            : `Showing ${startIndex}-${endIndex} of ${total} entries`}
+            : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
+                currentPage * PAGE_SIZE,
+                processedComplaints.length
+              )} of ${
+                processedComplaints.length
+              } entries (filtered for handled by cxc + open)`}
         </div>
         <div className="flex flex-wrap gap-1 order-1 sm:order-2">
           <Button
@@ -865,23 +826,44 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
             Previous
           </Button>
 
-          {pageNumbers.map((p, idx) =>
-            p === "…" ? (
-              <span key={`dots-${idx}`} className="px-2 text-gray-500">
-                …
-              </span>
-            ) : (
-              <Button
-                key={p}
-                variant={p === currentPage ? "orange" : "outline"}
-                size="sm"
-                onClick={() => setCurrentPage(p)}
-                disabled={loading}
-              >
-                {p}
-              </Button>
-            )
-          )}
+          {(() => {
+            const maxPages = Math.max(1, totalPages);
+            const curr = Math.min(Math.max(currentPage, 1), maxPages);
+            const windowSize = 5;
+            let start = Math.max(1, curr - Math.floor(windowSize / 2));
+            let end = Math.min(maxPages, start + windowSize - 1);
+            if (end - start + 1 < windowSize)
+              start = Math.max(1, end - windowSize + 1);
+
+            const pageNumbers = [];
+            if (start > 1) {
+              pageNumbers.push(1);
+              if (start > 2) pageNumbers.push("…");
+            }
+            for (let p = start; p <= end; p++) pageNumbers.push(p);
+            if (end < maxPages) {
+              if (end < maxPages - 1) pageNumbers.push("…");
+              pageNumbers.push(maxPages);
+            }
+
+            return pageNumbers.map((p, idx) =>
+              p === "…" ? (
+                <span key={`dots-${idx}`} className="px-2 text-gray-500">
+                  …
+                </span>
+              ) : (
+                <Button
+                  key={p}
+                  variant={p === currentPage ? "orange" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(p)}
+                  disabled={loading}
+                >
+                  {p}
+                </Button>
+              )
+            );
+          })()}
 
           <Button
             variant="outline"

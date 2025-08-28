@@ -5,14 +5,14 @@ import React, { useState, useEffect, useMemo } from "react";
 // Simple responsive hook using existing patterns
 const useResponsive = () => {
   const [isMobile, setIsMobile] = useState(false);
-  
+
   useEffect(() => {
     const checkSize = () => setIsMobile(window.innerWidth < 768);
     checkSize();
     window.addEventListener('resize', checkSize);
     return () => window.removeEventListener('resize', checkSize);
   }, []);
-  
+
   return { isMobile };
 };
 import {
@@ -44,11 +44,11 @@ import Button from "@/components/ui/Button";
 // Normalisasi status ke 3 kategori berdasarkan status sebenarnya
 function normalizeStatus(s) {
   const status = String(s || "");
-  
+
   if (status === "Closed") return "closed";
   if (status === "Handled by CxC" || status === "Escalated" || status === "Done by UIC") return "in-progress";
   if (status === "Open") return "open";
-  
+
   return "open"; // default fallback
 }
 
@@ -63,7 +63,7 @@ const toYMD = (iso) => {
 const Dashboard = () => {
   const [selectedTab, setSelectedTab] = useState("overview");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [showMyTicketsOnly, setShowMyTicketsOnly] = useState(true);
+  const [showMyTicketsOnly, setShowMyTicketsOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const { isMobile } = useResponsive();
@@ -379,7 +379,7 @@ const Dashboard = () => {
                       outerRadius={80}
                       paddingAngle={5}
                       dataKey="value"
-                      label={!isMobile ? ({name, value}) => `${name}: ${value}` : false}
+                      label={!isMobile ? ({ name, value }) => `${name}: ${value}` : false}
                       labelLine={false}
                     >
                       {statusData.filter(item => item.value > 0).map((entry, i) => (
@@ -392,9 +392,9 @@ const Dashboard = () => {
                 <div className="mt-4 flex flex-wrap justify-center gap-4">
                   {statusData.map((item, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{backgroundColor: item.color}}
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: item.color }}
                       ></div>
                       <span className="text-sm text-gray-600">
                         {item.name}: {item.value}
@@ -446,7 +446,7 @@ const Dashboard = () => {
             {/* Filter & Pagination Info */}
             <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
               <div className="flex items-center justify-between">
-                {user && (
+                {/* {user && (
                   <div className="flex items-center space-x-2">
                     <label className="text-sm text-gray-600">
                       My Tickets Only:
@@ -458,7 +458,7 @@ const Dashboard = () => {
                       className="rounded border-gray-300 text-orange-500 focus:ring-orange-600"
                     />
                   </div>
-                )}
+                )} */}
                 {filteredComplaints.length > 0 && (
                   <span className="text-sm text-gray-600">
                     Page {currentPage} of {totalPages || 1} (Total Pages:{" "}
