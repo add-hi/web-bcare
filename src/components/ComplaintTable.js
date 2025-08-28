@@ -23,7 +23,12 @@ import {
   CheckSquare,
   RefreshCw,
   Building2,
-  Paperclip
+  Paperclip,
+  ChevronRight,
+  Users,
+  Ticket,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 import Attachment from "@/components/Attachment";
@@ -39,12 +44,17 @@ import toast from "react-hot-toast";
 
 const ComplaintTable = ({ isActive = false }) => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
-  const [viewMode, setViewMode] = useState("table"); // 'table' or 'detail'
+  const [viewMode, setViewMode] = useState("table"); // 'table', 'grouped', or 'detail'
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [filters, setFilters] = useState({});
   const [showFilterDropdown, setShowFilterDropdown] = useState(null);
   const [newNote, setNewNote] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Grouped view specific states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState(new Set());
+  const [showAllGroups, setShowAllGroups] = useState(false);
 
   // API integration
   const { list, loading, error, pagination, fetchTickets, updateTicket } = useTicket();
@@ -161,7 +171,6 @@ const ComplaintTable = ({ isActive = false }) => {
     }
   };
 
-
   // Helper function to format date
   const fmtDate = (iso) => {
     if (!iso) return "-";
@@ -217,7 +226,52 @@ const ComplaintTable = ({ isActive = false }) => {
     });
   }, [list]);
 
+  // Group data by customer name with search filtering
+  const groupedData = useMemo(() => {
+    const groups = originalComplaints.reduce((acc, item) => {
+      const customerName = item.customerName;
+      if (!acc[customerName]) {
+        acc[customerName] = {
+          customerName,
+          tickets: [],
+          totalTickets: 0,
+          statusSummary: {}
+        };
+      }
+      acc[customerName].tickets.push(item);
+      acc[customerName].totalTickets++;
 
+      // Count status summary
+      const status = item.status;
+      acc[customerName].statusSummary[status] = (acc[customerName].statusSummary[status] || 0) + 1;
+
+      return acc;
+    }, {});
+
+    let allGroups = Object.values(groups);
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      allGroups = allGroups.filter(group =>
+        group.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        group.tickets.some(ticket =>
+          ticket.noTiket.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          ticket.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          ticket.channel.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      );
+    }
+
+    return allGroups.sort((a, b) => a.customerName.localeCompare(b.customerName));
+  }, [originalComplaints, searchQuery]);
+
+  // Tambahkan useEffect ini setelah groupedData
+  useEffect(() => {
+    if (groupedData.length > 0) {
+      // Set semua group sebagai collapsed by default
+      setCollapsedGroups(new Set(groupedData.map(g => g.customerName)));
+    }
+  }, [groupedData]);
 
   // Get unique values for filter options
   const getUniqueValues = (key) => {
@@ -323,8 +377,7 @@ const ComplaintTable = ({ isActive = false }) => {
   };
 
   const openAttachments = () => setViewMode("attachments");
-  const backFromAttachments = () => setViewMode(selectedComplaint ? "detail" : "table");
-
+  const backFromAttachments = () => setViewMode(selectedComplaint ? "detail" : (viewMode === "grouped" ? "grouped" : "table"));
 
   const clearAllFilters = () => {
     setFilters({});
@@ -342,8 +395,84 @@ const ComplaintTable = ({ isActive = false }) => {
   };
 
   const handleBackToTable = () => {
-    setViewMode("table");
+    setViewMode(viewMode === "grouped" ? "grouped" : "table");
     setSelectedComplaint(null);
+  };
+
+  // Grouped view specific functions
+  const toggleGroup = (customerName) => {
+    const newCollapsed = new Set(collapsedGroups);
+    if (newCollapsed.has(customerName)) {
+      newCollapsed.delete(customerName);
+    } else {
+      newCollapsed.add(customerName);
+    }
+    setCollapsedGroups(newCollapsed);
+  };
+
+  const toggleAllGroups = () => {
+    if (collapsedGroups.size === 0) {
+      // Jika semua expanded, collapse semua
+      setCollapsedGroups(new Set(groupedData.map(g => g.customerName)));
+      setShowAllGroups(false);
+    } else {
+      // Jika ada yang collapsed, expand semua
+      setCollapsedGroups(new Set());
+      setShowAllGroups(true);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+  };
+
+  const StatusSummary = ({ statusSummary }) => {
+    const getStatusColor = (status) => {
+      const statusLower = status.toLowerCase();
+
+      switch (statusLower) {
+        case 'open':
+          return 'bg-blue-100 text-blue-800 border-blue-200';
+        case 'handled by cxc':
+        case 'handledcxc':
+          return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        case 'escalated':
+          return 'bg-orange-100 text-orange-800 border-orange-200';
+        case 'done by uic':
+        case 'doneuic':
+        case 'donbyuic':
+          return 'bg-purple-100 text-purple-800 border-purple-200';
+        case 'closed':
+        case 'completed':
+        case 'resolved':
+          return 'bg-green-100 text-green-800 border-green-200';
+        case 'pending':
+        case 'waiting':
+          return 'bg-gray-100 text-gray-800 border-gray-200';
+        case 'cancelled':
+        case 'declined':
+        case 'rejected':
+          return 'bg-red-100 text-red-800 border-red-200';
+        case 'in progress':
+        case 'processing':
+          return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+        default:
+          return 'bg-gray-100 text-gray-800 border-gray-200';
+      }
+    };
+
+    return (
+      <div className="flex gap-2 flex-wrap">
+        {Object.entries(statusSummary).map(([status, count]) => (
+          <span
+            key={status}
+            className={`text-xs px-2 py-1 rounded border ${getStatusColor(status)}`}
+          >
+            {status}: {count}
+          </span>
+        ))}
+      </div>
+    );
   };
 
   const handleAddNote = async () => {
@@ -354,11 +483,11 @@ const ComplaintTable = ({ isActive = false }) => {
       // Get existing notes first
       const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
       const existingNotes = ticketDetail?.__raw?.division_notes || [];
-      
+
       // Build new note object
       const authorName = user?.full_name || user?.name || user?.email || "Unknown";
       const divisionName = user?.role_details?.role_name || user?.role || "Unknown";
-      
+
       const newNoteObject = {
         division: divisionName,
         timestamp: new Date().toLocaleDateString("id-ID", {
@@ -379,10 +508,10 @@ const ComplaintTable = ({ isActive = false }) => {
       await updateTicket(selectedComplaint.id, {
         division_notes: allNotes
       });
-      
+
       // Refresh ticket detail to show new note
       await fetchTicketDetail(selectedComplaint.id, { force: true });
-      
+
       toast.success("Note added successfully!");
       setNewNote("");
     } catch (error) {
@@ -733,6 +862,7 @@ const ComplaintTable = ({ isActive = false }) => {
     );
   };
 
+  // Attachments view
   if (viewMode === "attachments") {
     return (
       <div className="max-w-full mx-auto p-6 bg-white">
@@ -785,7 +915,7 @@ const ComplaintTable = ({ isActive = false }) => {
             onClick={handleBackToTable}
             className="px-5 py-2.5"
           >
-            Back to Table
+            Back to {viewMode === "grouped" ? "Group View" : "Table"}
           </Button>
 
           <h2 className="text-2xl font-bold text-gray-900">
@@ -1080,7 +1210,7 @@ const ComplaintTable = ({ isActive = false }) => {
                         {selectedComplaint?.number}
                       </p>
                     </div>
-                    
+
                   </div>
 
                   <div className="space-y-1">
@@ -1196,6 +1326,168 @@ const ComplaintTable = ({ isActive = false }) => {
     );
   }
 
+  // Grouped View
+  if (viewMode === "grouped") {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="mb-4 flex justify-between items-center">
+          <h2 className="text-xl font-semibold">Customer Tickets - Grouped View</h2>
+          <div className="flex gap-2">
+            <Button
+              variant="primary"
+              icon={Users}
+              onClick={() => setViewMode('grouped')}
+              className="px-4 py-2"
+            >
+              Group View
+            </Button>
+            <Button
+              variant="outline"
+              icon={Filter}
+              onClick={() => setViewMode('table')}
+              className="px-4 py-2"
+            >
+              Table View
+            </Button>
+          </div>
+        </div>
+
+        {/* Search and Controls */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search customer name, ticket number, category..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-4">
+            {searchQuery && (
+              <span className="text-sm text-gray-600">
+                {groupedData.length} customer{groupedData.length !== 1 ? 's' : ''} found
+              </span>
+            )}
+            <button
+              onClick={toggleAllGroups}
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              {collapsedGroups.size === 0 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {collapsedGroups.size === 0 ? 'Collapse All' : 'Expand All'}
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {groupedData.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+              <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No customers found</h3>
+              <p className="text-gray-500">
+                {searchQuery ?
+                  `No customers match "${searchQuery}". Try a different search term.` :
+                  'No customer data available.'
+                }
+              </p>
+              {searchQuery && (
+                <button
+                  onClick={clearSearch}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Clear Search
+                </button>
+              )}
+            </div>
+          ) : (
+            groupedData.map((group) => (
+              <div key={group.customerName} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                {/* Group Header */}
+                {/* Ubah warna zidan */}
+                <div
+                  className="bg-orange-50 border-b border-orange-100 p-4 cursor-pointer hover:bg-orange-100 transition-colors"
+                  onClick={() => toggleGroup(group.customerName)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {collapsedGroups.has(group.customerName) ? (
+                        <ChevronRight className="w-5 h-5 text-orange-600" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-orange-600" />
+                      )}
+                      <div>
+                        <h3 className="font-semibold text-lg text-orange-900">
+                          <Users className="inline-block w-5 h-5 mr-2" />
+                          {group.customerName}
+                        </h3>
+                        <p className="text-sm text-orange-700">
+                          <Ticket className="inline-block w-4 h-4 mr-1" />
+                          {group.totalTickets} ticket{group.totalTickets !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <StatusSummary statusSummary={group.statusSummary} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Group Content */}
+                {!collapsedGroups.has(group.customerName) && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50 text-xs">
+                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">No</th>
+                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Date</th>
+                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Ticket #</th>
+                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Status</th>
+                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Channel</th>
+                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Category</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700">SLA</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.tickets.map((ticket, index) => (
+                          <tr
+                            key={ticket.id}
+                            onClick={() => handleRowClick(ticket)}
+                            className="hover:bg-gray-50 border-b border-gray-100 last:border-b-0 cursor-pointer"
+                          >
+                            <td className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600">{index + 1}</td>
+                            <td className="border-r border-gray-200 px-3 py-3 text-sm text-gray-900">{ticket.tglInput}</td>
+                            <td className="border-r border-gray-200 px-3 py-3 text-sm font-medium text-orange-600">{ticket.noTiket}</td>
+                            <td className="border-r border-gray-200 px-3 py-3 text-sm">
+                              <StatusBadge status={ticket.status} />
+                            </td>
+                            <td className="border-r border-gray-200 px-3 py-3 text-sm text-gray-900">{ticket.channel}</td>
+                            <td className="border-r border-gray-200 px-3 py-3 text-sm text-gray-900">{ticket.category}</td>
+                            <td className="px-3 py-3 text-sm text-gray-900 font-medium">{ticket.sla}d</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Regular table view
   // Reorganized columns for better layout
   const columns = [
     {
@@ -1304,6 +1596,14 @@ const ComplaintTable = ({ isActive = false }) => {
         </div>
         <div className="flex items-center gap-2">
           <Button
+            variant="primary"
+            icon={Users}
+            onClick={() => setViewMode('grouped')}
+            className="px-4 py-2"
+          >
+            Group View
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             icon={RefreshCw}
@@ -1313,6 +1613,7 @@ const ComplaintTable = ({ isActive = false }) => {
             }}
             disabled={loading}
             loading={loading}
+            className="px-4 py-2"
           >
             Refresh
           </Button>
@@ -1445,7 +1746,7 @@ const ComplaintTable = ({ isActive = false }) => {
               <tr>
                 <td
                   className="border border-gray-300 px-4 py-6 text-sm text-center"
-                  colSpan={10}
+                  colSpan={12}
                 >
                   Loading tickets...
                 </td>
@@ -1484,10 +1785,10 @@ const ComplaintTable = ({ isActive = false }) => {
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                     {complaint.number}
                   </td>
-                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                     {complaint.cardNumber}
                   </td>
-                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">
                     {complaint.createdByUnit}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900 truncate">
@@ -1499,7 +1800,7 @@ const ComplaintTable = ({ isActive = false }) => {
               <tr>
                 <td
                   className="border border-gray-300 px-4 py-6 text-sm text-center"
-                  colSpan={10}
+                  colSpan={12}
                 >
                   No tickets found (excluding open status)
                 </td>

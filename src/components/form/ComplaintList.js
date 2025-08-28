@@ -11,6 +11,7 @@ import {
   Plus,
   ArrowLeft,
   Paperclip,
+  RefreshCw,
 } from "lucide-react";
 import DetailComplaint from "@/components/DetailComplaint";
 import AddComplaint from "@/components/AddComplaint";
@@ -68,7 +69,6 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
       limit: LIMIT,
       offset: 0,
       force: true,
-      status: '', // ⬅️ selalu kosong agar backend kirim semua data
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive, isAgent]);
@@ -93,7 +93,6 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
       limit: LIMIT,
       offset,
       force: false,
-      status: '', // ⬅️ selalu kosong agar backend kirim semua data
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, isActive, isAgent]);
@@ -145,7 +144,7 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
 
   const onDetailSubmitSuccess = async () => {
     const offset = (currentPage - 1) * LIMIT;
-    await fetchTicketsRef.current({ limit: LIMIT, offset, force: true, status: '' });
+    await fetchTicketsRef.current({ limit: LIMIT, offset, force: true});
     setViewMode("table");
   };
 
@@ -341,13 +340,6 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
           >
             <span className="hidden sm:inline">Back to List</span>
           </Button>
-          {/* <button
-            onClick={openAttachments}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <Paperclip size={18} />
-            Attachments
-          </button> */}
         </div>
         <AddComplaint />
       </div>
@@ -699,6 +691,24 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
               ? "Loading…"
               : `Showing ${startIndex}-${endIndex} of ${total} entries`}
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={RefreshCw}
+            onClick={() => {
+              setCurrentPage(1);
+              fetchTickets({
+                limit: LIMIT,
+                offset: 0,
+                force: true,
+              });
+            }}
+            disabled={loading}
+            loading={loading}
+            className="px-4 py-2"
+          >
+            Refresh
+          </Button>
         </div>
       </div>
 
