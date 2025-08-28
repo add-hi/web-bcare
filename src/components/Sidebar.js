@@ -25,7 +25,7 @@ const menuItems = [
     href: "/dashboard/mockdgo",
     icon: BarChart3,
     hasSubmenu: false,
-    division_codes: ["uic1", "uic3", "uic6", "uic7", "uic8", "uic10", "uic11", "tbs", "opr"],
+    division_codes: ["uic1", "uic3", "uic6", "uic7", "uic8", "uic10", "uic11", "tbs", "opr", "bcc"],
   },
 ];
 
