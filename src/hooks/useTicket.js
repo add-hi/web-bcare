@@ -40,7 +40,6 @@ export default function useTicket() {
       const sameParams = currentPagination.limit === limit && currentPagination.offset === offset;
 
       if (!force && hasData && sameParams) {
-        console.log('Using cached ticket data');
         return; // Use cached data
       }
 
