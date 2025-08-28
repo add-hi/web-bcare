@@ -24,11 +24,7 @@ const base = normalizeBase(rawBase);
 // If base already ends with /v1 (case-insensitive), keep it; else append /v1
 const apiBase = /\/v1$/i.test(base) ? base : `${base}/v1`;
 
-// Helpful one-time debug
-// if (process.env.NODE_ENV !== "production") {
-//   // eslint-disable-next-line no-console
-//   console.log("[httpClient] baseURL =", apiBase);
-// }
+
 
 const httpClient = axios.create({
   baseURL: apiBase, // e.g. "/api/v1" (with your Next.js rewrite) or "https://host/v1"

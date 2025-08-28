@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import useAddComplaint from "@/hooks/useAddComplaint";
 import useUser from "@/hooks/useUser";
 import Button from "@/components/ui/Button";
@@ -115,6 +115,103 @@ const InputForm = () => {
     }
   };
 
+  // SearchableSelect component (same as DataFormAdd)
+  const SearchableSelect = ({
+    value,
+    onChange,
+    options,
+    placeholder,
+    getLabel,
+    getValue,
+    disabled = false,
+  }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const dropdownRef = useRef(null);
+
+    const filteredOptions = options.filter((opt) => {
+      const haystack = (getLabel(opt) || "").toString().toLowerCase();
+      return haystack.includes((search || "").toLowerCase());
+    });
+
+    const selectedOption = options.find((opt) => getValue(opt) === value);
+
+    const displayValue =
+      isOpen && search
+        ? search
+        : selectedOption
+        ? getLabel(selectedOption)
+        : search;
+
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+          setIsOpen(false);
+          setSearch("");
+        }
+      };
+
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    return (
+      <div className="relative" ref={dropdownRef}>
+        <div className="relative">
+          <input
+            className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm pr-8 ${
+              disabled ? "bg-gray-50 text-gray-400" : ""
+            }`}
+            value={displayValue}
+            onChange={(e) => {
+              if (!disabled) {
+                setSearch(e.target.value);
+                setIsOpen(true);
+              }
+            }}
+            onFocus={() => {
+              if (!disabled) {
+                setIsOpen(true);
+                if (selectedOption) setSearch("");
+              }
+            }}
+            placeholder={placeholder}
+            disabled={disabled}
+          />
+          <svg
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+        {isOpen && !disabled && (
+          <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b max-h-40 overflow-y-auto">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt, idx) => (
+                <div
+                  key={idx}
+                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                  onClick={() => {
+                    onChange(getValue(opt));
+                    setSearch("");
+                    setIsOpen(false);
+                  }}
+                >
+                  {getLabel(opt)}
+                </div>
+              ))
+            ) : (
+              <div className="px-3 py-2 text-sm text-gray-500">No options found</div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="w-full bg-green-100 rounded-lg shadow-lg p-6 mb-6 border border-gray-200">
       {/* Header */}
@@ -131,17 +228,17 @@ const InputForm = () => {
                 Action
               </label>
               <div className="flex-1">
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm"
+                <SearchableSelect
                   value={formData.action}
-                  onChange={(e) => handleInputChange("action", e.target.value)}
-                >
-                  <option value="" disabled>
-                    Pilih Action 
-                  </option>
-                  <option value="ESCALATED">ESCALATED</option>
-                  <option value="CLOSED">CLOSED</option>
-                </select>
+                  onChange={(v) => handleInputChange("action", v)}
+                  options={[
+                    { value: "ESCALATED", label: "ESCALATED" },
+                    { value: "CLOSED", label: "CLOSED" }
+                  ]}
+                  placeholder="Pilih Action"
+                  getLabel={(opt) => opt.label}
+                  getValue={(opt) => opt.value}
+                />
               </div>
             </div>
 

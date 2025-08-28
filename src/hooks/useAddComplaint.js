@@ -1,13 +1,26 @@
 "use client";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import useAddComplaintStore from "@/store/addComplaintStore";
 import useUser from "@/hooks/useUser";
 import httpClient from "@/lib/httpClient";
 import toast from "react-hot-toast";
 
+// Global flag to prevent multiple fetches across all instances
+let globalFetchInProgress = false;
+let globalDataFetched = false;
+
+// Cache for policies by channel to prevent repeated calls
+const policiesByChannelCache = new Map();
+const policyInfoCache = new Map();
+
+// Global locks to prevent concurrent requests
+const activePolicyRequests = new Set();
+const activePolicyInfoRequests = new Set();
+
 export default function useAddComplaint() {
   const store = useAddComplaintStore();
   const { user, accessToken } = useUser();
+  const hasFetchedRef = useRef(false);
   
   const BASE = useMemo(
     () => (process.env.NEXT_PUBLIC_API_URL).replace(/\/$/, ""),
@@ -55,7 +68,31 @@ export default function useAddComplaint() {
   const fetchPolicyInfo = useCallback(async (channelId, categoryId) => {
     if (!accessToken) return null;
     
+    const cacheKey = `${channelId}-${categoryId}-${accessToken}`;
+    const requestKey = `${channelId}-${categoryId}`;
+    
+    // Check cache first
+    if (policyInfoCache.has(cacheKey)) {
+      return policyInfoCache.get(cacheKey);
+    }
+    
+    // Check if request is already in progress
+    if (activePolicyInfoRequests.has(requestKey)) {
+      // Wait for the active request to complete
+      while (activePolicyInfoRequests.has(requestKey)) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      // Check cache again after waiting
+      if (policyInfoCache.has(cacheKey)) {
+        return policyInfoCache.get(cacheKey);
+      }
+    }
+    
+    // Mark request as active
+    activePolicyInfoRequests.add(requestKey);
+    
     try {
+      
       const { data } = await httpClient.get('/v1/policies', {
         baseURL: BASE,
         params: { channel_id: channelId, complaint_id: categoryId, limit: 1 },
@@ -63,19 +100,32 @@ export default function useAddComplaint() {
       });
       
       const policies = Array.isArray(data) ? data : data?.data || [];
-      return policies[0] || null;
+      const result = policies[0] || null;
+      
+      // Cache the result
+      policyInfoCache.set(cacheKey, result);
+      
+      return result;
     } catch (error) {
-      console.error('Failed to fetch policy:', error);
       return null;
+    } finally {
+      // Remove request from active set
+      activePolicyInfoRequests.delete(requestKey);
     }
-  }, [accessToken]);
+  }, [accessToken, BASE]);
 
   // Fetch dropdown data
   const fetchDropdownData = useCallback(async () => {
-    if (isDataFetched || !accessToken) return;
+    // Global check to prevent multiple instances from fetching
+    if (globalDataFetched || globalFetchInProgress || !accessToken) {
+      return;
+    }
     
+    globalFetchInProgress = true;
     setLoadingData(true);
+    
     try {
+      
       const [channels, categories, sources, terminals, priorities, policies, uics] = await Promise.all([
         httpClient.get('/v1/channels', { baseURL: BASE, headers: { Authorization: accessToken } }),
         httpClient.get('/v1/complaint-categories', { baseURL: BASE, headers: { Authorization: accessToken } }),
@@ -97,12 +147,15 @@ export default function useAddComplaint() {
       setUics(uics.data?.data || uics.data || []);
       
       setIsDataFetched(true);
+      globalDataFetched = true;
+      
     } catch (error) {
-      console.error('Failed to fetch dropdown data:', error);
+      globalDataFetched = false; // Reset on error so it can retry
     } finally {
+      globalFetchInProgress = false;
       setLoadingData(false);
     }
-  }, [isDataFetched, accessToken, setLoadingData, setChannels, setCategories, setAllCategories, setSources, setTerminals, setPriorities, setPolicies, setUics, setIsDataFetched]);
+  }, [accessToken, BASE]);
 
 
 
@@ -110,7 +163,37 @@ export default function useAddComplaint() {
   const fetchPoliciesByChannel = useCallback(async (channelId) => {
     if (!accessToken || !channelId) return allCategories;
     
+    const cacheKey = `${channelId}-${accessToken}`;
+    const requestKey = `${channelId}`;
+    
+    // Check cache first
+    if (policiesByChannelCache.has(cacheKey)) {
+      const cachedPolicyIds = policiesByChannelCache.get(cacheKey);
+      return allCategories.filter(cat => 
+        cachedPolicyIds.includes(cat.complaint_id)
+      );
+    }
+    
+    // Check if request is already in progress
+    if (activePolicyRequests.has(requestKey)) {
+      // Wait for the active request to complete
+      while (activePolicyRequests.has(requestKey)) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      // Check cache again after waiting
+      if (policiesByChannelCache.has(cacheKey)) {
+        const cachedPolicyIds = policiesByChannelCache.get(cacheKey);
+        return allCategories.filter(cat => 
+          cachedPolicyIds.includes(cat.complaint_id)
+        );
+      }
+    }
+    
+    // Mark request as active
+    activePolicyRequests.add(requestKey);
+    
     try {
+      
       const { data } = await httpClient.get('/v1/policies', {
         baseURL: BASE,
         params: { channel_id: channelId, limit: 50 },
@@ -122,14 +205,20 @@ export default function useAddComplaint() {
         p.complaint_category?.complaint_id || p.complaint_id
       );
       
+      // Cache the result
+      policiesByChannelCache.set(cacheKey, allowedComplaintIds);
+      
       return allCategories.filter(cat => 
         allowedComplaintIds.includes(cat.complaint_id)
       );
     } catch (error) {
-      console.error('Failed to fetch policies by channel:', error);
+      console.error(`❌ Failed to fetch policies for channel ${channelId}:`, error);
       return allCategories;
+    } finally {
+      // Remove request from active set
+      activePolicyRequests.delete(requestKey);
     }
-  }, [accessToken, allCategories]);
+  }, [accessToken, allCategories, BASE]);
 
 
 
@@ -322,7 +411,6 @@ export default function useAddComplaint() {
       }
 
       // Debug: log ticket data before sending
-      console.log('Ticket data to be sent:', JSON.stringify(ticketData, null, 2));
       window.debugTicketData = ticketData;
 
       const response = await httpClient.post('/v1/tickets', ticketData, {
@@ -370,8 +458,10 @@ export default function useAddComplaint() {
   //   }
   // }, []);
   useEffect(() => {
-    fetchDropdownData();
-  }, [fetchDropdownData]);
+    if (accessToken) {
+      fetchDropdownData();
+    }
+  }, [accessToken]); // Only run when accessToken changes
 
   // return {
   //   // State

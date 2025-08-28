@@ -17,9 +17,19 @@ const toLocalInputDateTime = (iso) => {
 export default function InputForm({ detail, onChange }) {
   // === Priority options ===
   const priorityOptions = [
-    { priority_id: 1, priority_code: "CRITICAL", priority_name: "Critical", id: 1 },
+    {
+      priority_id: 1,
+      priority_code: "CRITICAL",
+      priority_name: "Critical",
+      id: 1,
+    },
     { priority_id: 2, priority_code: "HIGH", priority_name: "High", id: 2 },
-    { priority_id: 3, priority_code: "REGULAR", priority_name: "Regular", id: 3 },
+    {
+      priority_id: 3,
+      priority_code: "REGULAR",
+      priority_name: "Regular",
+      id: 3,
+    },
   ];
 
   // === Channel options ===
@@ -38,53 +48,177 @@ export default function InputForm({ detail, onChange }) {
   // === Category options 1..48 ===
   const categoryOptions = [
     { id: 1, code: "2ND_CHARGEBACK", name: "2nd Chargeback" },
-    { id: 2, code: "2ND_CHARGEBACK_QRIS_DEBIT", name: "2nd Chargeback QRIS Debit" },
-    { id: 3, code: "BI_FAST_BILATERAL", name: "BI-FAST Bilateral (Refund,salah/batal Care/ 7 transfer,rek terdebet > 1x)" },
-    { id: 4, code: "BI_FAST_DANA_TIDAK_MASUK", name: "BI-FAST Dana Tidak Masuk ke Rek Tujuan" },
-    { id: 5, code: "BI_FAST_GAGAL_HAPUS_AKUN", name: "BI-FAST Gagal Hapus Akun" },
-    { id: 6, code: "BI_FAST_GAGAL_MIGRASI_AKUN", name: "BI-FAST Gagal Migrasi Akun" },
-    { id: 7, code: "BI_FAST_GAGAL_SUSPEND_AKUN", name: "BI-FAST Gagal Suspend Akun" },
-    { id: 8, code: "BI_FAST_GAGAL_UPDATE_AKUN", name: "BI-FAST Gagal Update Akun" },
+    {
+      id: 2,
+      code: "2ND_CHARGEBACK_QRIS_DEBIT",
+      name: "2nd Chargeback QRIS Debit",
+    },
+    {
+      id: 3,
+      code: "BI_FAST_BILATERAL",
+      name: "BI-FAST Bilateral (Refund,salah/batal Care/ 7 transfer,rek terdebet > 1x)",
+    },
+    {
+      id: 4,
+      code: "BI_FAST_DANA_TIDAK_MASUK",
+      name: "BI-FAST Dana Tidak Masuk ke Rek Tujuan",
+    },
+    {
+      id: 5,
+      code: "BI_FAST_GAGAL_HAPUS_AKUN",
+      name: "BI-FAST Gagal Hapus Akun",
+    },
+    {
+      id: 6,
+      code: "BI_FAST_GAGAL_MIGRASI_AKUN",
+      name: "BI-FAST Gagal Migrasi Akun",
+    },
+    {
+      id: 7,
+      code: "BI_FAST_GAGAL_SUSPEND_AKUN",
+      name: "BI-FAST Gagal Suspend Akun",
+    },
+    {
+      id: 8,
+      code: "BI_FAST_GAGAL_UPDATE_AKUN",
+      name: "BI-FAST Gagal Update Akun",
+    },
     { id: 9, code: "DISPUTE", name: "Dispute" },
-    { id: 10, code: "DISPUTE_QRIS_KARTU_DEBIT", name: "Dispute QRIS Kartu Debit" },
+    {
+      id: 10,
+      code: "DISPUTE_QRIS_KARTU_DEBIT",
+      name: "Dispute QRIS Kartu Debit",
+    },
     { id: 11, code: "MOBILE_TUNAI", name: "Mobile Tunai" },
     { id: 12, code: "MOBILE_TUNAI_ALFAMART", name: "Mobile Tunai Alfamart" },
     { id: 13, code: "MOBILE_TUNAI_ALFAMIDI", name: "Mobile Tunai Alfamidi" },
     { id: 14, code: "MOBILE_TUNAI_INDOMARET", name: "Mobile Tunai Indomaret" },
-    { id: 15, code: "PEMBAYARAN_KARTU_KREDIT_BANK_LAIN", name: "Pembayaran Kartu Kredit Bank Lain" },
-    { id: 16, code: "PEMBAYARAN_KARTU_KREDIT_BNI", name: "Pembayaran Kartu Kredit BNI" },
+    {
+      id: 15,
+      code: "PEMBAYARAN_KARTU_KREDIT_BANK_LAIN",
+      name: "Pembayaran Kartu Kredit Bank Lain",
+    },
+    {
+      id: 16,
+      code: "PEMBAYARAN_KARTU_KREDIT_BNI",
+      name: "Pembayaran Kartu Kredit BNI",
+    },
     { id: 17, code: "PEMBAYARAN_MPNG2", name: "Pembayaran MPNG2" },
     { id: 18, code: "PEMBAYARAN_MPNG3", name: "Pembayaran MPNG3" },
     { id: 19, code: "PEMBAYARAN_MPNG4", name: "Pembayaran MPNG4" },
-    { id: 20, code: "PEMBAYARAN_PLN_VIA_ATM_BANK_LAIN", name: "Pembayaran PLN via ATM Bank Lain" },
+    {
+      id: 20,
+      code: "PEMBAYARAN_PLN_VIA_ATM_BANK_LAIN",
+      name: "Pembayaran PLN via ATM Bank Lain",
+    },
     { id: 21, code: "PEMBAYARAN_SAMSAT", name: "Pembayaran Samsat" },
-    { id: 22, code: "PEMBAYARAN_TELKOM_TELKOMSEL_INDOSAT_PROVIDER_LAINNYA", name: "Pembayaran Telkom/Telkomsel/Indosat/Provider Lainnya" },
-    { id: 23, code: "PERMINTAAN_CCTV_ATM_BNI", name: "Permintaan CCTV ATM BNI " },
-    { id: 24, code: "SETOR_TUNAI_DI_MESIN_ATM_CRM", name: "Setor Tunai Di Mesin ATM CRM" },
-    { id: 25, code: "TARIK_TUNAI_DI_ATM_LINK", name: "Tarik Tunai Di ATM Link" },
-    { id: 26, code: "TARIK_TUNAI_DI_ATM_PRIMA", name: "Tarik Tunai Di ATM Prima" },
-    { id: 27, code: "TARIK_TUNAI_DI_ATM_CIRRUS", name: "Tarik Tunai Di ATМ Cirrus" },
-    { id: 28, code: "TARIK_TUNAI_DI_JARINGAN_ALTO", name: "Tarik Tunai Di Jaringan Alto" },
-    { id: 29, code: "TARIK_TUNAI_DI_JARINGAN_BERSAMA", name: "Tarik Tunai Di Jaringan Bersama" },
-    { id: 30, code: "TARIK_TUNAI_DI_MESIN_ATM_BNI", name: "Tarik Tunai Di Mesin ATM BNI" },
+    {
+      id: 22,
+      code: "PEMBAYARAN_TELKOM_TELKOMSEL_INDOSAT_PROVIDER_LAINNYA",
+      name: "Pembayaran Telkom/Telkomsel/Indosat/Provider Lainnya",
+    },
+    {
+      id: 23,
+      code: "PERMINTAAN_CCTV_ATM_BNI",
+      name: "Permintaan CCTV ATM BNI ",
+    },
+    {
+      id: 24,
+      code: "SETOR_TUNAI_DI_MESIN_ATM_CRM",
+      name: "Setor Tunai Di Mesin ATM CRM",
+    },
+    {
+      id: 25,
+      code: "TARIK_TUNAI_DI_ATM_LINK",
+      name: "Tarik Tunai Di ATM Link",
+    },
+    {
+      id: 26,
+      code: "TARIK_TUNAI_DI_ATM_PRIMA",
+      name: "Tarik Tunai Di ATM Prima",
+    },
+    {
+      id: 27,
+      code: "TARIK_TUNAI_DI_ATM_CIRRUS",
+      name: "Tarik Tunai Di ATМ Cirrus",
+    },
+    {
+      id: 28,
+      code: "TARIK_TUNAI_DI_JARINGAN_ALTO",
+      name: "Tarik Tunai Di Jaringan Alto",
+    },
+    {
+      id: 29,
+      code: "TARIK_TUNAI_DI_JARINGAN_BERSAMA",
+      name: "Tarik Tunai Di Jaringan Bersama",
+    },
+    {
+      id: 30,
+      code: "TARIK_TUNAI_DI_MESIN_ATM_BNI",
+      name: "Tarik Tunai Di Mesin ATM BNI",
+    },
     { id: 31, code: "TOP_UP_DANA", name: "Top Up Dana" },
     { id: 32, code: "TOP_UP_E_MONEY", name: "Top Up e-money" },
     { id: 33, code: "TOP_UP_GOPAY", name: "Top Up Gopay" },
     { id: 34, code: "TOP_UP_LINKAJA", name: "Top Up LinkAja" },
     { id: 35, code: "TOP_UP_OVO", name: "Top Up OVO" },
-    { id: 36, code: "TOP_UP_PRA_MIGRASI_DANA_GAGAL_TERKOREKSI", name: "Top Up Pra Migrasi, Dana Gagal Terkoreksi" },
+    {
+      id: 36,
+      code: "TOP_UP_PRA_MIGRASI_DANA_GAGAL_TERKOREKSI",
+      name: "Top Up Pra Migrasi, Dana Gagal Terkoreksi",
+    },
     { id: 37, code: "TOP_UP_PULSA", name: "Top Up Pulsa" },
-    { id: 38, code: "TOP_UP_PULSA_VIA_ATM_BANK_LAIN", name: "Top Up Pulsa via ATM Bank Lain" },
+    {
+      id: 38,
+      code: "TOP_UP_PULSA_VIA_ATM_BANK_LAIN",
+      name: "Top Up Pulsa via ATM Bank Lain",
+    },
     { id: 39, code: "TOP_UP_SHOPEE_PAY", name: "Top Up Shopee Pay" },
-    { id: 40, code: "TRANSFER_ANTAR_REKENING_BNI", name: "Transfer Antar Rekening BNI" },
-    { id: 41, code: "TRANSFER_ATM_ALTO_DANA_TDK_MASUK", name: "Transfer ATM Alto (Dana Tdk Masuk ke Rek Tujuan)" },
-    { id: 42, code: "TRANSFER_ATM_ALTO_BILATERAL", name: "Transfer ATM Alto Bilateral (Refund,salah/batal transfer,rek terdebet > 1x)" },
-    { id: 43, code: "TRANSFER_ATM_ALTO_LINK_BILATERAL", name: "Transfer ATM Alto Link Bilateral (Refund,salah/batal transfer,rek terdebet > 1x)" },
-    { id: 44, code: "TRANSFER_ATM_BERSAMA_DANA_TDK_MASUK", name: "Transfer ATM Bersama (Dana Tdk Masuk ke Rek Tujuan)" },
-    { id: 45, code: "TRANSFER_ATM_BERSAMA_BILATERAL", name: "Transfer ATM Bersama Bilateral (Refund,salah/batal transfer,rek terdebet > 1x)" },
-    { id: 46, code: "TRANSFER_ATM_LINK_DANA_TDK_MASUK", name: "Transfer ATM Link (Dana Tdk Masuk ke Rek Tujuan)" },
-    { id: 47, code: "TRANSFER_ATM_PRIMA_DANA_TDK_MASUK", name: "Transfer ATM Prima (Dana Tdk Masuk ke Rek Tujuan)" },
-    { id: 48, code: "TRANSFER_ATM_PRIMA_BILATERAL", name: "Transfer ATM Prima Bilateral (Refund,salah/batal transfer,rek terdebet > 1x)" },
+    {
+      id: 40,
+      code: "TRANSFER_ANTAR_REKENING_BNI",
+      name: "Transfer Antar Rekening BNI",
+    },
+    {
+      id: 41,
+      code: "TRANSFER_ATM_ALTO_DANA_TDK_MASUK",
+      name: "Transfer ATM Alto (Dana Tdk Masuk ke Rek Tujuan)",
+    },
+    {
+      id: 42,
+      code: "TRANSFER_ATM_ALTO_BILATERAL",
+      name: "Transfer ATM Alto Bilateral (Refund,salah/batal transfer,rek terdebet > 1x)",
+    },
+    {
+      id: 43,
+      code: "TRANSFER_ATM_ALTO_LINK_BILATERAL",
+      name: "Transfer ATM Alto Link Bilateral (Refund,salah/batal transfer,rek terdebet > 1x)",
+    },
+    {
+      id: 44,
+      code: "TRANSFER_ATM_BERSAMA_DANA_TDK_MASUK",
+      name: "Transfer ATM Bersama (Dana Tdk Masuk ke Rek Tujuan)",
+    },
+    {
+      id: 45,
+      code: "TRANSFER_ATM_BERSAMA_BILATERAL",
+      name: "Transfer ATM Bersama Bilateral (Refund,salah/batal transfer,rek terdebet > 1x)",
+    },
+    {
+      id: 46,
+      code: "TRANSFER_ATM_LINK_DANA_TDK_MASUK",
+      name: "Transfer ATM Link (Dana Tdk Masuk ke Rek Tujuan)",
+    },
+    {
+      id: 47,
+      code: "TRANSFER_ATM_PRIMA_DANA_TDK_MASUK",
+      name: "Transfer ATM Prima (Dana Tdk Masuk ke Rek Tujuan)",
+    },
+    {
+      id: 48,
+      code: "TRANSFER_ATM_PRIMA_BILATERAL",
+      name: "Transfer ATM Prima Bilateral (Refund,salah/batal transfer,rek terdebet > 1x)",
+    },
   ];
 
   // ——— Infer initial IDs dari detail ———
@@ -96,8 +230,12 @@ export default function InputForm({ detail, onChange }) {
     const needleCode = String(p.code ?? p.priority_code ?? "").toLowerCase();
     const needleName = String(p.name ?? "").toLowerCase();
     const match =
-      priorityOptions.find((o) => String(o.priority_code).toLowerCase() === needleCode) ||
-      priorityOptions.find((o) => String(o.priority_name).toLowerCase() === needleName);
+      priorityOptions.find(
+        (o) => String(o.priority_code).toLowerCase() === needleCode
+      ) ||
+      priorityOptions.find(
+        (o) => String(o.priority_name).toLowerCase() === needleName
+      );
     return match ? String(match.id) : "";
   };
 
@@ -152,9 +290,15 @@ export default function InputForm({ detail, onChange }) {
   // ——— Propagate ke parent ———
   useEffect(() => {
     onChange?.({
-      priority_id: formData.priorityId ? Number(formData.priorityId) : undefined,
-      complaint_id: formData.categoryId ? Number(formData.categoryId) : undefined,
-      issue_channel_id: formData.channelId ? Number(formData.channelId) : undefined,
+      priority_id: formData.priorityId
+        ? Number(formData.priorityId)
+        : undefined,
+      complaint_id: formData.categoryId
+        ? Number(formData.categoryId)
+        : undefined,
+      issue_channel_id: formData.channelId
+        ? Number(formData.channelId)
+        : undefined,
       record: formData.record,
       // sementara source masih string
       source: formData.source,
@@ -199,9 +343,12 @@ export default function InputForm({ detail, onChange }) {
       Description: "description",
       Source: "source",
     };
-    if (field === "Priority") return setFormData((p) => ({ ...p, priorityId: String(value) }));
-    if (field === "Category") return setFormData((p) => ({ ...p, categoryId: String(value) }));
-    if (field === "Channel") return setFormData((p) => ({ ...p, channelId: String(value) }));
+    if (field === "Priority")
+      return setFormData((p) => ({ ...p, priorityId: String(value) }));
+    if (field === "Category")
+      return setFormData((p) => ({ ...p, categoryId: String(value) }));
+    if (field === "Channel")
+      return setFormData((p) => ({ ...p, channelId: String(value) }));
     const stateField = map[field];
     if (stateField) setFormData((p) => ({ ...p, [stateField]: value }));
   };
@@ -228,8 +375,8 @@ export default function InputForm({ detail, onChange }) {
     "w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm disabled:bg-gray-50";
 
   return (
-    <div className="w-full bg-orange-100 p-4 sm:p-5 lg:p-6 mb-6 relative rounded-lg border border-gray-300">
-      <div className="-m-4 sm:-m-5 sm:mb-6  bg-orange-500 text-white text-center py-2 px-4 rounded-t-lg">
+    <div className="w-full bg-orange-100 p-6 mb-6 rounded-lg border border-gray-200">
+      <div className="bg-orange-500 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
         <h2 className="text-base sm:text-lg font-semibold">Data</h2>
       </div>
 
@@ -249,7 +396,9 @@ export default function InputForm({ detail, onChange }) {
                   htmlFor={`field-${index}`}
                 >
                   {field.label}
-                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                  {field.required && (
+                    <span className="text-red-500 ml-1">*</span>
+                  )}
                 </label>
 
                 {field.type === "textarea" ? (
@@ -258,7 +407,9 @@ export default function InputForm({ detail, onChange }) {
                     className={`${inputClassName} min-h-10 sm:min-h-[52px] break-words resize-none`}
                     rows={2}
                     value={getFieldValue(field.label)}
-                    onChange={(e) => handleInputChange(field.label, e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange(field.label, e.target.value)
+                    }
                   />
                 ) : field.type === "date" ? (
                   <input
@@ -266,7 +417,9 @@ export default function InputForm({ detail, onChange }) {
                     type="date"
                     className={inputClassName}
                     value={getFieldValue(field.label)}
-                    onChange={(e) => handleInputChange(field.label, e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange(field.label, e.target.value)
+                    }
                   />
                 ) : field.type === "datetime" ? (
                   <input
@@ -274,7 +427,9 @@ export default function InputForm({ detail, onChange }) {
                     type="datetime-local"
                     className={inputClassName}
                     value={getFieldValue(field.label)}
-                    onChange={(e) => handleInputChange(field.label, e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange(field.label, e.target.value)
+                    }
                   />
                 ) : field.type === "select" ? (
                   field.label === "Channel" ? (
@@ -282,7 +437,9 @@ export default function InputForm({ detail, onChange }) {
                       id={`field-${index}`}
                       className={inputClassName}
                       value={formData.channelId}
-                      onChange={(e) => handleInputChange("Channel", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("Channel", e.target.value)
+                      }
                     >
                       <option value="" disabled>
                         Pilih Channel
@@ -298,7 +455,9 @@ export default function InputForm({ detail, onChange }) {
                       id={`field-${index}`}
                       className={inputClassName}
                       value={formData.categoryId}
-                      onChange={(e) => handleInputChange("Category", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("Category", e.target.value)
+                      }
                     >
                       <option value="" disabled>
                         Pilih Category
@@ -314,7 +473,9 @@ export default function InputForm({ detail, onChange }) {
                       id={`field-${index}`}
                       className={inputClassName}
                       value={formData.priorityId}
-                      onChange={(e) => handleInputChange("Priority", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("Priority", e.target.value)
+                      }
                     >
                       <option value="" disabled>
                         Pilih Priority
@@ -342,7 +503,9 @@ export default function InputForm({ detail, onChange }) {
                       id={`field-${index}`}
                       className={inputClassName}
                       value={formData.source}
-                      onChange={(e) => handleInputChange("Source", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("Source", e.target.value)
+                      }
                     >
                       <option value="" disabled>
                         Pilih Source
@@ -369,7 +532,9 @@ export default function InputForm({ detail, onChange }) {
                     type="text"
                     className={inputClassName}
                     value={getFieldValue(field.label)}
-                    onChange={(e) => handleInputChange(field.label, e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange(field.label, e.target.value)
+                    }
                   />
                 )}
               </div>

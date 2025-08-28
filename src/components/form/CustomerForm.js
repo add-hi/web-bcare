@@ -49,8 +49,8 @@ const CustomerForm = ({ detail }) => {
     "w-full px-3 py-2 border border-gray-300 rounded outline-none text-black text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50";
 
   return (
-    <div className="w-full bg-green-100 p-4 sm:p-5 lg:p-6 mb-6 relative rounded-lg border border-gray-300">
-      <div className="-m-4 sm:-m-5 sm:mb-6 bg-green-500 text-white text-center py-2 px-4 rounded-t-lg">
+    <div className="w-full bg-green-100 p-6 mb-6 rounded-lg border border-gray-200">
+      <div className="bg-green-500 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
         <h2 className="text-base sm:text-lg font-semibold">Customer Info</h2>
       </div>
 
