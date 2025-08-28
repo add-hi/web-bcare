@@ -28,7 +28,7 @@ import {
   Users,
   Ticket,
   Eye,
-  EyeOff
+  EyeOff,
 } from "lucide-react";
 
 import Attachment from "@/components/Attachment";
@@ -52,12 +52,13 @@ const ComplaintTable = ({ isActive = false }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Grouped view specific states
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [collapsedGroups, setCollapsedGroups] = useState(new Set());
   const [showAllGroups, setShowAllGroups] = useState(false);
 
   // API integration
-  const { list, loading, error, pagination, fetchTickets, updateTicket } = useTicket();
+  const { list, loading, error, pagination, fetchTickets, updateTicket } =
+    useTicket();
   const { selectedId, detail, fetchTicketDetail } = useTicketDetail();
   const { user } = useUser();
   const [doingAction, setDoingAction] = useState(false);
@@ -96,7 +97,11 @@ const ComplaintTable = ({ isActive = false }) => {
     );
   };
 
-  const handleActionClick = async (complaint, event, opts = { reset: true, refresh: true }) => {
+  const handleActionClick = async (
+    complaint,
+    event,
+    opts = { reset: true, refresh: true }
+  ) => {
     event?.stopPropagation();
     if (doingAction) return;
 
@@ -108,7 +113,9 @@ const ComplaintTable = ({ isActive = false }) => {
       // helper format tanggal dd/MM/yyyy (untuk division_notes.timestamp)
       const pad = (n) => String(n).padStart(2, "0");
       const now = new Date();
-      const ts = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+      const ts = `${pad(now.getDate())}/${pad(
+        now.getMonth() + 1
+      )}/${now.getFullYear()}`;
 
       // ambil nilai dari data ketika tersedia, fallback aman jika tidak
       const payload = {
@@ -126,7 +133,7 @@ const ComplaintTable = ({ isActive = false }) => {
         terminal_id: t?.terminal?.terminal_id ?? t?.terminal_id ?? undefined,
         // deskripsi ambil dari detail kalau ada, lalu dari fullTicketData/row
         description:
-          (ticketStore.detailById[complaint?.id]?.ticket?.description) ||
+          ticketStore.detailById[complaint?.id]?.ticket?.description ||
           t?.description ||
           complaint?.issueDescription ||
           "",
@@ -134,7 +141,8 @@ const ComplaintTable = ({ isActive = false }) => {
         solution: "Technical issue resolved, customer notified",
         division_notes: [
           {
-            division: t?.division?.division_code || t?.division?.division_name || "CXC",
+            division:
+              t?.division?.division_code || t?.division?.division_name || "CXC",
             timestamp: ts,
             msg: "Closed by division after resolution",
             author: "Agent CXC",
@@ -188,8 +196,9 @@ const ComplaintTable = ({ isActive = false }) => {
 
     // Filter out tickets with "open" status (case-insensitive)
     const filteredList = list.filter((t) => {
-      const status = t?.employee_status?.employee_status_name?.toLowerCase() || '';
-      return status !== 'open';
+      const status =
+        t?.employee_status?.employee_status_name?.toLowerCase() || "";
+      return status !== "open";
     });
 
     return filteredList.map((t) => {
@@ -215,7 +224,9 @@ const ComplaintTable = ({ isActive = false }) => {
         unitNow: t?.division?.division_name || "-",
         status: t?.employee_status?.employee_status_name || "-",
         sla: t?.policy?.sla_days != null ? String(t.policy.sla_days) : "-",
-        timeRemaining: t?.sla_info?.is_overdue ? "Overdue" : `${t?.sla_info?.remaining_hours || 0}h remaining`,
+        timeRemaining: t?.sla_info?.is_overdue
+          ? "Overdue"
+          : `${t?.sla_info?.remaining_hours || 0}h remaining`,
         lastUpdate: fmtDate(t?.created_time),
         assignedTo: t?.division?.division_name || "-",
         customerContact: t?.customer?.email || "-",
@@ -235,7 +246,7 @@ const ComplaintTable = ({ isActive = false }) => {
           customerName,
           tickets: [],
           totalTickets: 0,
-          statusSummary: {}
+          statusSummary: {},
         };
       }
       acc[customerName].tickets.push(item);
@@ -243,7 +254,8 @@ const ComplaintTable = ({ isActive = false }) => {
 
       // Count status summary
       const status = item.status;
-      acc[customerName].statusSummary[status] = (acc[customerName].statusSummary[status] || 0) + 1;
+      acc[customerName].statusSummary[status] =
+        (acc[customerName].statusSummary[status] || 0) + 1;
 
       return acc;
     }, {});
@@ -252,24 +264,34 @@ const ComplaintTable = ({ isActive = false }) => {
 
     // Filter by search query
     if (searchQuery.trim()) {
-      allGroups = allGroups.filter(group =>
-        group.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        group.tickets.some(ticket =>
-          ticket.noTiket.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          ticket.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          ticket.channel.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+      allGroups = allGroups.filter(
+        (group) =>
+          group.customerName
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          group.tickets.some(
+            (ticket) =>
+              ticket.noTiket
+                .toLowerCase()
+                .includes(searchQuery.toLowerCase()) ||
+              ticket.category
+                .toLowerCase()
+                .includes(searchQuery.toLowerCase()) ||
+              ticket.channel.toLowerCase().includes(searchQuery.toLowerCase())
+          )
       );
     }
 
-    return allGroups.sort((a, b) => a.customerName.localeCompare(b.customerName));
+    return allGroups.sort((a, b) =>
+      a.customerName.localeCompare(b.customerName)
+    );
   }, [originalComplaints, searchQuery]);
 
   // Tambahkan useEffect ini setelah groupedData
   useEffect(() => {
     if (groupedData.length > 0) {
       // Set semua group sebagai collapsed by default
-      setCollapsedGroups(new Set(groupedData.map(g => g.customerName)));
+      setCollapsedGroups(new Set(groupedData.map((g) => g.customerName)));
     }
   }, [groupedData]);
 
@@ -377,7 +399,14 @@ const ComplaintTable = ({ isActive = false }) => {
   };
 
   const openAttachments = () => setViewMode("attachments");
-  const backFromAttachments = () => setViewMode(selectedComplaint ? "detail" : (viewMode === "grouped" ? "grouped" : "table"));
+  const backFromAttachments = () =>
+    setViewMode(
+      selectedComplaint
+        ? "detail"
+        : viewMode === "grouped"
+        ? "grouped"
+        : "table"
+    );
 
   const clearAllFilters = () => {
     setFilters({});
@@ -413,7 +442,7 @@ const ComplaintTable = ({ isActive = false }) => {
   const toggleAllGroups = () => {
     if (collapsedGroups.size === 0) {
       // Jika semua expanded, collapse semua
-      setCollapsedGroups(new Set(groupedData.map(g => g.customerName)));
+      setCollapsedGroups(new Set(groupedData.map((g) => g.customerName)));
       setShowAllGroups(false);
     } else {
       // Jika ada yang collapsed, expand semua
@@ -423,7 +452,7 @@ const ComplaintTable = ({ isActive = false }) => {
   };
 
   const clearSearch = () => {
-    setSearchQuery('');
+    setSearchQuery("");
   };
 
   const StatusSummary = ({ statusSummary }) => {
@@ -431,33 +460,33 @@ const ComplaintTable = ({ isActive = false }) => {
       const statusLower = status.toLowerCase();
 
       switch (statusLower) {
-        case 'open':
-          return 'bg-blue-100 text-blue-800 border-blue-200';
-        case 'handled by cxc':
-        case 'handledcxc':
-          return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-        case 'escalated':
-          return 'bg-orange-100 text-orange-800 border-orange-200';
-        case 'done by uic':
-        case 'doneuic':
-        case 'donbyuic':
-          return 'bg-purple-100 text-purple-800 border-purple-200';
-        case 'closed':
-        case 'completed':
-        case 'resolved':
-          return 'bg-green-100 text-green-800 border-green-200';
-        case 'pending':
-        case 'waiting':
-          return 'bg-gray-100 text-gray-800 border-gray-200';
-        case 'cancelled':
-        case 'declined':
-        case 'rejected':
-          return 'bg-red-100 text-red-800 border-red-200';
-        case 'in progress':
-        case 'processing':
-          return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+        case "open":
+          return "bg-blue-100 text-blue-800 border-blue-200";
+        case "handled by cxc":
+        case "handledcxc":
+          return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        case "escalated":
+          return "bg-orange-100 text-orange-800 border-orange-200";
+        case "done by uic":
+        case "doneuic":
+        case "donbyuic":
+          return "bg-purple-100 text-purple-800 border-purple-200";
+        case "closed":
+        case "completed":
+        case "resolved":
+          return "bg-green-100 text-green-800 border-green-200";
+        case "pending":
+        case "waiting":
+          return "bg-gray-100 text-gray-800 border-gray-200";
+        case "cancelled":
+        case "declined":
+        case "rejected":
+          return "bg-red-100 text-red-800 border-red-200";
+        case "in progress":
+        case "processing":
+          return "bg-indigo-100 text-indigo-800 border-indigo-200";
         default:
-          return 'bg-gray-100 text-gray-800 border-gray-200';
+          return "bg-gray-100 text-gray-800 border-gray-200";
       }
     };
 
@@ -466,7 +495,9 @@ const ComplaintTable = ({ isActive = false }) => {
         {Object.entries(statusSummary).map(([status, count]) => (
           <span
             key={status}
-            className={`text-xs px-2 py-1 rounded border ${getStatusColor(status)}`}
+            className={`text-xs px-2 py-1 rounded border ${getStatusColor(
+              status
+            )}`}
           >
             {status}: {count}
           </span>
@@ -481,12 +512,15 @@ const ComplaintTable = ({ isActive = false }) => {
     setIsAddingNote(true);
     try {
       // Get existing notes first
-      const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
+      const ticketDetail =
+        detail || ticketStore.detailById[selectedComplaint?.id];
       const existingNotes = ticketDetail?.__raw?.division_notes || [];
 
       // Build new note object
-      const authorName = user?.full_name || user?.name || user?.email || "Unknown";
-      const divisionName = user?.role_details?.role_name || user?.role || "Unknown";
+      const authorName =
+        user?.full_name || user?.name || user?.email || "Unknown";
+      const divisionName =
+        user?.role_details?.role_name || user?.role || "Unknown";
 
       const newNoteObject = {
         division: divisionName,
@@ -506,7 +540,7 @@ const ComplaintTable = ({ isActive = false }) => {
 
       // Use existing updateTicket function with all notes
       await updateTicket(selectedComplaint.id, {
-        division_notes: allNotes
+        division_notes: allNotes,
       });
 
       // Refresh ticket detail to show new note
@@ -533,24 +567,27 @@ const ComplaintTable = ({ isActive = false }) => {
     };
 
     const divisionConfig = {
-      "Open": { color: "border-blue-400", bgColor: "bg-blue-50" },
+      Open: { color: "border-blue-400", bgColor: "bg-blue-50" },
       "Handled by CxC": { color: "border-yellow-400", bgColor: "bg-yellow-50" },
-      "Escalated": { color: "border-orange-400", bgColor: "bg-orange-50" },
+      Escalated: { color: "border-orange-400", bgColor: "bg-orange-50" },
       "Done by UIC": { color: "border-purple-400", bgColor: "bg-purple-50" },
-      "Closed": { color: "border-green-400", bgColor: "bg-green-50" },
-      "CXC": { color: "border-blue-400", bgColor: "bg-blue-50" },
-      "OPR": { color: "border-green-400", bgColor: "bg-green-50" },
-      "IT": { color: "border-purple-400", bgColor: "bg-purple-50" },
-      "Finance": { color: "border-yellow-400", bgColor: "bg-yellow-50" },
-      "Security": { color: "border-red-400", bgColor: "bg-red-50" },
+      Closed: { color: "border-green-400", bgColor: "bg-green-50" },
+      CXC: { color: "border-blue-400", bgColor: "bg-blue-50" },
+      OPR: { color: "border-green-400", bgColor: "bg-green-50" },
+      IT: { color: "border-purple-400", bgColor: "bg-purple-50" },
+      Finance: { color: "border-yellow-400", bgColor: "bg-yellow-50" },
+      Security: { color: "border-red-400", bgColor: "bg-red-50" },
       "ATM Operations": { color: "border-orange-400", bgColor: "bg-orange-50" },
       "Call Center": { color: "border-pink-400", bgColor: "bg-pink-50" },
-      "Customer": { color: "border-gray-400", bgColor: "bg-gray-50" },
-      "Employee": { color: "border-indigo-400", bgColor: "bg-indigo-50" },
+      Customer: { color: "border-gray-400", bgColor: "bg-gray-50" },
+      Employee: { color: "border-indigo-400", bgColor: "bg-indigo-50" },
     };
 
     const typeStyle = typeConfig[type] || typeConfig.note;
-    const divisionStyle = divisionConfig[division] || { color: "border-gray-400", bgColor: "bg-gray-50" };
+    const divisionStyle = divisionConfig[division] || {
+      color: "border-gray-400",
+      bgColor: "bg-gray-50",
+    };
 
     return { ...typeStyle, ...divisionStyle };
   };
@@ -760,7 +797,9 @@ const ComplaintTable = ({ isActive = false }) => {
               variant="primary"
               size="sm"
               onClick={applyDateFilter}
-              disabled={filterType === "range" ? !startDate || !endDate : !specificDate}
+              disabled={
+                filterType === "range" ? !startDate || !endDate : !specificDate
+              }
               className="flex-1"
             >
               Apply Filter
@@ -889,20 +928,35 @@ const ComplaintTable = ({ isActive = false }) => {
 
   if (viewMode === "detail") {
     // Generate timeline steps based on employee_status_id
-    const currentStatusId = selectedComplaint?.fullTicketData?.employee_status?.employee_status_id || 1;
+    const currentStatusId =
+      selectedComplaint?.fullTicketData?.employee_status?.employee_status_id ||
+      1;
 
     const allSteps = [
       { id: 1, title: "Open", icon: Clock, color: "bg-blue-500" },
       { id: 2, title: "Handled by CXC", icon: User, color: "bg-yellow-500" },
-      { id: 3, title: "Escalated", icon: AlertTriangle, color: "bg-orange-500" },
-      { id: 6, title: "Done by UIC", icon: CheckSquare, color: "bg-purple-500" },
+      {
+        id: 3,
+        title: "Escalated",
+        icon: AlertTriangle,
+        color: "bg-orange-500",
+      },
+      {
+        id: 6,
+        title: "Done by UIC",
+        icon: CheckSquare,
+        color: "bg-purple-500",
+      },
       { id: 4, title: "Closed", icon: CheckCircle, color: "bg-green-500" },
     ];
 
-    const timelineSteps = allSteps.map(step => ({
+    const timelineSteps = allSteps.map((step) => ({
       ...step,
       status: step.id <= currentStatusId ? "completed" : "pending",
-      timestamp: step.id <= currentStatusId ? selectedComplaint?.lastUpdate || "Completed" : "Pending",
+      timestamp:
+        step.id <= currentStatusId
+          ? selectedComplaint?.lastUpdate || "Completed"
+          : "Pending",
     }));
 
     return (
@@ -941,17 +995,51 @@ const ComplaintTable = ({ isActive = false }) => {
               </h3>
               <div className="space-y-6">
                 {(() => {
-                  const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
-                  const currentStatusId = selectedComplaint?.fullTicketData?.employee_status?.employee_status_id || 1;
-                  const employeeStatusHistory = ticketDetail?.tracking?.employeeStatusHistory || [];
+                  const ticketDetail =
+                    detail || ticketStore.detailById[selectedComplaint?.id];
+                  const currentStatusId =
+                    selectedComplaint?.fullTicketData?.employee_status
+                      ?.employee_status_id || 1;
+                  const employeeStatusHistory =
+                    ticketDetail?.tracking?.employeeStatusHistory || [];
 
                   // Define all possible steps
                   const allSteps = [
-                    { id: 1, title: "Open", icon: Clock, color: "bg-blue-500", code: "OPEN" },
-                    { id: 2, title: "Handled by CXC", icon: User, color: "bg-yellow-500", code: "HANDLEDCXC" },
-                    { id: 3, title: "Escalated", icon: AlertTriangle, color: "bg-orange-500", code: "ESCALATED" },
-                    { id: 6, title: "Done by UIC", icon: CheckSquare, color: "bg-purple-500", code: "DONEUIC" },
-                    { id: 4, title: "Closed", icon: CheckCircle, color: "bg-green-500", code: "CLOSED" },
+                    {
+                      id: 1,
+                      title: "Open",
+                      icon: Clock,
+                      color: "bg-blue-500",
+                      code: "OPEN",
+                    },
+                    {
+                      id: 2,
+                      title: "Handled by CXC",
+                      icon: User,
+                      color: "bg-yellow-500",
+                      code: "HANDLEDCXC",
+                    },
+                    {
+                      id: 3,
+                      title: "Escalated",
+                      icon: AlertTriangle,
+                      color: "bg-orange-500",
+                      code: "ESCALATED",
+                    },
+                    {
+                      id: 6,
+                      title: "Done by UIC",
+                      icon: CheckSquare,
+                      color: "bg-purple-500",
+                      code: "DONEUIC",
+                    },
+                    {
+                      id: 4,
+                      title: "Closed",
+                      icon: CheckCircle,
+                      color: "bg-green-500",
+                      code: "CLOSED",
+                    },
                   ];
 
                   return allSteps.map((step, index) => {
@@ -960,35 +1048,51 @@ const ComplaintTable = ({ isActive = false }) => {
                     const isCompleted = step.id <= currentStatusId;
 
                     // Find matching history item for this step
-                    const historyItem = employeeStatusHistory.find(h => h.status_code === step.code);
+                    const historyItem = employeeStatusHistory.find(
+                      (h) => h.status_code === step.code
+                    );
 
                     return (
                       <div key={step.id} className="relative flex items-start">
                         {/* Timeline Line */}
                         {!isLast && (
-                          <div className={`absolute left-6 top-12 w-0.5 h-16 ${isCompleted ? 'bg-gray-400' : 'bg-gray-200'}`}></div>
+                          <div
+                            className={`absolute left-6 top-12 w-0.5 h-16 ${
+                              isCompleted ? "bg-gray-400" : "bg-gray-200"
+                            }`}
+                          ></div>
                         )}
 
                         {/* Icon Circle */}
                         <div
-                          className={`flex-shrink-0 w-12 h-12 rounded-full ${isCompleted ? step.color : "bg-gray-300"
-                            } flex items-center justify-center text-white shadow-lg`}
+                          className={`flex-shrink-0 w-12 h-12 rounded-full ${
+                            isCompleted ? step.color : "bg-gray-300"
+                          } flex items-center justify-center text-white shadow-lg`}
                         >
                           <IconComponent size={20} />
                         </div>
 
                         {/* Content */}
                         <div className="ml-4 flex-1">
-                          <p className={`text-base font-medium leading-6 mb-1 ${isCompleted ? "text-gray-900" : "text-gray-400"
-                            }`}>
+                          <p
+                            className={`text-base font-medium leading-6 mb-1 ${
+                              isCompleted ? "text-gray-900" : "text-gray-400"
+                            }`}
+                          >
                             {step.title}
                           </p>
-                          <p className={`text-sm ${isCompleted ? "text-gray-500" : "text-gray-400"
-                            }`}>
+                          <p
+                            className={`text-sm ${
+                              isCompleted ? "text-gray-500" : "text-gray-400"
+                            }`}
+                          >
                             {historyItem
-                              ? `${fmtDate(historyItem.changed_at)} by ${historyItem.changed_by}`
-                              : isCompleted ? "Completed" : "Pending"
-                            }
+                              ? `${fmtDate(historyItem.changed_at)} by ${
+                                  historyItem.changed_by
+                                }`
+                              : isCompleted
+                              ? "Completed"
+                              : "Pending"}
                           </p>
                         </div>
                       </div>
@@ -1007,43 +1111,60 @@ const ComplaintTable = ({ isActive = false }) => {
                   </h3>
                   <span className="text-sm text-gray-500">
                     {(() => {
-                      const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
-                      const statusHistoryNotes = ticketDetail?.notes?.division || [];
-                      const rawDivisionNotes = ticketDetail?.__raw?.division_notes || [];
-                      return statusHistoryNotes.length + rawDivisionNotes.length;
-                    })()} messages
+                      const ticketDetail =
+                        detail || ticketStore.detailById[selectedComplaint?.id];
+                      const statusHistoryNotes =
+                        ticketDetail?.notes?.division || [];
+                      const rawDivisionNotes =
+                        ticketDetail?.__raw?.division_notes || [];
+                      return (
+                        statusHistoryNotes.length + rawDivisionNotes.length
+                      );
+                    })()}{" "}
+                    messages
                   </span>
                 </div>
 
                 <div className="space-y-4 max-h-96 overflow-y-auto">
                   {(() => {
-                    const ticketDetail = detail || ticketStore.detailById[selectedComplaint?.id];
-                    const statusHistoryNotes = ticketDetail?.notes?.division || [];
-                    const rawDivisionNotes = ticketDetail?.__raw?.division_notes || [];
+                    const ticketDetail =
+                      detail || ticketStore.detailById[selectedComplaint?.id];
+                    const statusHistoryNotes =
+                      ticketDetail?.notes?.division || [];
+                    const rawDivisionNotes =
+                      ticketDetail?.__raw?.division_notes || [];
 
                     // Combine both sources and sort by timestamp
-                    const allNotes = [...statusHistoryNotes, ...rawDivisionNotes]
-                      .sort((a, b) => {
-                        const dateA = new Date(a.timestamp);
-                        const dateB = new Date(b.timestamp);
-                        return dateA - dateB;
-                      });
+                    const allNotes = [
+                      ...statusHistoryNotes,
+                      ...rawDivisionNotes,
+                    ].sort((a, b) => {
+                      const dateA = new Date(a.timestamp);
+                      const dateB = new Date(b.timestamp);
+                      return dateA - dateB;
+                    });
 
                     if (allNotes.length === 0) {
                       return (
                         <div className="text-center py-8 text-gray-500">
-                          <MessageSquare size={48} className="mx-auto mb-2 text-gray-300" />
+                          <MessageSquare
+                            size={48}
+                            className="mx-auto mb-2 text-gray-300"
+                          />
                           <p>No division notes available</p>
                         </div>
                       );
                     }
 
                     return allNotes.map((note, index) => {
-                      const noteStyle = getNoteStyle(note.type || 'note', note.division);
+                      const noteStyle = getNoteStyle(
+                        note.type || "note",
+                        note.division
+                      );
                       const IconComponent = noteStyle.icon;
 
                       // Handle different timestamp formats
-                      const displayTimestamp = note.timestamp?.includes('/')
+                      const displayTimestamp = note.timestamp?.includes("/")
                         ? note.timestamp
                         : fmtDate(note.timestamp);
 
@@ -1053,7 +1174,10 @@ const ComplaintTable = ({ isActive = false }) => {
                           className={`border-l-4 ${noteStyle.color} pl-4 ${noteStyle.bgColor} rounded-r-lg p-3`}
                         >
                           <div className="flex items-center gap-2 mb-2">
-                            <IconComponent size={14} className="text-gray-600" />
+                            <IconComponent
+                              size={14}
+                              className="text-gray-600"
+                            />
                             <span className="text-xs text-gray-600 font-medium">
                               {displayTimestamp}
                             </span>
@@ -1070,7 +1194,7 @@ const ComplaintTable = ({ isActive = false }) => {
                             </span>
                           </div>
                           <p className="text-sm text-gray-900 leading-relaxed">
-                            {note.msg || note.message || 'No message'}
+                            {note.msg || note.message || "No message"}
                           </p>
                           {note.statusCode && (
                             <div className="mt-2 text-xs text-gray-500">
@@ -1210,7 +1334,6 @@ const ComplaintTable = ({ isActive = false }) => {
                         {selectedComplaint?.number}
                       </p>
                     </div>
-
                   </div>
 
                   <div className="space-y-1">
@@ -1245,10 +1368,11 @@ const ComplaintTable = ({ isActive = false }) => {
                       Time Remaining
                     </span>
                     <p
-                      className={`text-base font-medium ${selectedComplaint?.timeRemaining.includes("Overdue")
-                        ? "text-red-600"
-                        : "text-gray-900"
-                        }`}
+                      className={`text-base font-medium ${
+                        selectedComplaint?.timeRemaining.includes("Overdue")
+                          ? "text-red-600"
+                          : "text-gray-900"
+                      }`}
                     >
                       {selectedComplaint?.timeRemaining}
                     </p>
@@ -1259,7 +1383,11 @@ const ComplaintTable = ({ isActive = false }) => {
                     Description
                   </span>
                   <p className="text-base text-gray-900 bg-gray-50 rounded-lg p-3">
-                    {ticketStore.detailById[selectedComplaint?.id]?.ticket?.description || selectedComplaint?.fullTicketData?.description || selectedComplaint?.issueDescription || "-"}
+                    {ticketStore.detailById[selectedComplaint?.id]?.ticket
+                      ?.description ||
+                      selectedComplaint?.fullTicketData?.description ||
+                      selectedComplaint?.issueDescription ||
+                      "-"}
                   </p>
                 </div>
               </div>
@@ -1292,22 +1420,30 @@ const ComplaintTable = ({ isActive = false }) => {
             {/* button mark as done */}
             {(() => {
               const code = String(
-                selectedComplaint?.fullTicketData?.employee_status?.employee_status_code || ""
+                selectedComplaint?.fullTicketData?.employee_status
+                  ?.employee_status_code || ""
               ).toUpperCase();
-              const name = String(selectedComplaint?.status || "").toUpperCase();
-              return code === "DONEBYUIC" || code === "DONEUIC" || name.includes("DONE BY UIC");
+              const name = String(
+                selectedComplaint?.status || ""
+              ).toUpperCase();
+              return (
+                code === "DONEBYUIC" ||
+                code === "DONEUIC" ||
+                name.includes("DONE BY UIC")
+              );
             })() && (
-                <div className="pt-2 max-w-sm sm:max-w-none">
-                  {getActionButton(selectedComplaint, true)}
-                </div>
-              )}
+              <div className="pt-2 max-w-sm sm:max-w-none">
+                {getActionButton(selectedComplaint, true)}
+              </div>
+            )}
           </div>
         </div>
 
         {/* FloatingCustomerContact - only for non-closed/declined tickets */}
         {(() => {
-          const status = selectedComplaint?.status?.toLowerCase() || '';
-          const shouldShowContact = status !== 'closed' && status !== 'declined';
+          const status = selectedComplaint?.status?.toLowerCase() || "";
+          const shouldShowContact =
+            status !== "closed" && status !== "declined";
 
           if (!shouldShowContact) return null;
 
@@ -1316,8 +1452,10 @@ const ComplaintTable = ({ isActive = false }) => {
               room={`ticket-${selectedComplaint?.id}`}
               detail={{
                 ids: {
-                  customerId: selectedComplaint?.fullTicketData?.customer?.id || selectedComplaint?.customerName
-                }
+                  customerId:
+                    selectedComplaint?.fullTicketData?.customer?.id ||
+                    selectedComplaint?.customerName,
+                },
               }}
             />
           );
@@ -1331,12 +1469,14 @@ const ComplaintTable = ({ isActive = false }) => {
     return (
       <div className="p-6 bg-gray-50 min-h-screen">
         <div className="mb-4 flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Customer Tickets - Grouped View</h2>
+          <h2 className="text-xl font-semibold">
+            Customer Tickets - Grouped View
+          </h2>
           <div className="flex gap-2">
             <Button
               variant="primary"
               icon={Users}
-              onClick={() => setViewMode('grouped')}
+              onClick={() => setViewMode("grouped")}
               className="px-4 py-2"
             >
               Group View
@@ -1344,7 +1484,7 @@ const ComplaintTable = ({ isActive = false }) => {
             <Button
               variant="outline"
               icon={Filter}
-              onClick={() => setViewMode('table')}
+              onClick={() => setViewMode("table")}
               className="px-4 py-2"
             >
               Table View
@@ -1376,15 +1516,20 @@ const ComplaintTable = ({ isActive = false }) => {
           <div className="flex items-center gap-4">
             {searchQuery && (
               <span className="text-sm text-gray-600">
-                {groupedData.length} customer{groupedData.length !== 1 ? 's' : ''} found
+                {groupedData.length} customer
+                {groupedData.length !== 1 ? "s" : ""} found
               </span>
             )}
             <button
               onClick={toggleAllGroups}
               className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
             >
-              {collapsedGroups.size === 0 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              {collapsedGroups.size === 0 ? 'Collapse All' : 'Expand All'}
+              {collapsedGroups.size === 0 ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+              {collapsedGroups.size === 0 ? "Collapse All" : "Expand All"}
             </button>
           </div>
         </div>
@@ -1393,12 +1538,13 @@ const ComplaintTable = ({ isActive = false }) => {
           {groupedData.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
               <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No customers found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No customers found
+              </h3>
               <p className="text-gray-500">
-                {searchQuery ?
-                  `No customers match "${searchQuery}". Try a different search term.` :
-                  'No customer data available.'
-                }
+                {searchQuery
+                  ? `No customers match "${searchQuery}". Try a different search term.`
+                  : "No customer data available."}
               </p>
               {searchQuery && (
                 <button
@@ -1411,11 +1557,13 @@ const ComplaintTable = ({ isActive = false }) => {
             </div>
           ) : (
             groupedData.map((group) => (
-              <div key={group.customerName} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div
+                key={group.customerName}
+                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+              >
                 {/* Group Header */}
-                {/* Ubah warna zidan */}
                 <div
-                  className="bg-orange-50 border-b border-orange-100 p-4 cursor-pointer hover:bg-orange-100 transition-colors"
+                  className="bg-orange-50/60 border-b border-orange-100 p-4 cursor-pointer hover:bg-orange-100/65 transition-colors"
                   onClick={() => toggleGroup(group.customerName)}
                 >
                   <div className="flex items-center justify-between">
@@ -1432,7 +1580,8 @@ const ComplaintTable = ({ isActive = false }) => {
                         </h3>
                         <p className="text-sm text-orange-700">
                           <Ticket className="inline-block w-4 h-4 mr-1" />
-                          {group.totalTickets} ticket{group.totalTickets !== 1 ? "s" : ""}
+                          {group.totalTickets} ticket
+                          {group.totalTickets !== 1 ? "s" : ""}
                         </p>
                       </div>
                     </div>
@@ -1448,13 +1597,27 @@ const ComplaintTable = ({ isActive = false }) => {
                     <table className="w-full">
                       <thead>
                         <tr className="bg-gray-50 text-xs">
-                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">No</th>
-                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Date</th>
-                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Ticket #</th>
-                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Status</th>
-                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Channel</th>
-                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Category</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">SLA</th>
+                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">
+                            No
+                          </th>
+                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">
+                            Date
+                          </th>
+                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">
+                            Ticket #
+                          </th>
+                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">
+                            Status
+                          </th>
+                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">
+                            Channel
+                          </th>
+                          <th className="border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700">
+                            Category
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700">
+                            SLA
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1464,15 +1627,27 @@ const ComplaintTable = ({ isActive = false }) => {
                             onClick={() => handleRowClick(ticket)}
                             className="hover:bg-gray-50 border-b border-gray-100 last:border-b-0 cursor-pointer"
                           >
-                            <td className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600">{index + 1}</td>
-                            <td className="border-r border-gray-200 px-3 py-3 text-sm text-gray-900">{ticket.tglInput}</td>
-                            <td className="border-r border-gray-200 px-3 py-3 text-sm font-medium text-orange-600">{ticket.noTiket}</td>
+                            <td className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600">
+                              {index + 1}
+                            </td>
+                            <td className="border-r border-gray-200 px-3 py-3 text-sm text-gray-900">
+                              {ticket.tglInput}
+                            </td>
+                            <td className="border-r border-gray-200 px-3 py-3 text-sm font-medium text-orange-600">
+                              {ticket.noTiket}
+                            </td>
                             <td className="border-r border-gray-200 px-3 py-3 text-sm">
                               <StatusBadge status={ticket.status} />
                             </td>
-                            <td className="border-r border-gray-200 px-3 py-3 text-sm text-gray-900">{ticket.channel}</td>
-                            <td className="border-r border-gray-200 px-3 py-3 text-sm text-gray-900">{ticket.category}</td>
-                            <td className="px-3 py-3 text-sm text-gray-900 font-medium">{ticket.sla}d</td>
+                            <td className="border-r border-gray-200 px-3 py-3 text-sm text-gray-900">
+                              {ticket.channel}
+                            </td>
+                            <td className="border-r border-gray-200 px-3 py-3 text-sm text-gray-900">
+                              {ticket.category}
+                            </td>
+                            <td className="px-3 py-3 text-sm text-gray-900 font-medium">
+                              {ticket.sla}d
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -1589,16 +1764,16 @@ const ComplaintTable = ({ isActive = false }) => {
             {loading
               ? "Loading…"
               : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
-                currentPage * PAGE_SIZE,
-                processedComplaints.length
-              )} of ${processedComplaints.length} entries`}
+                  currentPage * PAGE_SIZE,
+                  processedComplaints.length
+                )} of ${processedComplaints.length} entries`}
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="primary"
             icon={Users}
-            onClick={() => setViewMode('grouped')}
+            onClick={() => setViewMode("grouped")}
             className="px-4 py-2"
           >
             Group View
@@ -1684,8 +1859,9 @@ const ComplaintTable = ({ isActive = false }) => {
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900 ${column.width || ""
-                    }`}
+                  className={`border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900 ${
+                    column.width || ""
+                  }`}
                 >
                   <div className="flex items-center justify-between gap-2 relative">
                     <span className="truncate">{column.label}</span>
@@ -1715,10 +1891,11 @@ const ComplaintTable = ({ isActive = false }) => {
                                 : column.key
                             )
                           }
-                          className={`hover:text-blue-600 ${filters[column.key]
-                            ? "text-blue-600"
-                            : "text-gray-400"
-                            }`}
+                          className={`hover:text-blue-600 ${
+                            filters[column.key]
+                              ? "text-blue-600"
+                              : "text-gray-400"
+                          }`}
                         >
                           <Filter size={14} />
                         </button>
@@ -1816,9 +1993,9 @@ const ComplaintTable = ({ isActive = false }) => {
           {loading
             ? "Loading…"
             : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
-              currentPage * PAGE_SIZE,
-              processedComplaints.length
-            )} of ${processedComplaints.length} entries`}
+                currentPage * PAGE_SIZE,
+                processedComplaints.length
+              )} of ${processedComplaints.length} entries`}
         </div>
         <div className="flex flex-wrap gap-1 order-1 sm:order-2">
           <Button
@@ -1844,7 +2021,8 @@ const ComplaintTable = ({ isActive = false }) => {
             const windowSize = 5;
             let start = Math.max(1, curr - Math.floor(windowSize / 2));
             let end = Math.min(maxPages, start + windowSize - 1);
-            if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
+            if (end - start + 1 < windowSize)
+              start = Math.max(1, end - windowSize + 1);
 
             const pageNumbers = [];
             if (start > 1) {
