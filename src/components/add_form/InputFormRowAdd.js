@@ -5,6 +5,7 @@ import React, {
   useState,
   forwardRef,
   useImperativeHandle,
+  useRef,
 } from "react";
 import Button from "@/components/ui/Button";
 import useCustomerSearch from "@/hooks/useCustomerSearch";
@@ -112,6 +113,103 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
     }
   };
 
+  // SearchableSelect component (same as DataFormAdd)
+  const SearchableSelect = ({
+    value,
+    onChange,
+    options,
+    placeholder,
+    getLabel,
+    getValue,
+    disabled = false,
+  }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const dropdownRef = useRef(null);
+
+    const filteredOptions = options.filter((opt) => {
+      const haystack = (getLabel(opt) || "").toString().toLowerCase();
+      return haystack.includes((search || "").toLowerCase());
+    });
+
+    const selectedOption = options.find((opt) => getValue(opt) === value);
+
+    const displayValue =
+      isOpen && search
+        ? search
+        : selectedOption
+        ? getLabel(selectedOption)
+        : search;
+
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+          setIsOpen(false);
+          setSearch("");
+        }
+      };
+
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    return (
+      <div className="relative" ref={dropdownRef}>
+        <div className="relative">
+          <input
+            className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm pr-8 ${
+              disabled ? "bg-gray-50 text-gray-400" : ""
+            }`}
+            value={displayValue}
+            onChange={(e) => {
+              if (!disabled) {
+                setSearch(e.target.value);
+                setIsOpen(true);
+              }
+            }}
+            onFocus={() => {
+              if (!disabled) {
+                setIsOpen(true);
+                if (selectedOption) setSearch("");
+              }
+            }}
+            placeholder={placeholder}
+            disabled={disabled}
+          />
+          <svg
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+        {isOpen && !disabled && (
+          <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b max-h-40 overflow-y-auto">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt, idx) => (
+                <div
+                  key={idx}
+                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                  onClick={() => {
+                    onChange(getValue(opt));
+                    setSearch("");
+                    setIsOpen(false);
+                  }}
+                >
+                  {getLabel(opt)}
+                </div>
+              ))
+            ) : (
+              <div className="px-3 py-2 text-sm text-gray-500">No options found</div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="w-full bg-[#B5EFE1] p-4 mb-4 mt-1 rounded-lg">
       <div className="bg-white border border-gray-200 p-6 rounded-lg">
@@ -120,41 +218,35 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
             <label className="text-sm font-medium text-gray-800 mb-2">
               Input Type<span className="text-red-500">*</span>
             </label>
-            <select
+            <SearchableSelect
               value={inputType}
-              onChange={(e) => {
-                setInputType(e.target.value);
+              onChange={(v) => {
+                setInputType(v);
                 setSourceType("");
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
-            >
-              <option value="" disabled>
-                Select Input Type
-              </option>
-              <option value="nasabah">Nasabah</option>
-              <option value="non_nasabah">Non Nasabah</option>
-            </select>
+              options={[
+                { value: "nasabah", label: "Nasabah" },
+                { value: "non_nasabah", label: "Non Nasabah" }
+              ]}
+              placeholder="Select Input Type"
+              getLabel={(opt) => opt.label}
+              getValue={(opt) => opt.value}
+            />
           </div>
 
           <div className="flex flex-col flex-1">
             <label className="text-sm font-medium text-gray-800 mb-2">
               Source Type <span className="text-red-500">*</span>
             </label>
-            <select
+            <SearchableSelect
               value={sourceType}
-              onChange={(e) => setSourceType(e.target.value)}
+              onChange={(v) => setSourceType(v)}
+              options={sourceOptions[inputType] || []}
+              placeholder="Select Source Type"
+              getLabel={(opt) => opt.label}
+              getValue={(opt) => opt.value}
               disabled={!inputType || inputType === "non_nasabah"}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none disabled:bg-gray-50 disabled:text-gray-400"
-            >
-              <option value="" disabled>
-                Select Source Type
-              </option>
-              {sourceOptions[inputType]?.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           <div className={`flex flex-col ${showExp ? "flex-1" : "flex-[2]"}`}>
