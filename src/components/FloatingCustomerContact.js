@@ -214,6 +214,9 @@ export default function FloatingCustomerContact({ room, detail }) {
       sock.emit("auth:register", { userId: uid });
       sock.emit("join", { room: ACTIVE_ROOM, userId: uid });
       sock.emit("presence:get", { room: ACTIVE_ROOM });
+      // Automatically start live chat when connected
+      setIsLiveChat(true);
+      quickDM();
     };
     const onDisconnect = () => {
       setConnected(false);
@@ -566,20 +569,12 @@ export default function FloatingCustomerContact({ room, detail }) {
               </div>
 
               <div className="flex items-center space-x-1">
-                {!isLiveChat ? (
-                  <button
-                    onClick={startLiveChat}
-                    className="text-white hover:text-orange-200 text-xs px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-all duration-200 font-medium"
-                    title="Start live chat"
-                  >
-                    Start Chat
-                  </button>
-                ) : (
+                {isLiveChat && (
                   <>
                     <button
                       onClick={quickDM}
                       className="text-white hover:text-orange-200 p-1.5 rounded-full hover:bg-white/20 transition-all duration-200"
-                      title="Connect to agent"
+                      title="Connect to customer"
                     >
                       <Users size={14} />
                     </button>
@@ -646,7 +641,7 @@ export default function FloatingCustomerContact({ room, detail }) {
           </div>
 
           {/* Tab Content */}
-          <div className="h-80 bg-white overflow-hidden">
+          <div className="h-96 bg-white overflow-hidden">
             {activeTab === "chat" && (
               <div className="h-full flex flex-col">
                 {/* Chat Messages Area */}
@@ -660,7 +655,7 @@ export default function FloatingCustomerContact({ room, detail }) {
                         Agent Chat Panel
                       </p>
                       <p className="text-gray-400 text-xs">
-                        Click "Start Chat" to begin.
+                        {connected ? "Ready to chat with customers" : "Connecting..."}
                       </p>
                     </div>
                   ) : (
@@ -732,10 +727,10 @@ export default function FloatingCustomerContact({ room, detail }) {
             {activeTab === "call" && (
               <div className="h-full flex flex-col">
                 {/* Audio Call Area */}
-                <div className="flex-1 p-6 overflow-hidden">
+                <div className="flex-1 p-8 pt-12 pb-12 overflow-hidden">
                   <div className="flex flex-col items-center justify-center h-full">
                     {/* Avatar */}
-                    <div className="relative mb-6">
+                    <div className="relative mb-6 mt-8">
                       <div
                         className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
                           callStatus === "in-call"
