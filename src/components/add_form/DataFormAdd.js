@@ -96,11 +96,13 @@ const DataForm = ({ detail, onChange, mode = "detail" }) => {
   const {
     channels,
     categories,
+    allCategories,
     sources,
     terminals,
     priorities,
     policies,
     filterCategories,
+    fetchPoliciesByChannel,
     updateCategories,
     getSlaInfo,
   } = useAddComplaint();
@@ -172,42 +174,47 @@ const DataForm = ({ detail, onChange, mode = "detail" }) => {
     }
   }, [detail, mode]);
 
-  // filter categories saat channel berubah (add mode)
+  // State untuk menyimpan filtered categories
+  const [filteredCategories, setFilteredCategories] = useState(allCategories);
+
+
+
+  // Effect untuk fetch policies ketika channel berubah
   useEffect(() => {
     if (mode === "add" && form.channelId) {
-      const filtered = filterCategories(form.channelId);
-      updateCategories(filtered);
-
-      if (
-        form.categoryId &&
-        !filtered.some((cat) => cat.complaint_id === form.categoryId)
-      ) {
-        update("categoryId", "");
-      }
+      fetchPoliciesByChannel(form.channelId).then(setFilteredCategories);
+    } else {
+      setFilteredCategories(allCategories);
     }
-  }, [mode, form.channelId, filterCategories, updateCategories]);
+  }, [mode, form.channelId, allCategories, fetchPoliciesByChannel]);
+
+
 
   // ambil SLA & deskripsi saat channel+category terisi (add mode)
   useEffect(() => {
     if (mode === "add" && form.channelId && form.categoryId) {
-      const slaInfo = getSlaInfo(form.channelId, form.categoryId);
+      const fetchSlaInfo = async () => {
+        const slaInfo = await getSlaInfo(form.channelId, form.categoryId);
 
-      const d = Number(slaInfo.slaDays) || 0;
-      const h = Number(slaInfo.slaHours) || 0;
+        const d = Number(slaInfo.slaDays) || 0;
+        const h = Number(slaInfo.slaHours) || 0;
 
-      // update SLA di form
-      update("slaDays", d);
-      update("slaHours", h);
+        // update SLA di form
+        update("slaDays", d);
+        update("slaHours", h);
 
-      // [ADDED] hitung & isi committed due langsung, walau createdTime belum diganti-ganti
-      const nextDue = computeCommittedDue(form.createdTime, d, h); // [ADDED]
-      if (nextDue && form.committedDueAt !== nextDue) {             // [ADDED]
-        update("committedDueAt", nextDue);                          // [ADDED]
-      }
+        // [ADDED] hitung & isi committed due langsung, walau createdTime belum diganti-ganti
+        const nextDue = computeCommittedDue(form.createdTime, d, h); // [ADDED]
+        if (nextDue && form.committedDueAt !== nextDue) {             // [ADDED]
+          update("committedDueAt", nextDue);                          // [ADDED]
+        }
 
-      if (slaInfo.description) {
-        update("description", slaInfo.description);
-      }
+        if (slaInfo.description) {
+          update("description", slaInfo.description);
+        }
+      };
+      
+      fetchSlaInfo();
     }
   }, [mode, form.channelId, form.categoryId, getSlaInfo]);
 
@@ -291,12 +298,13 @@ const SearchableSelect = ({
   placeholder,
   getLabel,
   getValue,
-  getSearchText, // <-- NEW (opsional)
+  getSearchText,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const dropdownRef = React.useRef(null);
 
-  const searchTextFn = getSearchText || getLabel; // fallback
+  const searchTextFn = getSearchText || getLabel;
   const q = (search || "").toLowerCase();
 
   const filteredOptions = options.filter((opt) => {
@@ -313,8 +321,20 @@ const SearchableSelect = ({
       ? getLabel(selectedOption)
       : search;
 
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+        setSearch("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <div className="relative">
         <input
           className={input + " pr-8"}
@@ -327,12 +347,6 @@ const SearchableSelect = ({
             setIsOpen(true);
             if (selectedOption) setSearch("");
           }}
-          onBlur={() =>
-            setTimeout(() => {
-              setIsOpen(false);
-              setSearch("");
-            }, 200)
-          }
           placeholder={placeholder}
         />
         <svg
@@ -453,9 +467,10 @@ const SearchableSelect = ({
             <div>
               <label className="text-sm font-medium">Category</label>
               <SearchableSelect
+                key={`category-${form.channelId}-${filteredCategories.length}`}
                 value={form.categoryId}
                 onChange={(v) => update("categoryId", v)}
-                options={categories}
+                options={filteredCategories}
                 placeholder="Select Category"
                 getLabel={(opt) => opt.complaint_name}
                 getValue={(opt) => opt.complaint_id}

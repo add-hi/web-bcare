@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
+import useCustomerSearch from "@/hooks/useCustomerSearch";
 
 const CustomerForm = ({
   detail,
@@ -8,6 +9,7 @@ const CustomerForm = ({
   searchContext,
   inputType,
 }) => {
+  const { processCustomerData } = useCustomerSearch();
   // field statis
   const formData = [
     { label: "CIF" },
@@ -86,150 +88,25 @@ const autoFilled = useMemo(() => {
     setLocked(autoFilled); // kunci otomatis saat hasil search mengisi form
   }, [autoFilled]);
 
-  // Update form when customer data from API changes
+  // Update form when customer data changes
   useEffect(() => {
-    // Skip API calls for non_nasabah input type
     if (inputType === "non_nasabah") {
       return;
     }
     
     if (customerData) {
-      const fetchRelatedData = async () => {
-        let accountNumbers = [];
-        let cardNumbers = [];
-        let accounts = [];
-
-        try {
-          // Get authorization token
-          const getAccessToken = () => {
-            try {
-              const raw = localStorage.getItem("auth");
-              if (!raw) return "";
-              const parsed = JSON.parse(raw);
-              const token = parsed?.state?.accessToken || "";
-              return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-            } catch {
-              return "";
-            }
-          };
-
-          const headers = {
-            Accept: "application/json",
-            Authorization: getAccessToken(),
-            "ngrok-skip-browser-warning": "true",
-          };
-
-          // Fetch accounts for this customer
-          const accountResponse = await fetch("/api/v1/account", { headers });
-          if (accountResponse.ok) {
-            accounts = await accountResponse.json();
-            const customerAccounts = accounts.filter((acc) => {
-              return acc.customer_id === customerData.customer_id;
-            });
-
-            // Filter based on search context
-            if (
-              searchContext?.searchType === "account" &&
-              searchContext?.searchedNumber
-            ) {
-              // Only show the searched account number
-              accountNumbers = [searchContext.searchedNumber];
-            } else if (customerAccounts.length > 0) {
-              // Show first account as fallback
-              accountNumbers = [customerAccounts[0].account_number];
-            } else {
-              accountNumbers = [];
-            }
-
-            // Fetch cards for this customer's accounts
-            const cardResponse = await fetch("/api/v1/card", { headers });
-            if (cardResponse.ok) {
-              const cards = await cardResponse.json();
-
-              if (customerAccounts.length > 0) {
-                // Get account_ids from customer's accounts
-                const customerAccountIds = customerAccounts.map(
-                  (acc) => acc.account_id
-                );
-
-                // Filter cards that belong to customer's accounts
-                const customerCards = cards.filter((card) => {
-                  const belongsToCustomer = customerAccountIds.includes(
-                    card.account_id
-                  );
-                  return belongsToCustomer;
-                });
-
-                // Filter based on search context
-                if (
-                  searchContext?.searchType === "debit" ||
-                  searchContext?.searchType === "credit"
-                ) {
-                  // Only show the searched card number
-                  cardNumbers = [searchContext.searchedNumber];
-                } else if (
-                  searchContext?.searchType === "account" &&
-                  searchContext?.searchedNumber
-                ) {
-                  // For account search, show only the first card related to that specific searched account
-                  const searchedAccount = accounts.find(
-                    (acc) =>
-                      acc.account_number.toString() ===
-                      searchContext.searchedNumber
-                  );
-                  if (searchedAccount) {
-                    const relatedCards = cards.filter(
-                      (card) => card.account_id === searchedAccount.account_id
-                    );
-                    cardNumbers =
-                      relatedCards.length > 0
-                        ? [relatedCards[0].card_number]
-                        : [];
-                  }
-                } else if (customerCards.length > 0) {
-                  // Show first card as fallback
-                  cardNumbers = [customerCards[0].card_number];
-                } else {
-                  cardNumbers = [];
-                }
-              } else {
-                console.log("No customer accounts found, skipping card lookup");
-              }
-            }
-          }
-        } catch (error) {
-        }
-
-        const mappedData = {
-          cif: customerData.cif || "",
-          gender: customerData.gender_type || "",
-          address: customerData.address || "",
-          accountNumber: accountNumbers.join(", ") || "",
-          placeOfBirth: customerData.place_of_birth || "",
-          billingAddress: customerData.billing_address || "",
-          cardNumber: cardNumbers.join(", ") || "",
-          homePhone: customerData.home_phone || "",
-          postalCode: customerData.postal_code || "",
-          customerName: customerData.full_name || "",
-          handphone: customerData.phone_number || "",
-          officePhone: customerData.office_phone || "",
-          personId: customerData.nik || "",
-          email: customerData.email || "",
-          faxPhone: customerData.fax_phone || "",
-        };
+      const mappedData = processCustomerData(customerData, searchContext);
+      if (mappedData) {
         const newFormData = { ...form, ...mappedData };
         setForm(newFormData);
         onChange?.(newFormData);
-      };
-
-      fetchRelatedData();
+      }
     } else {
-      // Reset form when customerData is null (after reset)
       const resetData = toInitial({});
       setForm(resetData);
       onChange?.(resetData);
     }
-  }, [customerData, inputType]);
+  }, [customerData, searchContext, inputType, processCustomerData]);
 
   // const update = (k, v) => setForm((prev) => { const n = { ...prev, [k]: v }; onChange?.(n); return n; });
 

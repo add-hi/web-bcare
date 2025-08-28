@@ -7,20 +7,10 @@ import React, {
   useImperativeHandle,
 } from "react";
 import Button from "@/components/ui/Button";
-
-function getAccessToken() {
-  try {
-    const raw = localStorage.getItem("auth");
-    if (!raw) return "";
-    const parsed = JSON.parse(raw);
-    const token = parsed?.state?.accessToken || "";
-    return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-  } catch {
-    return "";
-  }
-}
+import useCustomerSearch from "@/hooks/useCustomerSearch";
 
 const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
+  const { searchCustomer } = useCustomerSearch();
   const [inputType, setInputType] = useState("");
   const [sourceType, setSourceType] = useState("");
   const [expDate, setExpDate] = useState("");
@@ -50,106 +40,16 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
 
     setLoading(true);
     try {
-      let customerId = null;
-      let related_account_id = null;
-      let related_card_id = null;
-      let foundAccount = null;
-      let foundCard = null;
-
-      const headers = {
-        Accept: "application/json",
-        Authorization: getAccessToken(),
-        "ngrok-skip-browser-warning": "true",
-      };
-
-      if (sourceType === "account") {
-        const accountResponse = await fetch(`/api/v1/account`, { headers });
-        if (accountResponse.ok) {
-          const accounts = await accountResponse.json();
-          foundAccount = accounts.find(
-            (acc) => acc.account_number?.toString() === numberValue.trim()
-          );
-          if (foundAccount) {
-            related_account_id = foundAccount.account_id ?? null;
-            customerId = foundAccount.customer_id ?? null;
-          }
-        }
-      } else if (sourceType === "debit" || sourceType === "credit") {
-        const cardResponse = await fetch(`/api/v1/card`, { headers });
-        if (cardResponse.ok) {
-          const cards = await cardResponse.json();
-          const expectedType =
-            sourceType === "credit" ? "KREDIT" : sourceType.toUpperCase();
-
-          foundCard = cards.find((c) => {
-            const numberMatch =
-              c.card_number?.toString() === numberValue.trim();
-            const typeMatch = c.card_type?.toUpperCase() === expectedType;
-            const expMatch = expDate ? c.exp_date === expDate.trim() : true;
-            return numberMatch && typeMatch && expMatch;
-          });
-
-          if (foundCard) {
-            related_card_id = foundCard.card_id ?? null;
-
-            // ambil account pemilik card untuk dapat customer_id
-            const accountResponse = await fetch(`/api/v1/account`, { headers });
-            if (accountResponse.ok) {
-              const accounts = await accountResponse.json();
-              foundAccount = accounts.find(
-                (acc) => acc.account_id === foundCard.account_id
-              );
-              if (foundAccount) {
-                related_account_id = foundAccount.account_id ?? null;
-                customerId = foundAccount.customer_id ?? null;
-              }
-            }
-          }
-        }
-      }
-
-      if (!customerId) {
+      const result = await searchCustomer(numberValue, sourceType);
+      
+      if (!result) {
         alert("Number not found");
         return;
       }
 
-      // fetch customer
-      const customerResponse = await fetch(`/api/v1/customer`, { headers });
-      if (!customerResponse.ok) {
-        alert("Error fetching customer data");
-        return;
-      }
-      const customers = await customerResponse.json();
-      const customer = customers.find((c) => c.customer_id === customerId);
-      if (!customer) {
-        alert("Customer data not found");
-        return;
-      }
-
-      setCustomerData(customer);
+      setCustomerData(result.customer);
       setIsReadOnly(true);
-
-      onCustomerData?.(
-        {
-          ...customer,
-          related_account_id,
-          related_card_id,
-          // simpan juga nomor yg dicari, biar di-save gak perlu lookup ulang
-          ...(sourceType === "account"
-            ? { accountNumber: numberValue.trim() }
-            : {}),
-          ...(sourceType === "debit" || sourceType === "credit"
-            ? { cardNumber: numberValue.trim() }
-            : {}),
-        },
-        {
-          searchedNumber: numberValue.trim(),
-          searchType: sourceType,
-          related_account_id,
-          related_card_id,
-        },
-        inputType
-      );
+      onCustomerData?.(result.customer, result.searchContext, inputType);
     } catch (error) {
       console.error("Search error:", error);
       alert("Error fetching data: " + (error?.message || "Unknown error"));

@@ -1,5 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import useUser from "@/hooks/useUser";
+import useTicket from "@/hooks/useTicket";
 import {
   MessageSquare,
   FileText,
@@ -12,6 +14,9 @@ import {
 } from "lucide-react";
 
 const InputForm = ({ detail, onChange }) => {
+  const { user } = useUser();
+  const { updateTicket } = useTicket();
+  const ticketId = detail?.ids?.ticketId;
   // Normalize initial notes: ensure array of {division, timestamp, msg, author}
   const initialDivisionNotes = (() => {
     try {
@@ -58,33 +63,63 @@ const InputForm = ({ detail, onChange }) => {
   const [newNote, setNewNote] = useState("");
 
   const handleAddNote = async () => {
-    if (!newNote.trim()) return;
+    if (!newNote.trim() || !ticketId) return;
 
     setIsProcessing(true);
 
     try {
-      const newNoteObj = {
-        id: Date.now(),
+      // Get existing notes from detail prop
+      const existingNotes = (() => {
+        try {
+          if (Array.isArray(detail?.__raw?.division_notes)) {
+            return detail.__raw.division_notes;
+          }
+          if (typeof detail?.__raw?.division_notes === "string") {
+            return JSON.parse(detail.__raw.division_notes);
+          }
+        } catch {}
+        return [];
+      })();
+      
+      // Build new note object
+      const authorName = user?.full_name || user?.name || user?.email || "Unknown";
+      const divisionName = user?.role_details?.role_name || user?.role || "Unknown";
+      
+      const newNoteObject = {
+        division: divisionName,
         timestamp: new Date().toLocaleDateString("id-ID", {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
           hour: "2-digit",
           minute: "2-digit",
-        }).replace(/\//g, "/").replace(",", ""),
-        division: "Current Division",
-        author: "Current User",
+        }),
         msg: newNote,
+        author: authorName,
+      };
+
+      // Combine existing notes with new note
+      const allNotes = [...existingNotes, newNoteObject];
+
+      // Save to database using existing updateTicket
+      await updateTicket(ticketId, {
+        division_notes: allNotes
+      });
+      
+      // Update local state for immediate UI feedback
+      const newNoteObj = {
+        id: Date.now(),
+        ...newNoteObject,
         type: "note",
       };
 
       setDivisionNotes((prev) => [...prev, newNoteObj]);
+      setNewNote("");
     } catch (error) {
       console.error("Failed to add note:", error);
-      alert("Failed to add note. Please try again.");
+      // Error toast already shown in hook
     } finally {
       setIsProcessing(false);
-      setNewNote("");
     }
   };
 
@@ -203,11 +238,11 @@ const InputForm = ({ detail, onChange }) => {
 
           <button
             onClick={handleAddNote}
-            disabled={!newNote.trim() || isProcessing}
+            disabled={!newNote.trim() || isProcessing || !ticketId}
             className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <Send size={16} />
-            {isProcessing ? "Adding Note..." : "Add Note"}
+            {isProcessing ? "Saving Note..." : "Save Note"}
           </button>
 
 

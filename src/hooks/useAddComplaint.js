@@ -1,63 +1,19 @@
 "use client";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import useAddComplaintStore from "@/store/addComplaintStore";
+import useUser from "@/hooks/useUser";
+import httpClient from "@/lib/httpClient";
 import toast from "react-hot-toast";
-
-// === Single-flight guards (dipakai bareng semua komponen) ===
-let dropdownOnce = null; // untuk /channel, /category, dst
-let userOnce = null; // untuk /me atau /employee
-let dropdownLoaded = false; // flag lokal, anti-refetch walau store tak punya isDataFetched
-let userLoaded = false; // flag lokal, anti-refetch walau store tak punya isUserFetched
-
-const isFn = (f) => typeof f === "function";
-
-function getAccessToken() {
-  try {
-    const raw = localStorage.getItem("auth");
-    if (!raw) return "";
-    const parsed = JSON.parse(raw);
-    const token = parsed?.state?.accessToken || "";
-    return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-  } catch {
-    return "";
-  }
-}
-
-function decodeNameFromJWT(bearer) {
-  try {
-    const token = bearer.replace(/^Bearer\s+/i, "");
-    const [h, p] = token.split(".");
-    if (!p) return "";
-    const b64 = p.replace(/-/g, "+").replace(/_/g, "/");
-    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
-    const payload = JSON.parse(atob(b64 + pad));
-    return payload.full_name || payload.name || payload.username || "";
-  } catch {
-    return "";
-  }
-}
-
-// export default function useAddComplaint() {
-//   const store = useAddComplaintStore();
-//   const {
-//     // State
-//     customerData, searchContext, inputType,
-//     dataFormData, actionFormData, notesFormData,
-//     channels, categories, allCategories, policies, sources, terminals, priorities, uics,
-//     employees, roles, currentEmployee, currentRole,
-//     loadingData, isDataFetched, isUserFetched,
-
-//     // Actions
-//     setCustomerData, setDataFormData, setActionFormData, setNotesFormData,
-//     setChannels, setCategories, setAllCategories, setPolicies, setSources,
-//     setTerminals, setPriorities, setUics, setEmployees, setRoles,
-//     setCurrentEmployee, setCurrentRole, setLoadingData, reset,
-//     setIsDataFetched, setIsUserFetched
-
-//   } = store;
 
 export default function useAddComplaint() {
   const store = useAddComplaintStore();
+  const { user, accessToken } = useUser();
+  
+  const BASE = useMemo(
+    () => (process.env.NEXT_PUBLIC_API_URL).replace(/\/$/, ""),
+    []
+  );
+  
   const {
     // State
     customerData,
@@ -74,13 +30,8 @@ export default function useAddComplaint() {
     terminals,
     priorities,
     uics,
-    employees,
-    roles,
-    currentEmployee,
-    currentRole,
     loadingData,
     isDataFetched,
-    isUserFetched,
 
     // Actions
     setCustomerData,
@@ -95,259 +46,141 @@ export default function useAddComplaint() {
     setTerminals,
     setPriorities,
     setUics,
-    setEmployees,
-    setRoles,
-    setCurrentEmployee,
-    setCurrentRole,
     setLoadingData,
     setIsDataFetched,
-    setIsUserFetched,
     reset,
   } = store;
 
-  const get = () => store;
+  // Fetch specific policy for channel and category
+  const fetchPolicyInfo = useCallback(async (channelId, categoryId) => {
+    if (!accessToken) return null;
+    
+    try {
+      const { data } = await httpClient.get('/v1/policies', {
+        baseURL: BASE,
+        params: { channel_id: channelId, complaint_id: categoryId, limit: 1 },
+        headers: { Authorization: accessToken }
+      });
+      
+      const policies = Array.isArray(data) ? data : data?.data || [];
+      return policies[0] || null;
+    } catch (error) {
+      console.error('Failed to fetch policy:', error);
+      return null;
+    }
+  }, [accessToken]);
 
-  // === DROPDOWN: sekali saja untuk semua komponen ===
-  const fetchDropdownDataOnce = useCallback(async () => {
-    // kalau sudah pernah sukses (flag lokal) atau store sudah tandai fetched, stop
-    if (dropdownLoaded || isDataFetched) return;
+  // Fetch dropdown data
+  const fetchDropdownData = useCallback(async () => {
+    if (isDataFetched || !accessToken) return;
+    
+    setLoadingData(true);
+    try {
+      const [channels, categories, sources, terminals, priorities, policies, uics] = await Promise.all([
+        httpClient.get('/v1/channels', { baseURL: BASE, headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/complaint-categories', { baseURL: BASE, headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/sources', { baseURL: BASE, headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/terminals', { baseURL: BASE, headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/priorities', { baseURL: BASE, headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/policies', { baseURL: BASE, headers: { Authorization: accessToken } }),
+        httpClient.get('/v1/uics', { baseURL: BASE, headers: { Authorization: accessToken } })
+      ]);
 
-    // kalau sudah ada request yang lagi jalan, re-use
-    if (dropdownOnce) return dropdownOnce;
+      setChannels(channels.data?.data || channels.data || []);
+      const cats = categories.data?.data || categories.data || [];
+      setAllCategories(cats);
+      setCategories(cats);
+      setSources(sources.data?.data || sources.data || []);
+      setTerminals(terminals.data?.data || terminals.data || []);
+      setPriorities(priorities.data?.data || priorities.data || []);
+      setPolicies(policies.data?.data || policies.data || []);
+      setUics(uics.data?.data || uics.data || []);
+      
+      setIsDataFetched(true);
+    } catch (error) {
+      console.error('Failed to fetch dropdown data:', error);
+    } finally {
+      setLoadingData(false);
+    }
+  }, [isDataFetched, accessToken, setLoadingData, setChannels, setCategories, setAllCategories, setSources, setTerminals, setPriorities, setPolicies, setUics, setIsDataFetched]);
 
-    dropdownOnce = (async () => {
-      // kalau store punya setLoadingData baru dipanggil
-      if (isFn(setLoadingData)) setLoadingData(true);
-      try {
-        const Authorization = getAccessToken();
-        if (!Authorization) return;
 
-        const headers = {
-          Accept: "application/json",
-          Authorization,
-          "ngrok-skip-browser-warning": "true",
-        };
 
-        const [
-          channelRes,
-          categoryRes,
-          sourceRes,
-          terminalRes,
-          priorityRes,
-          policyRes,
-          uicRes,
-        ] = await Promise.all([
-          fetch("/api/v1/channel", { headers }),
-          fetch("/api/v1/complaint_category", { headers }),
-          fetch("/api/v1/source", { headers }),
-          fetch("/api/v1/terminals", { headers }),
-          fetch("/api/v1/priority", { headers }),
-          fetch("/api/v1/complaint_policy", { headers }),
-          fetch("/api/v1/uics", { headers }),
-        ]);
-
-        if (channelRes.ok) setChannels(await channelRes.json());
-
-        if (categoryRes.ok) {
-          const cats = await categoryRes.json();
-          setAllCategories(cats);
-          setCategories(cats);
-        }
-
-        if (sourceRes.ok) setSources(await sourceRes.json());
-        if (terminalRes.ok) {
-          const terminalData = await terminalRes.json();
-          // Handle different response formats
-          const terminals = Array.isArray(terminalData)
-            ? terminalData
-            : terminalData.data || [];
-          setTerminals(terminals);
-        }
-        if (priorityRes.ok) setPriorities(await priorityRes.json());
-
-        if (policyRes.ok) {
-          const policyData = await policyRes.json();
-          setPolicies(
-            Array.isArray(policyData) ? policyData : policyData.data || []
-          );
-        }
-
-        if (uicRes.ok) {
-          const uicData = await uicRes.json();
-          setUics(uicData.data || []);
-        } else {
-          setUics([]);
-        }
-
-        // tandai loaded pakai flag lokal
-        dropdownLoaded = true;
-        // kalau store menyediakan setter, update juga (opsional)
-        if (isFn(setIsDataFetched)) setIsDataFetched(true);
-      } finally {
-        if (isFn(setLoadingData)) setLoadingData(false);
-      }
-    })().catch((err) => {
-      // kalau gagal, biar bisa retry
-      dropdownOnce = null;
-      throw err;
-    });
-
-    return dropdownOnce;
-  }, [
-    isDataFetched, // aman meski undefined (falsy)
-    setLoadingData,
-    setChannels,
-    setCategories,
-    setAllCategories,
-    setSources,
-    setTerminals,
-    setPriorities,
-    setPolicies,
-    setUics,
-  ]);
-
-  // === USER: sekali saja untuk semua komponen ===
-  const fetchCurrentUserOnce = useCallback(async () => {
-    // hindari refetch: pakai flag lokal + guard store
-    if (userLoaded || isUserFetched || currentEmployee) return;
-    if (userOnce) return userOnce;
-
-    userOnce = (async () => {
-      const Authorization = getAccessToken();
-      if (!Authorization) return;
-
-      const headers = {
-        Accept: "application/json",
-        Authorization,
-        "ngrok-skip-browser-warning": "true",
-      };
-
-      try {
-        const meRes = await fetch("/api/v1/me", { headers });
-        if (meRes.ok) {
-          const me = await meRes.json();
-          setCurrentEmployee({
-            ...me,
-            full_name:
-              me.full_name || me.fullName || me.name || me.username || "",
-          });
-          const roleName =
-            me.role_details?.role_name || me.role_name || me.role || "";
-          setCurrentRole({ role_name: roleName });
-
-          userLoaded = true; // flag lokal
-          if (isFn(setIsUserFetched)) setIsUserFetched(true); // opsional
-          return;
-        }
-      } catch (_) {}
-
-      const employeeRes = await fetch("/api/v1/employee", { headers });
-      if (employeeRes.ok) {
-        const employeeData = await employeeRes.json();
-        const employee = Array.isArray(employeeData)
-          ? employeeData[0]
-          : employeeData;
-        if (employee) setCurrentEmployee(employee);
-
-        if (employee?.role_id) {
-          const roleRes = await fetch("/api/v1/role", { headers });
-          if (roleRes.ok) {
-            const roleData = await roleRes.json();
-            const role = roleData.find((r) => r.role_id === employee.role_id);
-            setCurrentRole(role);
-          }
-        }
-
-        userLoaded = true; // flag lokal
-        if (isFn(setIsUserFetched)) setIsUserFetched(true); // opsional
-      }
-    })().catch((err) => {
-      userOnce = null;
-      throw err;
-    });
-
-    return userOnce;
-  }, [
-    isUserFetched,
-    currentEmployee,
-    setCurrentEmployee,
-    setCurrentRole,
-    setIsUserFetched,
-  ]);
-
-  // Filter categories based on selected channel
-  const filterCategories = useCallback(
-    (channelId) => {
-      if (channelId && policies.length > 0 && allCategories.length > 0) {
-        const allowedComplaintIds = policies
-          .filter((policy) => policy.channel_id === Number(channelId))
-          .map((policy) => policy.complaint_id);
-
-        const filteredCategories = allCategories.filter((cat) =>
-          allowedComplaintIds.includes(cat.complaint_id)
-        );
-
-        return filteredCategories;
-      }
+  // Fetch policies by channel and filter categories
+  const fetchPoliciesByChannel = useCallback(async (channelId) => {
+    if (!accessToken || !channelId) return allCategories;
+    
+    try {
+      const { data } = await httpClient.get('/v1/policies', {
+        baseURL: BASE,
+        params: { channel_id: channelId, limit: 50 },
+        headers: { Authorization: accessToken }
+      });
+      
+      const channelPolicies = Array.isArray(data) ? data : data?.data || [];
+      const allowedComplaintIds = channelPolicies.map(p => 
+        p.complaint_category?.complaint_id || p.complaint_id
+      );
+      
+      return allCategories.filter(cat => 
+        allowedComplaintIds.includes(cat.complaint_id)
+      );
+    } catch (error) {
+      console.error('Failed to fetch policies by channel:', error);
       return allCategories;
-    },
-    [policies, allCategories]
-  );
+    }
+  }, [accessToken, allCategories]);
 
-  // Update categories in store
-  const updateCategories = useCallback(
-    (filteredCategories) => {
-      setCategories(filteredCategories);
-    },
-    [setCategories]
-  );
+
 
   // Get UIC name based on channel and category
   const getUicName = useCallback(
-    (channelId, categoryId) => {
-      if (channelId && categoryId && policies.length > 0) {
-        const policy = policies.find(
-          (p) =>
-            p.channel_id === Number(channelId) &&
-            p.complaint_id === Number(categoryId)
-        );
-
-        if (policy && policy.uic_id) {
-          if (uics.length > 0) {
-            const uic = uics.find((u) => u.uic_id === policy.uic_id);
-            return uic?.uic_name || "";
-          } else {
-            // Fallback when UIC data is not available
-            return `UIC ID: ${policy.uic_id}`;
+    async (channelId, categoryId) => {
+      if (channelId && categoryId) {
+        const policy = await fetchPolicyInfo(channelId, categoryId);
+        
+        if (policy) {
+          // Try to get UIC name from nested structure first
+          const uicName = policy.uic?.division_name || policy.uic?.uic_name;
+          if (uicName) {
+            return uicName;
+          }
+          
+          // Fallback to lookup in uics array
+          const uicId = policy.uic?.division_id || policy.uic_id;
+          if (uicId && uics.length > 0) {
+            const uic = uics.find((u) => u.uic_id === uicId || u.division_id === uicId);
+            return uic?.uic_name || uic?.division_name || "";
+          }
+          
+          // Last fallback
+          if (uicId) {
+            return `UIC ID: ${uicId}`;
           }
         }
       }
       return "";
     },
-    [policies, uics]
+    [fetchPolicyInfo, uics]
   );
 
   // Get SLA info based on channel and category
   const getSlaInfo = useCallback(
-    (channelId, categoryId) => {
-      if (channelId && categoryId && policies.length > 0) {
-        const policy = policies.find(
-          (p) =>
-            p.channel_id === Number(channelId) &&
-            p.complaint_id === Number(categoryId)
-        );
-
+    async (channelId, categoryId) => {
+      if (channelId && categoryId) {
+        const policy = await fetchPolicyInfo(channelId, categoryId);
+        
         if (policy) {
           return {
-            slaDays: policy.sla,
-            slaHours: policy.sla * 24,
+            slaDays: policy.sla_days || policy.sla,
+            slaHours: policy.sla_hours || (policy.sla_days || policy.sla) * 24,
             description: policy.description,
           };
         }
       }
       return { slaDays: "", slaHours: "", description: "" };
     },
-    [policies]
+    [fetchPolicyInfo]
   );
 
   const resetAllForms = useCallback(() => {
@@ -355,58 +188,15 @@ export default function useAddComplaint() {
     window.dispatchEvent(new CustomEvent("resetAllForms"));
   }, [reset]);
 
-  // Update ticket status after creation (workaround for backend limitation)
-  const updateTicketStatus = useCallback(
-    async (ticketId, statusIds, action) => {
-      const Authorization = getAccessToken();
-      if (!Authorization) {
-        throw new Error("No authorization token for status update");
-      }
 
-      const updateData = {
-        customer_status_id: statusIds.customer_status_id,
-        employee_status_id: statusIds.employee_status_id,
-      };
-
-      const response = await fetch(`/api/v1/tickets/${ticketId}`, {
-        method: "PATCH",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: Authorization,
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify(updateData),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `Failed to save ticket: ${response.status} - ${errorText}`
-        );
-      }
-
-      const result = await response.json();
-
-      return result;
-    },
-    []
-  );
 
   // Save ticket function
   const saveTicket = useCallback(async () => {
-    // Get fresh store state
-    const storeState = get();
-
-    // Check if actionFormData exists in fresh store
-    if (!storeState.actionFormData) {
-      // Handle missing actionFormData
+    if (!accessToken) {
+      throw new Error("No authorization token found");
     }
+    
     try {
-      const Authorization = getAccessToken();
-      if (!Authorization) {
-        throw new Error("No authorization token found");
-      }
 
       // Get policy_id based on channel and category
       const policy = policies.find(
@@ -426,7 +216,6 @@ export default function useAddComplaint() {
         return { customer_status_id: 1, employee_status_id: 1 };
       };
 
-      // Use actionFormData from hook (more reliable than store state)
       const currentActionData = actionFormData;
 
       const statusIds = getStatusIds(currentActionData?.action);
@@ -435,60 +224,20 @@ export default function useAddComplaint() {
       let related_account_id = null;
       let related_card_id = null;
 
-      // Lookup account ID by account number from form
-      if (customerData?.accountNumber) {
-        const accountNum = customerData.accountNumber.split(",")[0].trim();
-
-        try {
-          const accountResponse = await fetch("/api/v1/account", {
-            headers: {
-              Accept: "application/json",
-              Authorization: Authorization,
-              "ngrok-skip-browser-warning": "true",
-            },
-          });
-
-          if (accountResponse.ok) {
-            const accounts = await accountResponse.json();
-            const matchedAccount = accounts.find(
-              (acc) => acc.account_number.toString() === accountNum
-            );
-
-            if (matchedAccount) {
-              related_account_id = matchedAccount.account_id;
-            }
-          }
-        } catch (error) {
-          // Silent fail
-        }
+      // Use related_account_id from search context if available
+      if (searchContext?.related_account_id) {
+        related_account_id = searchContext.related_account_id;
       }
 
-      // Lookup card ID by card number from form
-      if (customerData?.cardNumber) {
-        const cardNum = customerData.cardNumber.split(",")[0].trim();
-
-        try {
-          const cardResponse = await fetch("/api/v1/card", {
-            headers: {
-              Accept: "application/json",
-              Authorization: Authorization,
-              "ngrok-skip-browser-warning": "true",
-            },
-          });
-
-          if (cardResponse.ok) {
-            const cards = await cardResponse.json();
-            const matchedCard = cards.find(
-              (card) => card.card_number.toString() === cardNum
-            );
-
-            if (matchedCard) {
-              related_card_id = matchedCard.card_id;
-            }
-          }
-        } catch (error) {
-          // Silent fail
-        }
+      // Use related_card_id from search context (should be the actual card ID)
+      if (searchContext?.related_card_id) {
+        related_card_id = searchContext.related_card_id;
+      } else if (searchContext?.customerCards && searchContext.customerCards.length > 0) {
+        // Use first card ID from customer cards
+        related_card_id = searchContext.customerCards[0].card_id;
+      } else if (customerData?.card_id) {
+        // Fallback to customerData card_id if available
+        related_card_id = customerData.card_id;
       }
 
       // Build ticket data matching exact body format
@@ -528,15 +277,15 @@ export default function useAddComplaint() {
 
           return null;
         })(),
-        amount: dataFormData?.amount ? Number(dataFormData.amount) : null,
+        amount: dataFormData?.amount && dataFormData.amount !== "" ? Number(dataFormData.amount) : null,
         record: dataFormData?.record || "",
         related_account_id: related_account_id,
         related_card_id: related_card_id,
-        terminal_id: dataFormData?.terminalId || null,
+        terminal_id: dataFormData?.terminalId && dataFormData.terminalId !== "" ? Number(dataFormData.terminalId) : null,
         intake_source_id: dataFormData?.sourceId
           ? Number(dataFormData.sourceId)
           : null,
-        priority_id: dataFormData?.priorityId || null,
+        priority_id: dataFormData?.priorityId && dataFormData.priorityId !== "" ? Number(dataFormData.priorityId) : null,
         reason: currentActionData?.reason || "",
         solution: currentActionData?.solution || "",
       };
@@ -554,58 +303,34 @@ export default function useAddComplaint() {
 
       // Add division_notes in correct JSON format
       if (notesFormData?.newNote) {
-        const authz = getAccessToken();
-        const jwtName = decodeNameFromJWT(authz);
-        const authorName =
-          currentEmployee?.full_name ||
-          currentEmployee?.name ||
-          currentEmployee?.fullName ||
-          jwtName || // ✅ JWT fallback
-          "Unknown";
+        const authorName = user?.full_name || user?.name || user?.email || "Unknown";
+        const divisionName = user?.role_details?.role_name || user?.role || "Unknown";
+          
         const noteObject = {
-          division: currentRole?.role_name || "Unknown",
+          division: divisionName,
           timestamp: new Date().toLocaleDateString("id-ID", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
           }),
           msg: notesFormData.newNote,
-          author: authorName, // ✅ use robust author
+          author: authorName,
         };
 
         // Send as array of objects (backend expects this format)
         ticketData.division_notes = [noteObject];
       }
 
-      // Don't remove any fields - send everything including null values
-      // Backend should handle null values properly
+      // Debug: log ticket data before sending
+      console.log('Ticket data to be sent:', JSON.stringify(ticketData, null, 2));
+      window.debugTicketData = ticketData;
 
-      const response = await fetch("/api/v1/tickets", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: Authorization,
-          "ngrok-skip-browser-warning": "true",
-          "X-Requested-With": "XMLHttpRequest",
-        },
-        body: JSON.stringify(ticketData),
+      const response = await httpClient.post('/v1/tickets', ticketData, {
+        baseURL: BASE,
+        headers: { Authorization: accessToken }
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        toast.error(
-          `Gagal membuat ticket (${response.status} ${response.statusText}).\n\n` +
-            `${
-              errorText?.slice(0, 500) || "Tidak ada detail error dari server."
-            }`
-        );
-        throw new Error(
-          `Failed to save ticket: ${response.status} - ${errorText}`
-        );
-      }
-
-      const result = await response.json();
+      const result = response.data;
 
       // Toast sukses
       try {
@@ -629,17 +354,7 @@ export default function useAddComplaint() {
       );
       throw error;
     }
-  }, [
-    dataFormData,
-    actionFormData,
-    notesFormData,
-    customerData,
-    currentEmployee,
-    currentRole,
-    policies,
-    resetAllForms,
-    get,
-  ]);
+  }, [dataFormData, actionFormData, notesFormData, customerData, user, policies, resetAllForms, accessToken]);
 
   // useEffect(() => {
   //   fetchDropdownData();
@@ -655,9 +370,8 @@ export default function useAddComplaint() {
   //   }
   // }, []);
   useEffect(() => {
-    fetchDropdownDataOnce();
-    fetchCurrentUserOnce();
-  }, [fetchDropdownDataOnce, fetchCurrentUserOnce]);
+    fetchDropdownData();
+  }, [fetchDropdownData]);
 
   // return {
   //   // State
@@ -688,8 +402,6 @@ export default function useAddComplaint() {
     terminals,
     priorities,
     uics,
-    currentEmployee,
-    currentRole,
     loadingData,
 
     // Actions
@@ -697,8 +409,7 @@ export default function useAddComplaint() {
     setDataFormData,
     setActionFormData,
     setNotesFormData,
-    filterCategories,
-    updateCategories,
+    fetchPoliciesByChannel,
     getUicName,
     getSlaInfo,
     reset,

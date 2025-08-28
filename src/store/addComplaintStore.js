@@ -60,6 +60,8 @@ const useAddComplaintStore = create((set, get) => ({
 
   // Loading actions
   setLoadingData: (loadingData) => set({ loadingData }),
+  setIsDataFetched: (isDataFetched) => set({ isDataFetched }),
+  setIsUserFetched: (isUserFetched) => set({ isUserFetched }),
 
   // Current user actions
   setCurrentEmployee: (currentEmployee) => set({ currentEmployee }),

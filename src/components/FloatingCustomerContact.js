@@ -70,6 +70,7 @@ export default function FloatingCustomerContact({ room, detail }) {
   const [showCallUI, setShowCallUI] = useState(false);
   const [remoteAudio, setRemoteAudio] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
 
   // Chat State
   const MAX_MSG = 200;
@@ -269,6 +270,7 @@ export default function FloatingCustomerContact({ room, detail }) {
       setCallStatus("in-call");
       setShowCallUI(true);
       callStartAt.current = Date.now();
+      setCallDuration(0);
       setTimeout(() => {
         createOffer();
       }, 1000);
@@ -296,6 +298,7 @@ export default function FloatingCustomerContact({ room, detail }) {
       setCallStatus("idle");
       setShowCallUI(false);
       setRemoteAudio(null);
+      setCallDuration(0);
       stopLocalStream();
     });
     // WebRTC signaling
@@ -326,6 +329,17 @@ export default function FloatingCustomerContact({ room, detail }) {
       stopLocalStream();
     };
   }, [SOCKET_URL, ACTIVE_ROOM, uid]);
+
+  // Call timer effect
+  useEffect(() => {
+    let interval;
+    if (callStatus === "in-call") {
+      interval = setInterval(() => {
+        setCallDuration((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [callStatus]);
 
   // Load chat history per room
   useEffect(() => {
@@ -386,7 +400,7 @@ export default function FloatingCustomerContact({ room, detail }) {
     const sock = socketRef.current;
     if (!sock) return;
     if (peerCount < 2) {
-      alert("Agent tidak tersedia. Pastikan ada 2 user yang online.");
+      alert("Customer tidak tersedia. Pastikan ada customer yang online.");
       return;
     }
     try {
@@ -409,6 +423,7 @@ export default function FloatingCustomerContact({ room, detail }) {
       setCallStatus("in-call");
       setShowCallUI(true);
       callStartAt.current = Date.now();
+      setCallDuration(0);
     } catch (error) {
       console.error("Failed to start audio stream:", error);
     }
@@ -431,6 +446,7 @@ export default function FloatingCustomerContact({ room, detail }) {
     setCallStatus("idle");
     setShowCallUI(false);
     setRemoteAudio(null);
+    setCallDuration(0);
   }, [ACTIVE_ROOM, stopLocalStream]);
 
   const startLiveChat = () => {
@@ -486,139 +502,193 @@ export default function FloatingCustomerContact({ room, detail }) {
       {/* Floating Button */}
       <div className="fixed bottom-6 right-6 z-50">
         {!isOpen && (
-          <div className="relative">
+          <div className="relative group">
             <button
               onClick={toggleWidget}
-              className="bg-orange-500 hover:bg-orange-600 text-white p-4 rounded-full shadow-lg transition-all duration-200 hover:scale-105"
+              className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-110 hover:shadow-2xl group-hover:animate-pulse"
             >
-              <MessageCircle size={24} />
+              <MessageCircle size={24} className="drop-shadow-sm" />
             </button>
-            <div
-              className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-                connected ? "bg-green-500" : "bg-red-500"
-              }`}
-            />
+
+            {/* Connection Status Indicator */}
+            <div className="absolute -top-1 -right-1">
+              <div
+                className={`w-4 h-4 rounded-full border-2 border-white shadow-sm ${
+                  connected ? "bg-emerald-500 animate-pulse" : "bg-red-500"
+                }`}
+              />
+            </div>
+
+            {/* Live Chat Indicator */}
             {isLiveChat && (
-              <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-orange-400 rounded-full border-2 border-white" />
+              <div className="absolute -bottom-1 -left-1">
+                <div className="w-3 h-3 bg-amber-400 rounded-full border-2 border-white shadow-sm animate-bounce" />
+              </div>
             )}
+
+            {/* Tooltip */}
+            <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                Contact Customer
+                <div className="absolute top-full right-2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
           </div>
         )}
       </div>
 
       {/* Popup Panel */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-80 bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden">
+        <div className="fixed bottom-6 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden backdrop-blur-sm animate-in slide-in-from-bottom-4 duration-300">
           {/* Header */}
-          <div className="bg-orange-500 text-white p-3 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <h3 className="font-semibold text-sm">Chat Agent</h3>
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  connected ? "bg-green-300" : "bg-red-300"
-                }`}
-              />
-              {isLiveChat && (
-                <span className="text-xs opacity-90">• {peerCount} peers</span>
-              )}
-            </div>
-            <div className="flex items-center space-x-2">
-              {!isLiveChat ? (
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <MessageCircle size={16} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">Customer Contact</h3>
+                  <div className="flex items-center space-x-2 text-xs opacity-90">
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        connected
+                          ? "bg-emerald-300 animate-pulse"
+                          : "bg-red-300"
+                      }`}
+                    />
+                    <span>{connected ? "Online" : "Offline"}</span>
+                    {isLiveChat && <span>• {peerCount} active</span>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-1">
+                {!isLiveChat ? (
+                  <button
+                    onClick={startLiveChat}
+                    className="text-white hover:text-orange-200 text-xs px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-all duration-200 font-medium"
+                    title="Start live chat"
+                  >
+                    Start Chat
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={quickDM}
+                      className="text-white hover:text-orange-200 p-1.5 rounded-full hover:bg-white/20 transition-all duration-200"
+                      title="Connect to agent"
+                    >
+                      <Users size={14} />
+                    </button>
+                    <button
+                      onClick={clearAll}
+                      className="text-white hover:text-red-200 p-1.5 rounded-full hover:bg-white/20 transition-all duration-200"
+                      title="End session"
+                    >
+                      <LogOut size={14} />
+                    </button>
+                  </>
+                )}
                 <button
-                  onClick={startLiveChat}
-                  className="text-white hover:text-green-200 text-xs px-2 py-1 rounded border border-white/30 hover:bg-white/10"
-                  title="Start chat"
+                  onClick={toggleWidget}
+                  className="text-white hover:text-gray-200 p-1.5 rounded-full hover:bg-white/20 transition-all duration-200"
                 >
-                  Start
+                  <X size={16} />
                 </button>
-              ) : (
-                <>
-                  <button
-                    onClick={quickDM}
-                    className="text-white hover:text-blue-200 text-xs px-1.5 py-1 rounded border border-white/30 hover:bg-white/10"
-                    title="Pair DM"
-                  >
-                    <Users size={12} />
-                  </button>
-                  <button
-                    onClick={clearAll}
-                    className="text-white hover:text-red-200 text-xs px-1.5 py-1 rounded border border-white/30 hover:bg-white/10"
-                    title="End chat"
-                  >
-                    <LogOut size={12} />
-                  </button>
-                </>
-              )}
-              <button
-                onClick={toggleWidget}
-                className="text-white hover:text-gray-200"
-              >
-                <X size={18} />
-              </button>
+              </div>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-gray-200">
+          <div className="flex bg-gray-50 border-b border-gray-200">
             <button
               onClick={() => setActiveTab("chat")}
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+              className={`flex-1 py-3 text-sm font-medium transition-all duration-200 relative ${
                 activeTab === "chat"
-                  ? "text-orange-600 border-b-2 border-orange-600 bg-orange-50"
-                  : "text-gray-600 hover:text-gray-800"
+                  ? "text-orange-600 bg-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-800 hover:bg-gray-100"
               }`}
             >
-              Chat{" "}
-              {isLiveChat && (
-                <span className="ml-1 w-1.5 h-1.5 bg-green-500 rounded-full inline-block"></span>
+              <div className="flex items-center justify-center space-x-2">
+                <MessageCircle size={16} />
+                <span>Chat</span>
+                {isLiveChat && (
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                )}
+              </div>
+              {activeTab === "chat" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-orange-500 to-orange-600"></div>
               )}
             </button>
+
             <button
               onClick={() => setActiveTab("call")}
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+              className={`flex-1 py-3 text-sm font-medium transition-all duration-200 relative ${
                 activeTab === "call"
-                  ? "text-orange-600 border-b-2 border-orange-600 bg-orange-50"
-                  : "text-gray-600 hover:text-gray-800"
+                  ? "text-orange-600 bg-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-800 hover:bg-gray-100"
               }`}
             >
-              Call{" "}
-              {callStatus !== "idle" && (
-                <span className="ml-1 w-1.5 h-1.5 bg-red-500 rounded-full inline-block"></span>
+              <div className="flex items-center justify-center space-x-2">
+                <Phone size={16} />
+                <span>Call</span>
+                {callStatus !== "idle" && (
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                )}
+              </div>
+              {activeTab === "call" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-orange-500 to-orange-600"></div>
               )}
             </button>
           </div>
 
           {/* Tab Content */}
-          <div className="h-72 bg-white overflow-hidden">
+          <div className="h-80 bg-white overflow-hidden">
             {activeTab === "chat" && (
               <div className="h-full flex flex-col">
                 {/* Chat Messages Area */}
-                <div className="flex-1 p-3 overflow-y-auto">
+                <div className="flex-1 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   {!isLiveChat ? (
-                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                      Click "Start" to begin live chat
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <div className="w-16 h-16 bg-gradient-to-br from-orange-100 to-orange-200 rounded-full flex items-center justify-center mb-4">
+                        <MessageCircle size={24} className="text-orange-500" />
+                      </div>
+                      <p className="text-gray-500 text-sm mb-2">
+                        Agent Chat Panel
+                      </p>
+                      <p className="text-gray-400 text-xs">
+                        Click "Start Chat" to begin.
+                      </p>
                     </div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {messages.map((message) => (
                         <div
                           key={message.id}
-                          className={`flex ${
+                          className={`flex animate-in slide-in-from-bottom-2 duration-300 ${
                             !message.isBot ? "justify-end" : "justify-start"
                           }`}
                         >
                           <div
-                            className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
+                            className={`px-4 py-2 rounded-2xl text-sm shadow-sm max-w-xs ${
                               !message.isBot
-                                ? "bg-orange-500 text-white rounded-br-sm"
-                                : "bg-gray-100 text-gray-800 rounded-bl-sm"
+                                ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-br-md"
+                                : "bg-gray-100 text-gray-800 rounded-bl-md border border-gray-200"
                             } ${
                               message.isCallLog
-                                ? "bg-blue-100 text-blue-800"
+                                ? "bg-gradient-to-r from-emerald-100 to-blue-100 text-emerald-800 border border-emerald-200"
                                 : ""
                             }`}
                           >
                             <p className="leading-relaxed">{message.text}</p>
-                            <p className={`text-xs mt-1 opacity-70`}>
+                            <p
+                              className={`text-xs mt-1 ${
+                                !message.isBot
+                                  ? "text-white/70"
+                                  : "text-gray-500"
+                              }`}
+                            >
                               {message.timestamp}
                             </p>
                           </div>
@@ -630,23 +700,25 @@ export default function FloatingCustomerContact({ room, detail }) {
                 </div>
 
                 {/* Chat Input */}
-                <div className="p-3 border-t border-gray-100">
+                <div className="p-4 bg-gray-50 border-t border-gray-200">
                   <div className="flex space-x-2">
                     <input
                       type="text"
                       placeholder={
-                        isLiveChat ? "Type message..." : "Chat not active"
+                        isLiveChat
+                          ? "Type your message..."
+                          : "Start chat to send messages"
                       }
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
                       onKeyPress={(e) => e.key === "Enter" && handleSend()}
                       disabled={!isLiveChat}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:bg-gray-50"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400 transition-all duration-200"
                     />
                     <button
                       onClick={handleSend}
                       disabled={!inputText.trim() || !isLiveChat}
-                      className="px-4 py-2 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors text-sm disabled:bg-gray-300"
+                      className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-full transition-all duration-200 text-sm font-medium disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
                     >
                       Send
                     </button>
@@ -658,94 +730,135 @@ export default function FloatingCustomerContact({ room, detail }) {
             {activeTab === "call" && (
               <div className="h-full flex flex-col">
                 {/* Audio Call Area */}
-                <div className="flex-1 p-3 overflow-hidden">
+                <div className="flex-1 p-6 overflow-hidden">
                   <div className="flex flex-col items-center justify-center h-full">
-                    <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mb-3 shadow-inner">
-                      <User size={24} className="text-gray-600" />
+                    {/* Avatar */}
+                    <div className="relative mb-6">
+                      <div
+                        className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                          callStatus === "in-call"
+                            ? "bg-gradient-to-br from-emerald-400 to-emerald-600 animate-pulse"
+                            : callStatus === "ringing"
+                            ? "bg-gradient-to-br from-amber-400 to-orange-500 animate-bounce"
+                            : "bg-gradient-to-br from-gray-200 to-gray-400"
+                        }`}
+                      >
+                        <User size={28} className="text-white drop-shadow-sm" />
+                      </div>
+
+                      {/* Call Status Ring */}
+                      {callStatus !== "idle" && (
+                        <div
+                          className={`absolute inset-0 rounded-full border-4 ${
+                            callStatus === "in-call"
+                              ? "border-emerald-300"
+                              : "border-amber-300"
+                          } animate-ping`}
+                        ></div>
+                      )}
                     </div>
 
-                    {callStatus !== "idle" ? (
-                      <div className="flex items-center justify-center space-x-2">
-                        <div
-                          className={`w-2 h-2 rounded-full animate-pulse ${
-                            callStatus === "in-call"
-                              ? "bg-green-500"
-                              : "bg-yellow-500"
-                          }`}
-                        />
-                        <p className="text-sm font-medium text-gray-700">
-                          {callStatus === "in-call"
-                            ? "Voice Call Active"
-                            : callStatus === "ringing"
-                            ? "Ringing..."
-                            : "Connecting..."}
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        <p className="text-sm text-gray-500 mb-2">
-                          Ready for voice call
-                        </p>
-                        {peerCount < 2 && (
-                          <p className="text-xs text-gray-400 text-center">
-                            Waiting for peer to connect...
+                    {/* Status Text */}
+                    <div className="text-center mb-4">
+                      {callStatus !== "idle" ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-center space-x-2">
+                            <div
+                              className={`w-3 h-3 rounded-full animate-pulse ${
+                                callStatus === "in-call"
+                                  ? "bg-emerald-500"
+                                  : "bg-amber-500"
+                              }`}
+                            />
+                            <p className="text-lg font-semibold text-gray-800">
+                              {callStatus === "in-call"
+                                ? "Call Active"
+                                : callStatus === "ringing"
+                                ? "Calling Customer"
+                                : "Connecting..."}
+                            </p>
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            {callStatus === "in-call"
+                              ? "Voice call in progress"
+                              : callStatus === "ringing"
+                              ? "Waiting for customer to answer"
+                              : "Please wait..."}
                           </p>
-                        )}
-                      </>
-                    )}
+                          {callStatus === "in-call" && (
+                            <div className="text-2xl font-mono text-gray-700 mt-2">
+                              {String(Math.floor(callDuration / 60)).padStart(
+                                2,
+                                "0"
+                              )}
+                              :{String(callDuration % 60).padStart(2, "0")}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="text-lg font-medium text-gray-700">
+                            Voice Call Ready
+                          </p>
+                          {peerCount < 2 && (
+                            <div className="flex items-center justify-center space-x-2 mt-3">
+                              <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                              <p className="text-xs text-gray-400">
+                                Waiting for customer to connect...
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Call Controls - Fixed at bottom */}
-                <div className="p-3 border-t border-gray-100 bg-gray-50">
-                  <div className="flex items-center justify-center space-x-4">
+                {/* Call Controls */}
+                <div className="p-6 bg-gray-50 border-t border-gray-200">
+                  <div className="flex items-center justify-center space-x-6">
                     {callStatus === "idle" ? (
                       <button
                         onClick={placeCall}
                         disabled={peerCount < 2}
-                        className="w-12 h-12 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-full flex items-center justify-center transition-colors shadow-lg"
+                        className="w-14 h-14 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-full flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 disabled:cursor-not-allowed"
                         title={
-                          peerCount < 2 ? "Waiting for peer..." : "Start Call"
+                          peerCount < 2
+                            ? "Waiting for customer..."
+                            : "Call Customer"
                         }
                       >
-                        <Phone size={18} />
+                        <Phone size={20} />
                       </button>
                     ) : callStatus === "ringing" ? (
-                      <>
-                        <button
-                          onClick={acceptCall}
-                          className="w-12 h-12 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition-colors shadow-lg"
-                          title="Accept Call"
-                        >
-                          <Phone size={18} />
-                        </button>
-                        <button
-                          onClick={declineCall}
-                          className="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-lg"
-                          title="Decline Call"
-                        >
-                          <PhoneOff size={18} />
-                        </button>
-                      </>
+                      <button
+                        onClick={hangupCall}
+                        className="w-14 h-14 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-full flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+                        title="Cancel Call"
+                      >
+                        <PhoneOff size={20} />
+                      </button>
                     ) : (
                       <>
                         <button
                           onClick={() => setIsMuted(!isMuted)}
-                          className={`w-10 h-10 ${
+                          className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
                             isMuted
-                              ? "bg-red-500 hover:bg-red-600"
-                              : "bg-gray-500 hover:bg-gray-600"
-                          } text-white rounded-full flex items-center justify-center transition-colors shadow-lg`}
-                          title={isMuted ? "Unmute" : "Mute"}
+                              ? "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                              : "bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700"
+                          } text-white`}
+                          title={
+                            isMuted ? "Unmute Microphone" : "Mute Microphone"
+                          }
                         >
-                          {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
+                          {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
                         </button>
                         <button
                           onClick={hangupCall}
-                          className="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-lg"
+                          className="w-14 h-14 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-full flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
                           title="End Call"
                         >
-                          <PhoneOff size={18} />
+                          <PhoneOff size={20} />
                         </button>
                       </>
                     )}
