@@ -284,7 +284,7 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
             <span className="hidden sm:inline">Back to List</span>
           </Button>
         </div>
-        <AddComplaint />
+        <AddComplaint reset />
       </div>
     );
   }
@@ -633,9 +633,9 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
             {loading
               ? "Loading…"
               : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
-                  currentPage * PAGE_SIZE,
-                  processedComplaints.length
-                )} of ${processedComplaints.length} entries`}
+                currentPage * PAGE_SIZE,
+                processedComplaints.length
+              )} of ${processedComplaints.length} entries`}
           </div>
           <Button
             variant="outline"
@@ -702,9 +702,8 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
                               showFilterDropdown === col.key ? null : col.key
                             )
                           }
-                          className={`hover:text-blue-600 ${
-                            filters[col.key] ? "text-blue-600" : "text-gray-400"
-                          }`}
+                          className={`hover:text-blue-600 ${filters[col.key] ? "text-blue-600" : "text-gray-400"
+                            }`}
                         >
                           <Filter size={14} />
                         </button>
@@ -802,11 +801,10 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
           {loading
             ? "Loading…"
             : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(
-                currentPage * PAGE_SIZE,
-                processedComplaints.length
-              )} of ${
-                processedComplaints.length
-              } entries (filtered for handled by cxc + open)`}
+              currentPage * PAGE_SIZE,
+              processedComplaints.length
+            )} of ${processedComplaints.length
+            } entries (filtered for handled by cxc + open)`}
         </div>
         <div className="flex flex-wrap gap-1 order-1 sm:order-2">
           <Button

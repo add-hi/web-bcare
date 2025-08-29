@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import useCustomerSearch from "@/hooks/useCustomerSearch";
 
 const CustomerForm = ({
@@ -8,9 +8,11 @@ const CustomerForm = ({
   customerData,
   searchContext,
   inputType,
+  reset, // boolean
 }) => {
   const { processCustomerData } = useCustomerSearch();
-  // field statis
+
+  // --- definisi field ---
   const formData = [
     { label: "CIF" },
     { label: "Gender", type: "select", required: true },
@@ -49,7 +51,7 @@ const CustomerForm = ({
     "List Debit Card Number": "listDebitCardNumber",
   };
 
-  // ambil dari detail.customer
+  // --- helpers ---
   const toInitial = (d = {}) => ({
     cif: d.cif ?? "",
     gender: d.gender ?? "",
@@ -69,55 +71,95 @@ const CustomerForm = ({
     listDebitCardNumber: d.listDebitCardNumber ?? "",
   });
 
+  const jsonEq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
   const [form, setForm] = useState(toInitial(detail?.customer));
-  useEffect(() => {
-    const next = toInitial(detail?.customer);
-    setForm(next);
-    onChange?.(next);
-  }, [detail?.customer]); // remap saat ganti tiket
-
-// Kunci jika sudah ada data dari hasil search (customerData terisi)
-const autoFilled = useMemo(() => {
-  return Boolean(customerData && Object.keys(customerData).length > 0);
-}, [customerData]);
-
-
+  const autoFilled = useMemo(
+    () => Boolean(customerData && Object.keys(customerData).length > 0),
+    [customerData]
+  );
   const [locked, setLocked] = useState(false);
 
-  useEffect(() => {
-    setLocked(autoFilled); // kunci otomatis saat hasil search mengisi form
-  }, [autoFilled]);
+  // Flag untuk "programmatic updates" (reset/prefill) supaya tidak memanggil onChange
+  const silentRef = useRef(false);
 
-  // Update form when customer data changes
+  // --- RESET: kosongkan form SEKALI saat reset=true, tanpa trigger onChange ---
   useEffect(() => {
-    if (inputType === "non_nasabah") {
+    if (!reset) return;
+    const cleared = toInitial({});
+    if (!jsonEq(form, cleared)) {
+      silentRef.current = true;
+      setForm(cleared);
+      setLocked(false);
+      // TIDAK panggil onChange di sini agar tidak memicu loop ke parent
+      silentRef.current = false;
+    } else {
+      setLocked(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reset]); // cukup tergantung reset
+
+  // --- LOCK mengikuti autoFilled, tapi jangan meng-influence reset ---
+  useEffect(() => {
+    if (reset) {
+      setLocked(false);
+    } else {
+      setLocked(autoFilled);
+    }
+  }, [autoFilled, reset]);
+
+  // --- PREFILL dari detail (silent) ---
+  useEffect(() => {
+    if (reset) return; // saat reset aktif, jangan override kosong
+    const next = toInitial(detail?.customer);
+    if (!jsonEq(form, next)) {
+      silentRef.current = true;
+      setForm(next);
+      // silent: tidak panggil onChange
+      silentRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail?.customer, reset]);
+
+  // --- PREFILL dari customerData (silent), tetap jalan setelah reset ---
+  useEffect(() => {
+    if (inputType === "non_nasabah") return; // non_nasabah = manual input
+
+    // Jika customerData kosong -> kosongkan form (silent)
+    if (!customerData || Object.keys(customerData).length === 0) {
+      const empty = toInitial({});
+      if (!jsonEq(form, empty)) {
+        silentRef.current = true;
+        setForm(empty);
+        silentRef.current = false;
+      }
       return;
     }
-    
-    if (customerData) {
-      const mappedData = processCustomerData(customerData, searchContext);
-      if (mappedData) {
-        const newFormData = { ...form, ...mappedData };
-        setForm(newFormData);
-        onChange?.(newFormData);
-      }
-    } else {
-      const resetData = toInitial({});
-      setForm(resetData);
-      onChange?.(resetData);
+
+    // Map & isi (silent)
+    const mapped = processCustomerData(customerData, searchContext) || {};
+    const next = { ...toInitial({}), ...mapped };
+    if (!jsonEq(form, next)) {
+      silentRef.current = true;
+      setForm(next);
+      // silent: tidak panggil onChange
+      silentRef.current = false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerData, searchContext, inputType, processCustomerData]);
 
-  // const update = (k, v) => setForm((prev) => { const n = { ...prev, [k]: v }; onChange?.(n); return n; });
-
+  // --- UPDATE oleh user (hanya non_nasabah), ini yang BUKAN silent ---
   const update = (k, v) =>
     setForm((prev) => {
       if (!inputType || inputType !== "non_nasabah") return prev;
       const n = { ...prev, [k]: v };
-      onChange?.(n);
+      if (!silentRef.current) {
+        onChange?.(n); // hanya kirim ke parent saat user mengetik
+      }
       return n;
     });
 
+  // --- UI ---
   const inputClassName =
     "w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm";
 
@@ -135,6 +177,7 @@ const autoFilled = useMemo(() => {
       <div className="bg-green-300 text-white text-center py-2 px-4 rounded-t-lg -m-6 mb-6">
         <h2 className="text-lg font-semibold">Customer Info</h2>
       </div>
+
       <div className={inputType !== "non_nasabah" && locked ? "opacity-75" : ""}>
         <div className="bg-white border-gray-200 p-6 rounded-lg">
           <div className="grid grid-cols-3 gap-x-6 gap-y-5">
@@ -143,13 +186,12 @@ const autoFilled = useMemo(() => {
               const value = form[key] ?? "";
               const isDisabled = !inputType || inputType !== "non_nasabah";
               const fieldBgClass = isDisabled ? " bg-gray-100" : "";
+
               return (
                 <div key={idx} className="flex flex-col">
                   <label className="text-sm text-black font-medium mb-2 whitespace-nowrap">
                     {field.label}
-                    {field.required && (
-                      <span className="text-red-500 ml-1">*</span>
-                    )}
+                    {field.required && <span className="text-red-500 ml-1">*</span>}
                   </label>
 
                   {field.type === "select" ? (
@@ -168,9 +210,7 @@ const autoFilled = useMemo(() => {
                   ) : field.type === "textarea" ? (
                     <textarea
                       className={
-                        inputClassName +
-                        " resize-none overflow-y-auto h-[40px]" +
-                        fieldBgClass
+                        inputClassName + " resize-none overflow-y-auto h-[40px]" + fieldBgClass
                       }
                       rows={1}
                       value={value}
