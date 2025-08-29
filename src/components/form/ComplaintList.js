@@ -610,7 +610,7 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
   };
 
   return (
-    <div className="max-w-full mx-auto p-6 bg-white">
+    <div className="max-w-full mx-auto p-6 bg-white min-h-80">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Button variant="primary" icon={Plus} onClick={handleAddClick}>
@@ -664,7 +664,7 @@ const ComplaintList = ({ isActive = false, isAgent = false }) => {
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto min-h-80">
         <table className="w-full border-collapse bg-white">
           <thead>
             <tr className="bg-gray-50">
