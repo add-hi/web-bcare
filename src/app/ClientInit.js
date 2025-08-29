@@ -7,8 +7,6 @@ import { useEffect } from "react";
 /** Dipasang sekali di root layout untuk memasang interceptor Axios secara global */
 export default function ClientInit() {
     useEffect(() => {
-        console.log("[ClientInit] interceptor mounted");
-        console.log("[ClientInit] httpClient baseURL =", httpClient.defaults.baseURL);
         try {
             const raw = localStorage.getItem("auth");
             if (!raw) return;

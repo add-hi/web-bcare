@@ -14,9 +14,9 @@ export default function useAxiosAuth() {
 
         // === REQUEST INTERCEPTOR ===
         const reqId = httpClient.interceptors.request.use((config) => {
-            console.log("[REQ]", config.method?.toUpperCase(), config.url, {
-                hasAuthHeader: !!config.headers?.Authorization,
-            });
+            // console.log("[REQ]", config.method?.toUpperCase(), config.url, {
+            //     hasAuthHeader: !!config.headers?.Authorization,
+            // });
             const url = String(config?.url || "");
             // Jangan attach Authorization untuk login/refresh
             const isAuthCall = /\/auth\/(login|refresh)/.test(url);
@@ -41,7 +41,7 @@ export default function useAxiosAuth() {
         // === RESPONSE INTERCEPTOR ===
         const resId = httpClient.interceptors.response.use(
             (res) => {
-                console.log("[RES]", res.status, res.config?.url);
+                // console.log("[RES]", res.status, res.config?.url);
                 return res;
             },
             async (error) => {
@@ -50,7 +50,7 @@ export default function useAxiosAuth() {
                 const url = String(original?.url || "");
                 const isRefreshCall = /\/auth\/refresh/.test(url);
                 const isLoginCall = /\/auth\/login/.test(url);
-                console.log("[RES ERR]", error?.response?.status, error?.config?.url);
+                // console.log("[RES ERR]", error?.response?.status, error?.config?.url);
 
                 if (!error?.response) return Promise.reject(error);
 
