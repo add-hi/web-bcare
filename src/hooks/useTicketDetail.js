@@ -2,25 +2,26 @@
 import { useCallback, useMemo } from "react";
 import httpClient from "@/lib/httpClient";
 import useTicketStore from "@/store/ticketStore";
+import { useAuthStore } from "@/store/userStore";
 
-function getAccessToken() {
-    try {
-        const raw = localStorage.getItem("auth");
-        if (!raw) return "";
-        const parsed = JSON.parse(raw);
-        const token = parsed?.state?.accessToken || "";
-        return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-    } catch {
-        return "";
-    }
-}
+// function getAccessToken() {
+//     try {
+//         const raw = localStorage.getItem("auth");
+//         if (!raw) return "";
+//         const parsed = JSON.parse(raw);
+//         const token = parsed?.state?.accessToken || "";
+//         return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+//     } catch {
+//         return "";
+//     }
+// }
 
 function mapDetail(data) {
     // Extract employee status history for division notes and complaint tracking
     const statusHistory = data?.status_history || {};
     const employeeStatusHistory = Array.isArray(statusHistory?.employee_status_history) ? statusHistory.employee_status_history : [];
     const customerStatusHistory = Array.isArray(statusHistory?.customer_status_history) ? statusHistory.customer_status_history : [];
-    
+
     // Create division notes from employee status history
     const divisionNotesFromHistory = employeeStatusHistory.map((h) => ({
         division: h?.status_name || h?.status_code || "Unknown",
@@ -32,7 +33,7 @@ function mapDetail(data) {
         statusName: h?.status_name,
         actionType: h?.action_type
     }));
-    
+
     // Fallback to activities if no status history
     const activities = Array.isArray(data?.activities) ? data.activities : [];
     const divisionNotesFromActivities = activities.map((a) => ({
@@ -44,8 +45,8 @@ function mapDetail(data) {
     }));
 
     // Use status history first, then activities, then division_notes
-    const divisionNotes = employeeStatusHistory.length > 0 
-        ? divisionNotesFromHistory 
+    const divisionNotes = employeeStatusHistory.length > 0
+        ? divisionNotesFromHistory
         : (Array.isArray(data?.division_notes) ? data.division_notes : divisionNotesFromActivities);
 
     const customer = data?.customer || {};
@@ -173,14 +174,21 @@ export default function useTicketDetail(ticketId) {
         setDetailError(null);
 
         try {
-            const Authorization = getAccessToken();
+
+            const { accessToken } = useAuthStore.getState();
+            if (!accessToken)
+                throw new Error("Token tidak ditemukan. Silakan login ulang.");
+
+            const Authorization = accessToken;
             if (!Authorization) throw new Error("Token tidak ditemukan. Silakan login ulang.");
+
+            // const Authorization = getAccessToken();
+            // if (!Authorization) throw new Error("Token tidak ditemukan. Silakan login ulang.");
 
             const res = await httpClient.get(`/v1/tickets/${ticketIdToFetch}`, {
                 baseURL: BASE,
                 headers: {
                     Accept: "application/json",
-                    Authorization,
                     "ngrok-skip-browser-warning": "true",
                 },
             });

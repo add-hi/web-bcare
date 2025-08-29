@@ -2,18 +2,19 @@
 import { useCallback, useMemo } from "react";
 import httpClient from "@/lib/httpClient";
 import useTicketStore from "@/store/ticketStore";
+import { useAuthStore } from "@/store/userStore";
 
-function getAccessToken() {
-  try {
-    const raw = localStorage.getItem("auth");
-    if (!raw) return "";
-    const parsed = JSON.parse(raw);
-    const token = parsed?.state?.accessToken || "";
-    return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-  } catch {
-    return "";
-  }
-}
+// function getAccessToken() {
+//   try {
+//     const raw = localStorage.getItem("auth");
+//     if (!raw) return "";
+//     const parsed = JSON.parse(raw);
+//     const token = parsed?.state?.accessToken || "";
+//     return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+//   } catch {
+//     return "";
+//   }
+// }
 
 export default function useTicket() {
   const {
@@ -46,8 +47,12 @@ export default function useTicket() {
       setListLoading(true);
       setListError(null);
       try {
-        const Authorization = getAccessToken();
-        if (!Authorization)
+        // const Authorization = getAccessToken();
+        // if (!Authorization)
+        //   throw new Error("Token tidak ditemukan. Silakan login ulang.");
+
+        const { accessToken } = useAuthStore.getState();
+        if (!accessToken)
           throw new Error("Token tidak ditemukan. Silakan login ulang.");
 
         const res = await httpClient.get("/v1/tickets", {
@@ -55,7 +60,6 @@ export default function useTicket() {
           params: { limit, offset, status },
           headers: {
             Accept: "application/json",
-            Authorization,
             "ngrok-skip-browser-warning": "true",
           },
         });
@@ -89,7 +93,11 @@ export default function useTicket() {
     async (id, payload) => {
       if (!id) throw new Error("Ticket id tidak valid");
 
-      const Authorization = getAccessToken();
+      const { accessToken } = useAuthStore.getState();
+      if (!accessToken)
+        throw new Error("Token tidak ditemukan. Silakan login ulang.");
+
+      const Authorization = accessToken;
       if (!Authorization) throw new Error("Token tidak ditemukan. Silakan login ulang.");
 
       const res = await httpClient.patch(`/v1/tickets/${id}`, payload, {
@@ -97,7 +105,6 @@ export default function useTicket() {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
-          Authorization,
           "ngrok-skip-browser-warning": "true",
         },
       });

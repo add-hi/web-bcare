@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import Button from "@/components/ui/Button";
 import useCustomerSearch from "@/hooks/useCustomerSearch";
+import toast from "react-hot-toast";
 
 const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
   const { searchCustomer } = useCustomerSearch();
@@ -42,9 +43,9 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
     setLoading(true);
     try {
       const result = await searchCustomer(numberValue, sourceType);
-      
+
       if (!result) {
-        alert("Number not found");
+        toast.error("Number not found")
         return;
       }
 
@@ -53,7 +54,7 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
       onCustomerData?.(result.customer, result.searchContext, inputType);
     } catch (error) {
       console.error("Search error:", error);
-      alert("Error fetching data: " + (error?.message || "Unknown error"));
+      toast.error("Error fetching data: " + (error?.message || "Unknown error"))
     } finally {
       setLoading(false);
     }
@@ -138,8 +139,8 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
       isOpen && search
         ? search
         : selectedOption
-        ? getLabel(selectedOption)
-        : search;
+          ? getLabel(selectedOption)
+          : search;
 
     useEffect(() => {
       const handleClickOutside = (event) => {
@@ -157,9 +158,8 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
       <div className="relative" ref={dropdownRef}>
         <div className="relative">
           <input
-            className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm pr-8 ${
-              disabled ? "bg-gray-50 text-gray-400" : ""
-            }`}
+            className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-black text-sm pr-8 ${disabled ? "bg-gray-50 text-gray-400" : ""
+              }`}
             value={displayValue}
             onChange={(e) => {
               if (!disabled) {
@@ -260,9 +260,8 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
               placeholder={`Enter ${getNumberLabel()}`}
               readOnly={isReadOnly}
               disabled={inputType === "non_nasabah"}
-              className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none ${
-                isReadOnly || inputType === "non_nasabah" ? "bg-gray-100" : ""
-              } disabled:bg-gray-50 disabled:text-gray-400`}
+              className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none ${isReadOnly || inputType === "non_nasabah" ? "bg-gray-100" : ""
+                } disabled:bg-gray-50 disabled:text-gray-400`}
             />
           </div>
 
@@ -278,9 +277,8 @@ const InputFormRow = forwardRef(({ onCustomerData }, ref) => {
                 placeholder="MM/YY"
                 readOnly={isReadOnly}
                 disabled={inputType === "non_nasabah"}
-                className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none ${
-                  isReadOnly || inputType === "non_nasabah" ? "bg-gray-100" : ""
-                } disabled:bg-gray-50 disabled:text-gray-400`}
+                className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none ${isReadOnly || inputType === "non_nasabah" ? "bg-gray-100" : ""
+                  } disabled:bg-gray-50 disabled:text-gray-400`}
               />
             </div>
           )}

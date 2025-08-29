@@ -1745,7 +1745,7 @@ const ComplaintTable = ({ isActive = false }) => {
   ];
 
   return (
-    <div className="max-w-full mx-auto p-6 bg-white">
+    <div className="max-w-full mx-auto p-6 bg-white min-h-80">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         {/* Filter Controls */}
@@ -1849,7 +1849,7 @@ const ComplaintTable = ({ isActive = false }) => {
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto min-h-80">
         <table className="w-full border-collapse bg-white">
           <thead>
             <tr className="bg-gray-50">
