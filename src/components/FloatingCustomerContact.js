@@ -19,6 +19,7 @@ import {
   LogOut,
 } from "lucide-react";
 import io from "socket.io-client";
+import toast from "react-hot-toast";
 
 export default function FloatingCustomerContact({ room, detail }) {
   // ====== Socket Configuration ======
@@ -126,7 +127,7 @@ export default function FloatingCustomerContact({ room, detail }) {
       return stream;
     } catch (error) {
       console.error("Error accessing microphone:", error);
-      alert(`Microphone error: ${error.message}`);
+      toast.error(`Microphone error: ${error.message}`);
       throw error;
     }
   }, []);

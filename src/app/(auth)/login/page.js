@@ -65,7 +65,6 @@ export default function LoginPage() {
       else router.push("/dashboard/mockdgo");
     } catch (err) {
       toast.error(err?.message || "Login failed")
-      // alert(err?.message || "Login failed");
     }
   };
 
