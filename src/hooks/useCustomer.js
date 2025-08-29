@@ -2,22 +2,23 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import httpClient from "@/lib/httpClient";
+import { useAuthStore } from "@/store/userStore";
 // (opsional) kalau pakai store cache, aktifkan import di bawah:
 // import useCustomerStore from "@/store/customerStore";
 
-function getAccessToken() {
-    if (typeof window === "undefined") return "";
-    try {
-        const raw = localStorage.getItem("auth");
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            let t = parsed?.state?.accessToken || "";
-            if (t && !/^Bearer\s/i.test(t)) t = `Bearer ${t}`;
-            return t || "";
-        }
-    } catch { }
-    return "";
-}
+// function getAccessToken() {
+//     if (typeof window === "undefined") return "";
+//     try {
+//         const raw = localStorage.getItem("auth");
+//         if (raw) {
+//             const parsed = JSON.parse(raw);
+//             let t = parsed?.state?.accessToken || "";
+//             if (t && !/^Bearer\s/i.test(t)) t = `Bearer ${t}`;
+//             return t || "";
+//         }
+//     } catch { }
+//     return "";
+// }
 
 export default function useCustomer(customerId) {
     const [customer, setCustomer] = useState(null);
@@ -34,7 +35,13 @@ export default function useCustomer(customerId) {
         if (!id) return;
         setLoading(true);
         setError(null);
-        const Authorization = getAccessToken();
+        const { accessToken } = useAuthStore.getState();
+        if (!accessToken)
+            throw new Error("Token tidak ditemukan. Silakan login ulang.");
+
+        const Authorization = accessToken;
+        if (!Authorization) throw new Error("Token tidak ditemukan. Silakan login ulang.");
+
 
         try {
             if (!Authorization) throw new Error("Token tidak ditemukan. Silakan login ulang.");
@@ -43,7 +50,6 @@ export default function useCustomer(customerId) {
                 baseURL: BASE,
                 headers: {
                     Accept: "application/json",
-                    Authorization,
                     "ngrok-skip-browser-warning": "true",
                 },
             });

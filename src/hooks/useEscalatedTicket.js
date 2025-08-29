@@ -2,18 +2,19 @@
 import { useCallback, useMemo } from "react";
 import httpClient from "@/lib/httpClient";
 import useEscalatedTicketStore from "@/store/escalatedTicketStore";
+import { useAuthStore } from "@/store/userStore";
 
-function getAccessToken() {
-  try {
-    const raw = localStorage.getItem("auth");
-    if (!raw) return "";
-    const parsed = JSON.parse(raw);
-    const token = parsed?.state?.accessToken || "";
-    return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-  } catch {
-    return "";
-  }
-}
+// function getAccessToken() {
+//   try {
+//     const raw = localStorage.getItem("auth");
+//     if (!raw) return "";
+//     const parsed = JSON.parse(raw);
+//     const token = parsed?.state?.accessToken || "";
+//     return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+//   } catch {
+//     return "";
+//   }
+// }
 
 export default function useEscalatedTicket() {
   const {
@@ -40,7 +41,10 @@ export default function useEscalatedTicket() {
       setListLoading(true);
       setListError(null);
       try {
-        const Authorization = getAccessToken();
+        if (!accessToken)
+          throw new Error("Token tidak ditemukan. Silakan login ulang.");
+
+        const Authorization = accessToken;
         if (!Authorization)
           throw new Error("Token tidak ditemukan. Silakan login ulang.");
 
@@ -54,7 +58,6 @@ export default function useEscalatedTicket() {
           },
           headers: {
             Accept: "application/json",
-            Authorization,
             "ngrok-skip-browser-warning": "true",
           },
         });
@@ -78,8 +81,8 @@ export default function useEscalatedTicket() {
       } catch (e) {
         setListError(
           e?.response?.data?.message ||
-            e?.message ||
-            "Terjadi kesalahan saat mengambil tiket"
+          e?.message ||
+          "Terjadi kesalahan saat mengambil tiket"
         );
       } finally {
         setListLoading(false);

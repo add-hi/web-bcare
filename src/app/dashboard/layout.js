@@ -38,9 +38,6 @@ export default function DashboardLayout({ children }) {
     })
 
     useEffect(() => {
-        // Jika belum login, lempar ke /auth/login
-        console.log(user);
-        
         if (!user) {
             router.replace("/login");
         }
