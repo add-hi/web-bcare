@@ -111,7 +111,15 @@ export default function FloatingCustomerContact({ room, detail }) {
 
   // ====== Audio Streaming Functions ======
   const startLocalStream = useCallback(async () => {
-    if (streamRef.current) return streamRef.current;
+    // Old Code:
+    // if (streamRef.current) return streamRef.current;
+
+    // Stop existing stream to get fresh audio
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+
     try {
       // Check if getUserMedia is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -133,6 +141,9 @@ export default function FloatingCustomerContact({ room, detail }) {
   }, []);
 
   const stopLocalStream = useCallback(() => {
+    // Old Code
+    // if (peerConnectionRef.current) return peerConnectionRef.current;
+
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
@@ -144,7 +155,11 @@ export default function FloatingCustomerContact({ room, detail }) {
   }, []);
 
   const createPeerConnection = useCallback(async () => {
-    if (peerConnectionRef.current) return peerConnectionRef.current;
+    // Always create fresh peer connection for new calls
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
 
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -257,6 +272,8 @@ export default function FloatingCustomerContact({ room, detail }) {
     sock.on("chat:new", (msg) => {
       if (msg?.room !== ACTIVE_ROOM) return;
       if (!msg?.text) return;
+      // Skip if message is from self (already added locally)
+      if (msg.author?.id === uid) return;
       pushMsg({
         id: String(msg._id || msg.id || Date.now()),
         text: msg.text,
@@ -267,8 +284,10 @@ export default function FloatingCustomerContact({ room, detail }) {
 
     // Call
     sock.on("call:ringing", () => {
-      setCallStatus("ringing");
+      setCallStatus("in-call");
       setShowCallUI(true);
+      callStartAt.current = Date.now();
+      setCallDuration(0);
     });
     sock.on("call:accepted", async () => {
       setCallStatus("in-call");
@@ -307,18 +326,33 @@ export default function FloatingCustomerContact({ room, detail }) {
     });
     // WebRTC signaling
     sock.on("webrtc:offer", async ({ offer }) => {
-      await createAnswer(offer);
+      try {
+        await createAnswer(offer);
+      } catch (error) {
+        console.error("Error handling WebRTC offer:", error);
+      }
     });
 
     sock.on("webrtc:answer", async ({ answer }) => {
-      if (peerConnectionRef.current) {
-        await peerConnectionRef.current.setRemoteDescription(answer);
+      try {
+        if (
+          peerConnectionRef.current &&
+          peerConnectionRef.current.signalingState !== "stable"
+        ) {
+          await peerConnectionRef.current.setRemoteDescription(answer);
+        }
+      } catch (error) {
+        console.error("Error handling WebRTC answer:", error);
       }
     });
 
     sock.on("webrtc:ice-candidate", async ({ candidate }) => {
-      if (peerConnectionRef.current) {
-        await peerConnectionRef.current.addIceCandidate(candidate);
+      try {
+        if (peerConnectionRef.current) {
+          await peerConnectionRef.current.addIceCandidate(candidate);
+        }
+      } catch (error) {
+        console.error("Error handling ICE candidate:", error);
       }
     });
 
@@ -656,7 +690,9 @@ export default function FloatingCustomerContact({ room, detail }) {
                         Agent Chat Panel
                       </p>
                       <p className="text-gray-400 text-xs">
-                        {connected ? "Ready to chat with customers" : "Connecting..."}
+                        {connected
+                          ? "Ready to chat with customers"
+                          : "Connecting..."}
                       </p>
                     </div>
                   ) : (
