@@ -499,16 +499,16 @@ export default function FloatingCustomerContact({ room, detail }) {
     setCallDuration(0);
   }, [ACTIVE_ROOM, stopLocalStream]);
 
-  const startLiveChat = () => {
-    setIsLiveChat(true);
-    pushMsg({
-      id: `sys_${Date.now()}`,
-      text: "Anda telah terhubung dengan live chat. Silakan mulai percakapan.",
-      isBot: true,
-      timestamp: nowHHMM(),
-    });
-    quickDM();
-  };
+  // const startLiveChat = () => {
+  //   setIsLiveChat(true);
+  //   pushMsg({
+  //     id: `sys_${Date.now()}`,
+  //     text: "Anda telah terhubung dengan live chat. Silakan mulai percakapan.",
+  //     isBot: true,
+  //     timestamp: nowHHMM(),
+  //   });
+  //   quickDM();
+  // };
 
   const clearAll = () => {
     try {
