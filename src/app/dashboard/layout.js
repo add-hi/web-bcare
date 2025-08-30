@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }) {
 
     const { getRemainingTime } = useIdleTimer({
         onIdle,
-        timeout: 1 * 60 * 1000,
+        timeout: 2 * 60 * 1000,
         throttle: 500
     })
 

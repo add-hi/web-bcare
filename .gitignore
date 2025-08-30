@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 *.zip
+
+# MacOS exclude
+.DS_Store
+__MACOSX/
