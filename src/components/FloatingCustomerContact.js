@@ -162,7 +162,17 @@ export default function FloatingCustomerContact({ room, detail }) {
     }
 
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:34.50.84.251:3478" }, // +1 baris
+        {
+          // +2 baris
+          urls: "turn:34.50.84.251:3478", // +3 baris
+          username: "bcare-user",
+          credential: "bcare-secret-key-2024",
+        },
+      ],
     });
 
     // Handle remote audio stream
@@ -232,7 +242,7 @@ export default function FloatingCustomerContact({ room, detail }) {
       sock.emit("presence:get", { room: ACTIVE_ROOM });
       // Automatically start live chat when connected
       setIsLiveChat(true);
-      quickDM();
+      // quickDM(); // Remove this to prevent calling undefined function
     };
     const onDisconnect = () => {
       setConnected(false);
@@ -366,7 +376,7 @@ export default function FloatingCustomerContact({ room, detail }) {
       sock.disconnect();
       stopLocalStream();
     };
-  }, [SOCKET_URL, ACTIVE_ROOM, uid]);
+  }, [SOCKET_URL, ACTIVE_ROOM, uid, createAnswer, createOffer]);
 
   // Call timer effect
   useEffect(() => {
@@ -489,16 +499,16 @@ export default function FloatingCustomerContact({ room, detail }) {
     setCallDuration(0);
   }, [ACTIVE_ROOM, stopLocalStream]);
 
-  const startLiveChat = () => {
-    setIsLiveChat(true);
-    pushMsg({
-      id: `sys_${Date.now()}`,
-      text: "Anda telah terhubung dengan live chat. Silakan mulai percakapan.",
-      isBot: true,
-      timestamp: nowHHMM(),
-    });
-    quickDM();
-  };
+  // const startLiveChat = () => {
+  //   setIsLiveChat(true);
+  //   pushMsg({
+  //     id: `sys_${Date.now()}`,
+  //     text: "Anda telah terhubung dengan live chat. Silakan mulai percakapan.",
+  //     isBot: true,
+  //     timestamp: nowHHMM(),
+  //   });
+  //   quickDM();
+  // };
 
   const clearAll = () => {
     try {
